@@ -1,0 +1,689 @@
+@import url('https://fonts.googleapis.com/css2?family=Buda:wght@300&family=Delius&family=Henny+Penny&family=Rubik+Doodle+Shadow&family=Stalemate&family=Sue+Ellen+Francisco&family=Syncopate:wght@400;700&family=Vibes&family=Zeyada&display=swap');
+
+:root{
+    --dark: #3a264a;
+    --light: #854e6b;
+    --border: #3e4577;
+    --other: #f9f546;
+    --black: #242424;
+    --back: #f1620b;
+    --back2: #0e8660;
+    --back3: #ec490f;
+    
+    font-family: "Delius", cursive;
+    text-transform: none;
+}
+
+/*********************************************************************************************************************/
+/**************************************            FONT STYLES               *****************************************/
+/*********************************************************************************************************************/
+
+.delius-regular {
+  font-family: "Delius", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.henny-penny-regular {
+  font-family: "Henny Penny", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.buda-light {
+  font-family: "Buda", serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.syncopate-regular {
+  font-family: "Syncopate", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.sue-ellen-francisco-regular {
+  font-family: "Sue Ellen Francisco", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.zeyada-regular {
+  font-family: "Zeyada", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+.stalemate-regular {
+  font-family: "Stalemate", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.rubik-doodle-shadow-regular {
+  font-family: "Rubik Doodle Shadow", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.vibes-regular {
+  font-family: "Vibes", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/*********************************************************************************************************************/
+/**************************************            BODY STYLES               *****************************************/
+/*********************************************************************************************************************/
+
+html, body {
+  overflow-x: hidden;  
+  overflow-y: auto;
+  width: 100vw;
+  padding: 0;
+  margin: 0;
+  scroll-behavior: smooth;
+}
+hr{
+  color: var(--black);
+  opacity: 0.1;
+  width: 80%;
+}
+#r1-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/background17.png");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+}
+
+.r1-back{
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  flex-direction: column;
+}
+.back-heading{
+  z-index: 70;
+  
+}
+.back-heading h1{
+  font-size: 4em;
+  font-weight: bolder;
+  font-family: "Rubik Doodle Shadow", system-ui;
+  text-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  color: white;
+  margin-top: 2em;
+}
+
+.intro-back-heading {
+  font-family: "Sue Ellen Francisco", cursive;
+  font-size: 2em;
+  margin-top: 0em;
+  color:white;
+  z-index: 70;
+}
+
+.info-back-heading{
+  font-family: "Sue Ellen Francisco", cursive;
+  font-size: 2em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 900;
+  text-decoration: underline;
+  z-index: 70;
+  text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+}
+
+.dark-info-back-heading{
+  font-family: "Sue Ellen Francisco", cursive;
+  font-size: 2em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 900;
+  text-decoration: underline;
+  z-index: 70;
+  color: white;
+}
+
+.back-heading h3{
+  font-family: "Zeyada", cursive;
+  font-size: 2em;
+  letter-spacing: 1px;
+  text-transform: capitalize;
+  padding-top: 2em;
+  text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+}
+
+.r1-back-buttons{
+  display: flex;
+  justify-content: space-evenly;
+  gap: 10em;
+}
+
+.r1-back-buttons button{
+  background-color: var(--black);
+  padding: .3em 3em;
+  border-radius: 15px;
+  border: 2px var(--black) solid;
+  color: white;
+  font-size: 1.2em;
+  font-family: "Vibes", system-ui;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+}
+
+.r1-back-buttons button:hover{
+  background-color: transparent;
+  color: var(--black);
+  transition: 0.3s;
+}
+
+#r1-info-dark-bg{
+  background-color: var(--back);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100vw;
+  height: fit-content;
+  padding: 4em 0;
+}
+
+#r1-info,
+#r1-social{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  background-color: none;
+  width: 100vw;
+  height: fit-content;
+  padding: 0em;
+  margin-top: 4em;
+}
+
+#r1-info .r1-back-card{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+  gap: 4em; 
+  padding: 5em;
+  z-index: 65;
+}
+
+.service {
+  position: relative;
+  width: fit-content;
+  height: fit-content;
+  display: table;
+  overflow: hidden;
+}
+
+.desc{
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  font-weight: 900;
+}
+
+.serv{
+  background-color: white;
+  display: block;
+  border: 2px var(--black) solid;
+  border-radius: 15px;
+  padding: 1em;
+  width: fit-content;
+  justify-content: center;
+  align-items: center;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
+}
+
+.serv:hover {
+  transform: scale(1.05);
+  transition: 0.8s;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.desc p{
+  font-weight: 1em;
+}
+
+.desc p:hover{
+  transition: 0.5s;
+}
+
+.serv-icon{
+  position: relative;
+  width: 320px;
+  border: 2px solid var(--black);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+.service .desc {
+  display: table-cell;
+  vertical-align: middle;
+  height: 120px;
+  opacity: 1;  
+}
+
+.listed p{
+  font-family: "Delius", cursive;
+  font-size: .8em;
+  padding-top: 0;
+}
+
+.r1-back-card a{
+  color: var(--black);
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-decoration: none;
+}
+
+@media screen and (max-width: 768px) {
+  .service {
+    height: 150px;
+    background-color: none;
+  }
+}
+@media screen and (max-width: 480px) {
+  .service {
+    height: 100px;
+    background-color: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .service .desc {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.6);
+  }
+  .service .desc h3 {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  .service .desc span {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .service .desc {
+    opacity: 1;
+  }
+  .service .desc h3 {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+  .service .desc span {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+#r1-cta{
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  background-image: url("/imgs/30.png");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: fit-content;
+  padding: 5em 0;
+  color: white;
+}
+
+.cta-heading{
+  text-align: center;
+  font-family: "Sue Ellen Francisco", cursive;
+}
+
+.cta-heading h1{
+  font-size: 2.5em;
+  text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+}
+
+.cta-heading h2{
+  font-size: 2em;
+  text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+}
+
+.cta-buttons{
+   display: flex;
+   gap: 2.5em;
+}
+
+.btn{
+  font-size: 1.5em;
+  color: white;
+  background-color: var(--black);
+  padding: .8em;
+  border-radius: 15px;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  transition: 0.8s;
+  cursor: pointer;
+  color: var(--black);
+  background-color: white;
+}
+
+.r1-col-why{
+  margin-top: 1em;
+  display: flex;
+  gap: 5em;
+  padding: 4em 5em;
+}
+.col-reason {
+  width: 30%;
+  float: left;
+  margin-bottom: 4em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.col-reason-icon{
+  z-index: 70;
+  width: 100px;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
+  border-radius: 50%;
+}
+
+.col-reason-icon:hover {
+  transform: scale(1.05);
+  transition: 0.8s;
+}
+
+.col-reason h3 {
+  font-size: 1em;
+  font-weight: 900;
+}
+
+.name-mid{
+  z-index: 70;
+}
+
+.scroll-down {
+  position: absolute;
+  bottom: 0rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+  color: white;
+  animation: bounce 2s infinite;
+  cursor: pointer;
+  z-index: 1;
+  text-decoration: none;
+}
+
+.scroll-up {
+  position: absolute;
+  bottom: 0rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 2rem;
+  color: var(--back3);
+  animation: bounce 2s infinite;
+  cursor: pointer;
+  z-index: 1;
+  text-decoration: none;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+#r2-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/10.png");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+}
+
+#r3-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/background34.svg");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+}
+
+#r4-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/background31.svg");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+}
+
+#r5-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/background21.svg");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+}
+
+#r6-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/background39.svg");
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100vw;
+  height: 100vh;
+  
+}
+
+/*****************************************************************
+********************** Instagram *********************************
+*****************************************************************/
+
+.instagram-feed {
+  padding: 2rem;
+  z-index: 70;
+  height: fit-content;
+}
+
+.feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 5rem;
+  margin-top: 4em;
+}
+
+.post-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
+  text-align: center;
+  z-index: 70;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.post-card video {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 4px solid var(--black);
+}
+
+.post-card p {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--black);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.social{
+  margin-top: 5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.social-icons{
+  display: flex;
+  justify-content: center;
+  gap: 2em;
+  margin-top: 2em;
+  border-radius: 15px;
+  padding: 2em;
+}
+
+.social-icons img{
+  width: 40px;
+}
+
+
+/*****************************************************************
+********************** Cookie Info *******************************
+*****************************************************************/
+.cookie-banner {
+  all: unset;
+  background-color: #d5d6d6;
+  color: white;
+  font-size: 14px;
+  padding: 16px;
+  padding-right: 2em;
+  z-index: 9999;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  font-family: "Delius", cursive;
+}
+
+.cookie-content {
+  flex: 1 1 auto;
+  margin-right: 1rem;
+}
+
+.cookie-link {
+  color: #FBBF24;
+  text-decoration: underline;
+}
+
+.cookie-accept,
+.cookie-decline {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.cookie-accept {
+  background-color: #FBBF24;
+  color: #000;
+}
+
+.cookie-decline {
+  background-color: #e5e7eb;
+  color: #000;
+}
+
+#p1-intro{
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/imgs/34.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100%;
+  height: 400px;
+  padding: 2em;
+  color: white;
+}
+
+#p1-intro p{
+  font-family: "Buda", serif;
+  padding: 0 10em;
+  font-weight: 900;
+}
+#p1-info{
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: left;
+  background-color: white;
+  padding-top: 1.5em;
+  padding-bottom: 3em;
+  font-family: "Buda", serif;
+}
+
+.privacy-policy h1 {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.privacy-policy h2 {
+  margin-top: 25px;
+  font-size: 1.5rem;
+  color: #2b2b2b;
+}
+
+.privacy-policy ul {
+  list-style-type: disc;
+  margin-left: 20px;
+}
+

@@ -1,0 +1,430 @@
+@import url('https://fonts.googleapis.com/css2?family=Buda:wght@300&family=Flavors&family=Henny+Penny&family=Rock+3D&family=Rubik+Doodle+Shadow&family=Sedgwick+Ave+Display&family=Shizuru&family=Stalemate&family=Sue+Ellen+Francisco&family=Syncopate:wght@400;700&family=Vibes&family=ZCOOL+KuaiLe&family=Zeyada&display=swap');
+
+:root{
+    --dark: #3a264a;
+    --light: #854e6b;
+    --border: #3e4577;
+    --other: #f9f546;
+    --black: #242424;
+    --back: #f1620b;
+    --back2: #0e8660;
+    --back3: #ec490f;
+    
+    font-family: "Zeyada", cursive;
+    text-transform: none;
+}
+
+/*********************************************************************************************************************/
+/**************************************            BODY STYLES               *****************************************/
+/*********************************************************************************************************************/
+
+html, body {
+    overflow-x: hidden;  
+    overflow-y: auto;
+    width: 100vw;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.site-footer {
+    display: flex;
+    flex-direction: column; 
+    position: relative;
+    justify-content: center;
+    align-items: center;
+    width:100%;
+    bottom: 0;
+    padding:5em 1em;
+    padding-bottom: 0em;
+    background-color: var(--black);
+    min-height:200px;
+    color: white;
+    font-family: "Sue Ellen Francisco", cursive;
+}
+    
+.f-nav-links{
+    margin-top: 1em;
+}  
+
+.f-menu{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent;
+    justify-content: center;
+    position: relative;
+    width:100%;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.f-menu button{
+    all:unset;
+}
+
+.f-menu li,
+.f-menu button{
+    margin-right: 5em;
+    text-align: center;
+    margin-left: 2em;
+    font-size: .7em;
+    font-weight: bolder;
+    list-style :none;
+}
+
+.f-menu li a,
+.f-menu li a:visited,
+.f-menu button a,
+.f-menu button a:visited {
+    text-decoration: none;
+    display: inline;
+    color: white;
+    position: relative;
+    padding: .5em;
+}
+    
+.f-menu li a:hover,
+.f-menu button a:hover{
+    color: var(--back);
+    transition: 0.2s;
+    border-bottom: var(--back) 2px solid;
+}
+
+.f-menu li a:focus,
+.f-menu button a:focus{
+    color: var(--light);
+    background-color: var(--black);
+}
+
+.f-social-icons {
+    align-items: center;
+    margin-top: 1em;
+    list-style: none;
+    position: relative;
+    justify-content: space-between;
+    display: flex;
+    color: #fff;
+    padding: 2em;
+    gap: 2em;
+}
+    
+.f-social-icons a svg{
+    text-decoration: none;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    text-align: center;
+    color: #fff;
+    width: fit-content;
+    font-size: 1.5em;
+}
+    
+.f-social-icons a:hover svg{ 
+    background:none;
+    color: var(--back);
+    transition: 0.3s;
+}
+
+.f-info{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10em;
+    padding: 3em 3em 2em ;
+    border-bottom: rgb(92, 92, 92) 2px solid;
+    font-family: "Syncopate", sans-serif;
+}
+
+#links, 
+#contact{
+    display: flex;
+    flex-direction: column;
+}
+#links a,
+#contact a,
+#contact p{
+    color: white;
+    text-decoration: none;
+    width: fit-content;
+    margin: 0em;
+    font-size: .7em;
+    margin-bottom: 1em;
+    font-weight: 700;
+}
+#contact em{
+    font-weight: 900;
+    color: var(--back3);
+}
+#links a:hover,
+#contact a:hover
+{
+    color: var(--back);
+    transition: 0.3s;
+    text-decoration: underline;
+}
+.f-search-wrapper {
+    position: relative;
+}
+
+.f-search-input {
+    padding: 0.5em 2.5em 0.5em 2.5em;
+    font-size: .8em;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    width: 250px;
+}
+
+.f-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    color: var(--black);
+}
+
+.gototop {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transition: 0.5s;
+    -o-transition: 0.5s;
+    transition: 0.5s;
+}
+.gototop.active {
+    opacity: 1;
+    visibility: visible;
+}
+.gototop a {
+    width: 50px;
+    height: 50px;
+    display: table;
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--back);
+    text-align: center;
+    -webkit-border-radius: 50%;
+    -moz-border-radius: 50%;
+    -ms-border-radius: 50%;
+    border-radius: 50%;
+}
+.gototop a i {
+    height: 50px;
+    display: table-cell;
+    vertical-align: middle;
+}
+.gototop a:hover, .gototop a:active, .gototop a:focus {
+    text-decoration: none;
+    outline: none;
+    color: var(--back);
+}
+
+footer span{
+    display: block;
+    position: relative;
+    bottom: 0;
+    font-size: 10px;
+    color: white;
+    margin-top: 2em;
+    right: 0;
+    text-transform: none;    
+}
+/*********************************************************************************************************************/
+/**************************************            Mobile STYLES               ***************************************/
+/*********************************************************************************************************************/
+
+@media screen and (max-width: 800px) {
+
+    .site-footer {
+        display: flex;
+        flex-direction: column; 
+        position: relative;
+        justify-content: center;
+        align-items: center;
+        width:100vw;
+        bottom: 0;
+        padding:2em 0;
+        padding-bottom: 0em;
+        background-color: var(--black);
+        color: white;
+        font-family: "Sue Ellen Francisco", cursive;
+    }
+    
+    .f-nav-links{
+        margin-top: 1em;
+    }  
+
+    .f-menu{
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        background-color: transparent;
+        justify-content: center;
+        position: relative;
+        width:100%;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding-left: 0em;
+    }
+
+    .f-menu button{
+        all:unset;
+    }
+
+    .f-menu li,
+    .f-menu button{
+        margin: 1em;
+        text-align: center;
+        font-size: .5em;
+        font-weight: bolder;
+        list-style :none;
+    }
+
+    .f-menu li a,
+    .f-menu li a:visited,
+    .f-menu button a,
+    .f-menu button a:visited {
+        text-decoration: none;
+        display: inline;
+        color: white;
+        position: relative;
+        padding: .5em;
+    }
+
+    .f-social-icons {
+        align-items: center;
+        margin-top: 1em;
+        list-style: none;
+        position: relative;
+        justify-content: space-between;
+        display: flex;
+        color: #fff;
+        padding: .5em;
+        gap: 1em;
+    }
+    
+    .f-social-icons a svg{
+        text-decoration: none;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        text-align: center;
+        color: #fff;
+        width: fit-content;
+        font-size: 1.5em;
+    }
+
+    .f-info{
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2em;
+        padding: 3em;
+        border-bottom: rgb(92, 92, 92) 2px solid;
+        font-family: "Syncopate", sans-serif;
+    }
+
+    #links, 
+    #contact{
+        display: flex;
+        flex-direction: column;
+        border-bottom: var(--back3) 2px solid;
+        width: 100%;
+    }
+
+    #links a,
+    #contact a,
+    #contact p{
+        color: white;
+        text-decoration: none;
+        width: fit-content;
+        margin: 0em;
+        font-size: .7em;
+        margin-bottom: 1em;
+        font-weight: 700;
+    }
+#contact em{
+    font-weight: 900;
+    color: var(--back3);
+}
+#links a:hover,
+#contact a:hover
+{
+    color: var(--back);
+    transition: 0.3s;
+    text-decoration: underline;
+}
+.f-search-wrapper {
+    position: relative;
+}
+
+.f-search-input {
+    padding: 0.5em 2.5em 0.5em 2.5em;
+    font-size: .8em;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    width: 250px;
+}
+
+.f-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    color: var(--black);
+}
+
+.gototop {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        -webkit-transition: 0.5s;
+        -o-transition: 0.5s;
+        transition: 0.5s;
+      }
+      .gototop.active {
+        opacity: 1;
+        visibility: visible;
+      }
+      .gototop a {
+        width: 50px;
+        height: 50px;
+        display: table;
+        background: rgba(0, 0, 0, 0.8);
+        color: var(--back);
+        text-align: center;
+        -webkit-border-radius: 50%;
+        -moz-border-radius: 50%;
+        -ms-border-radius: 50%;
+        border-radius: 50%;
+      }
+      .gototop a i {
+        height: 50px;
+        display: table-cell;
+        vertical-align: middle;
+      }
+      .gototop a:hover, .gototop a:active, .gototop a:focus {
+        text-decoration: none;
+        outline: none;
+        color: var(--back);
+      }
+
+    footer span{
+        display: block;
+        position: relative;
+        bottom: 0;
+        font-size: 10px;
+        color: white;
+        margin-top: 2em;
+        right: 0;
+        text-transform: none;    
+    }
+}
