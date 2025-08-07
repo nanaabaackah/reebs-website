@@ -50,14 +50,7 @@ const Navbar = () => {
               <li><Link to="/" className={isActive('/') ? 'active' : ''}><FontAwesomeIcon icon={faHome} /></Link></li>
               <li><Link to="/About" className={isActive('/About') ? 'active' : ''}>About</Link></li>
               <li><Link to="/Shop" className={isActive('/Shop') ? 'active' : ''}>Shop</Link></li>
-              <div className='drop'>
-                <button className='dropbtn'><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals <FontAwesomeIcon icon={faCaretDown} /></Link></button>
-                <div className='dropdown-content'>
-                  <Link to=""></Link>
-                  <Link to=""></Link>
-                  <Link to=""></Link>
-                </div>
-              </div>
+              <li><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link></li>
               <li><Link to="/Gallery" className={isActive('/Gallery') ? 'active' : ''}>Gallery</Link></li>
               <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
               <li><Link to="/Book" className={isActive('/Book') ? 'active' : ''}><FontAwesomeIcon icon={ faCalendarDays } /></Link></li>
