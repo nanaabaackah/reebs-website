@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ClickSpark from './components/ClickSpark';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -14,8 +15,10 @@ import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/privacy-policy';
 
 function AppLayout() {
+  
   return (
     <>
+    
     <Navbar />
       <main>
         <Routes>
@@ -36,9 +39,17 @@ function AppLayout() {
 
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <ClickSpark
+          sparkColor='#f1620b'
+          sparkSize={14}
+          sparkRadius={25}
+          sparkCount={8}
+          duration={400}
+        >
+        <Router>
+          <AppLayout />
+        </Router>
+    </ClickSpark>
   );
 }
 export default App;

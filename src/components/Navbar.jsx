@@ -22,25 +22,28 @@ const Navbar = () => {
   return (
     <header>
       <nav className={`navbar ${scrolled ? 'navbar-scrolled' : 'navbar-default'}`}>
+        <div className="main-logo">
+          <Link to="/"><img src="/imgs/reebs_logo.svg" alt="REEBS Logo" /></Link>
+        </div>
         <div className="nav-links">
-            <Link className="logo" to="/"><img src="/imgs/reebs_logo.svg" alt="REEBS Logo" /></Link>
-            <ul className='menu'>
-              <li><Link to="/" className={isActive('/') ? 'active' : ''}><FontAwesomeIcon icon={faHome} /></Link></li>
-              <li><Link to="/About" className={isActive('/About') ? 'active' : ''}>About</Link></li>
-              <li><Link to="/Shop" className={isActive('/Shop') ? 'active' : ''}>Shop</Link></li>
-              <div className='drop'>
-                <button className='dropbtn'><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link><FontAwesomeIcon icon={faCaretDown} /></button>
-                <div className='dropdown-content'>
-                  <Link to=""></Link>
-                  <Link to=""></Link>
-                  <Link to=""></Link>
-                </div>
+          <ul className='menu'>
+            <li><Link to="/" className={isActive('/') ? 'active' : ''}><FontAwesomeIcon icon={faHome} /></Link></li>
+            <li><Link to="/About" className={isActive('/About') ? 'active' : ''}>About</Link></li>
+            <li><Link to="/Shop" className={isActive('/Shop') ? 'active' : ''}>Shop</Link></li>
+            <div className='drop'>
+              <button className='dropbtn'><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link><FontAwesomeIcon icon={faCaretDown} /></button>
+              <div className='dropdown-content'>
+                <Link to="">Kid's Party Equipment</Link>
+                <Link to="">Party Setup Rentals</Link>
+                <Link to="">Event Decor</Link>
               </div>
-              <li><Link to="/Gallery" className={isActive('/Gallery') ? 'active' : ''}>Gallery</Link></li>
-              <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
-              <li><Link to="/Book" className={isActive('/Book') ? 'active' : ''}><FontAwesomeIcon icon={ faCalendarDays } /></Link></li>
-              <li><Link to="/Cart" className={isActive('/Cart') ? 'active' : ''}><FontAwesomeIcon icon={ faShoppingCart } /></Link></li>
-            </ul>
+            </div>
+            <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
+          </ul>
+        </div>
+        <div className='nav-buttons'>
+            <Link to="/Book" className={isActive('/Book') ? 'active' : ''}><FontAwesomeIcon icon={ faCalendarDays } /></Link>
+            <Link to="/Cart" className={isActive('/Cart') ? 'active' : ''}><FontAwesomeIcon icon={ faShoppingCart } /></Link>
         </div>
       </nav>
       <nav className={`navbar ${scrolled ? 'navbar-scrolled-mob' : 'navbar-default'}`}>
@@ -51,7 +54,6 @@ const Navbar = () => {
               <li><Link to="/About" className={isActive('/About') ? 'active' : ''}>About</Link></li>
               <li><Link to="/Shop" className={isActive('/Shop') ? 'active' : ''}>Shop</Link></li>
               <li><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link></li>
-              <li><Link to="/Gallery" className={isActive('/Gallery') ? 'active' : ''}>Gallery</Link></li>
               <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
               <li><Link to="/Book" className={isActive('/Book') ? 'active' : ''}><FontAwesomeIcon icon={ faCalendarDays } /></Link></li>
               <li><Link to="/Cart" className={isActive('/Cart') ? 'active' : ''}><FontAwesomeIcon icon={ faShoppingCart } /></Link></li>

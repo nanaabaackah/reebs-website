@@ -29,7 +29,7 @@ html, body {
     text-transform: uppercase;
     transition: 0.8s;
     font-family: "Syncopate", sans-serif;
-    color: white;
+    color: var(--back3);
     font-weight: 900;
 }
 
@@ -56,16 +56,21 @@ html, body {
 
 .nav-links {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     width: 100%;
     padding: 0 .5em;
 }
 
+.nav-buttons {
+    display: flex;
+    padding: 0 3em;
+}
+
 .menu button{
     all:unset;
 }
-.menu li, .menu button{
+.menu li, .menu button, .nav-buttons svg{
     margin: 1em;
     text-align: center;
     font-size: .8em;
@@ -78,13 +83,14 @@ html, body {
 .menu li a,
 .menu li a:visited, 
 .menu button a,
-.menu button a:visited {
+.menu button a:visited,
+.nav-buttons svg,
+.nav-buttons svg:visited {
     text-decoration: none;
     display: inline;
     padding: .5em;
-    color: white;
+    color: var(--black);
     position: relative;
-    
 }
 
 .menu a.active{
@@ -100,7 +106,7 @@ html, body {
     padding: .5em;
 }
 
-.menu li:last-child a:hover{
+.nav-buttons svg:hover{
     background-color: var(--black);
     color: white;
     border-radius: 5px;
@@ -109,15 +115,18 @@ html, body {
 }
 
 .menu li a:focus{
-    color: var(--other);
+    color: var(--light);
     background-color: none;
-    text-decoration: underline;
+    text-decoration: none;
 }
-
 
 .drop {
     float: left;
     overflow: hidden;
+}
+
+.dropbtn:hover{
+    background: none;
 }
 .dropdown-content {
     display: none;
@@ -136,10 +145,13 @@ html, body {
     text-decoration: none;
     display: block;
     text-align: left;
+    font-size: 0.8em;
+    text-transform: capitalize;
+     font-family: "Delius", cursive;
 }
 
 .dropdown-content a:hover {
-    background-color: #ddd;
+    background-color: lightgray;
 }
 
 .drop:hover .dropdown-content {
@@ -147,11 +159,11 @@ html, body {
 }
 
 .navbar-scrolled {
-    background-color: white;
+    background-color: var(--black);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
     transition: 0.8s;
     padding: 1em;
     z-index: 80;
@@ -162,10 +174,12 @@ html, body {
     margin-top: 0em;
 }
 
-.navbar-scrolled li, .navbar-scrolled button{
+.navbar-scrolled li, 
+.navbar-scrolled button, 
+.navbar-scrolled .nav-buttons svg{
     margin: 0.8em;
     text-align: center;
-    font-size: 0.9em;
+    font-size: 0.8em;
     margin-bottom:0em;
     list-style:none;
     margin-right: 0em;
@@ -173,8 +187,11 @@ html, body {
 }
 
 .navbar-scrolled .nav-links {
+    display: inline;
+    position: relative;
+    align-items: center;
+    justify-content: space-between;
     float: right;
-    padding-right: 5em;
 }
 
 .navbar-scrolled.menu li a.focus{
@@ -185,11 +202,13 @@ html, body {
 .navbar-scrolled li a,
 .navbar-scrolled li a:visited, 
 .navbar-scrolled button a,
-.navbar-scrolled button a:visited {
+.navbar-scrolled button a:visited,
+.navbar-scrolled .nav-buttons svg,
+.navbar-scrolled .nav-buttons svg:visited {
     text-decoration: none;
     display: inline;
     padding: .5em;
-    color: var(--border);
+    color: white;
     font-weight: 900;
     position: relative;
 }
@@ -202,7 +221,7 @@ html, body {
     transition: 0.2s;
 }
 
-.navbar-scrolled li:last-child a:hover{
+.nav-buttons svg:hover{
     background-color: var(--light);
     color: white;
     border-radius: 5px;
@@ -269,7 +288,7 @@ html, body {
         text-transform: uppercase;
         transition: 0.8s;
         font-family: "Syncopate", sans-serif;
-        color: white;
+        color: var(--back2);
         font-weight: 900;
     }
 
@@ -323,7 +342,7 @@ html, body {
         text-decoration: none;
         display: inline;
         padding: 0em;
-        color: white;
+        color: var(--dark);
         position: relative;
         
     }
@@ -341,7 +360,7 @@ html, body {
     }
 
     .menu li a:focus{
-        color: var(--other);
+        color: var(--light);
         background-color: none;
         text-decoration: underline;
     }
@@ -386,6 +405,14 @@ html, body {
         color: var(--border);
         font-weight: 900;
         position: relative;
+    }
+
+    .nav-buttons{
+        display: none;
+    }
+
+    .main-logo {
+        display: none;
     }
 }
 
@@ -432,6 +459,13 @@ html, body {
         display: none;
     }
 
+    .nav-buttons{
+        display: none;
+    }
+
+    .main-logo {
+        display: none;
+    }
     .nav-links-mob{
         display: block;
         justify-content: space-between;

@@ -1,0 +1,67 @@
+[
+  {
+    "id": 1,
+    "name": "vtech Spin & Learn Color Flashlight",
+    "description": "Learning is colorful with the Spin & Learn Color Flashlight® by VTech®! Press the adorable turtle button on the chunky handle in flashlight mode to use just like a real flashlight.",
+    "price": 280.00,
+    "currency": "GHS",
+    "age_range": "12 to 36 Months",
+    "category": "Kid's Toys",
+    "image": "/imgs/shopItems/img_1.png"
+  },
+
+  {
+    "id": 2,
+    "name": "Number Foil Balloon",
+    "description": "Perfect for birthdays, anniversaries, graduations, and milestone celebrations. Durable and easy to inflate with air or helium.",
+    "price": 50.00,
+    "currency": "GHS",
+    "age_range": "n/a",
+    "category": "Party Supplies",
+    "image": "/imgs/shopItems/img_25.png"
+  },
+
+  {
+    "id": 3,
+    "name": "Johnson's® Baby Cotton Buds",
+    "description": "200 pieces. Plastic-free. Recyclable packaging. 100% pure cotton tips and 100% paper sticks.",
+    "price": 50.00,
+    "currency": "GHS",
+    "age_range": "n/a",
+    "category": "Household Supplies",
+    "image": "/imgs/shopItems/img_30.png"
+  },
+
+   {
+    "id": 4,
+    "name": "Montoy Slime Bave (100g)",
+    "description": "Feels and Stretches like real bubble gum.",
+    "price": 150.00,
+    "age_range": "5+",
+    "category": "Kid's Toys",
+    "image": "/imgs/shopItems/img_24.png"
+  },
+
+  {
+    "id": 5,
+    "name": "Shredded Tissue Paper",
+    "description": "Enhance your gift wrapping with premium shredded tissue paper, ideal for birthdays, weddings, parties, and special events.",
+    "price": 30.00,
+    "currency": "GHS",
+    "age_range": "n/a",
+    "category": "Party Supplies",
+    "image": "/imgs/shopItems/img_28.png"
+  },
+
+  {
+    "id": 6,
+    "name": "Lexibook Premium Stereo Headphones",
+    "description": "Safe volume for kids, designed for comfort and style.",
+    "price": 300.00,
+    "currency": "GHS",
+    "age_range": "n/a",
+    "category": "Kid's Toys",
+    "image": "/imgs/shopItems/img_7.png"
+  }
+
+]

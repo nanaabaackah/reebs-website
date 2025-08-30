@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Inventory {
+  id           Int        @id @default(autoincrement())
+  inventoryId  String     @unique
+  name         String
+  description  String?
+  quantity     Int
+  price        Float
+  type         String
+  status       String
+
+  bookings     Booking[]
+}
+
+model Booking {
+  id           Int      @id @default(autoincrement())
+  bookingId    String   @unique
+  customerName String
+  phone        String?
+  email        String?
+  eventDate    DateTime
+  returnDate   DateTime?
+  status       String   @default("pending")
+  totalAmount  Float?
+
+  itemId   Int
+  item     Inventory @relation(fields: [itemId], references: [id])
+
+  createdAt DateTime @default(now())
+}

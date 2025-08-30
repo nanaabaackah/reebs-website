@@ -3,8 +3,9 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './master.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faEnvelope, faHandPointUp, faPhone } from '@fortawesome/free-solid-svg-icons';
 import PopupModal from '/src/components/PopupModal';
+import TypingEffect from '/src/components/TypingEffect';
 import CookieBanner from '/src/components/CookieBanner';
 import InstagramFeed from '/src/components/InstagramFeed';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
@@ -16,11 +17,13 @@ function Home() {
         <div className="r1">
             {/*<BrushCanvas />*/}
             <PopupModal />
-            <main className="r1-back">
+            <main className="r1 back">
                 <section id='r1-intro'>
                     <div className="r1 back-heading">
                         <h1>REEBS <br/> Party Themes</h1>
-                        <h2 className='intro-back-heading'>We Promise Less Hustle, More Fun!</h2>
+                        <h2 >
+                            <TypingEffect text="We promise less hustle, more fun!" speed={120}/>
+                        </h2>
                         <div className='r1-back-buttons'>
                             <Link to="/rentals"><button>View Rentals</button></Link>
                             <Link to="/shop"><button>Explore Our Shop</button></Link>
@@ -29,7 +32,7 @@ function Home() {
                         <a href="#r1-info" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
                     </div>
                 </section>
-                <section id='r1-info' className="relative h-screen overflow-visible">
+                <section id='r1-info'>
                     <h2 className='info-back-heading'>Why Choose Us?</h2>
                     <div className='r1-col-why'>
                         <div className='col-reason'>
@@ -73,12 +76,25 @@ function Home() {
                             <h3 className="name-mid">Fast Support</h3>
                         </div>
                     </div>
-                    <h2 className='info-back-heading'>Our Services</h2>
+                </section>
+                <section id="r1-cta" className='cta1'>
+                    <div className='cta-heading'>
+                        <h1>Have any Questions?</h1>
+                        <h2>Contact Us Today!</h2>
+                    </div>
+                    <div className='cta-buttons'>
+                        <Link to="tel:+233-244-238-419" className='btn'><FontAwesomeIcon icon={faPhone} /></Link>
+                        <Link to="" className='btn'><FontAwesomeIcon icon={faWhatsapp} /></Link>
+                        <Link to="mailto:info@reebspartythemes.com" className='btn'><FontAwesomeIcon icon={faEnvelope} /></Link>
+                    </div>
                     <img
-                        src="/imgs/cloud_group2.svg"
+                        src="/imgs/confetti2.svg"
                         alt="cloud overflow"
-                        className="absolute top-[-65px] left-1/2 transform -translate-x-1/2 w-[1000px] z-60 pointer-events-none"
+                        className="absolute top-[700px] left-1/2 transform -translate-x-1/2 w-[1200px] z-60 pointer-events-none"
                     />
+                </section>
+                <section id='r1-services' className="relative overflow-visible">
+                    <h2 className='info-back-heading'>Our Services</h2>
                     <div className='r1-back-card'>
                         <div className='serv'>
                             <Link to="">
@@ -184,19 +200,9 @@ function Home() {
                             </div>
                         </div>
                     </div>
-                    <img
-                        src="/imgs/cloud_group4.svg"
-                        alt="cloud overflow"
-                        className="absolute bottom-[10px] left-1/2 transform -translate-x-1/2 w-[1000px] z-50 pointer-events-none"
-                    />
                 </section>
-                <section id="r1-cta">
-                    <img
-                        src="/imgs/cloud_group6.svg"
-                        alt="cloud overflow"
-                        className="absolute top-[10px] left-1/2 transform -translate-x-1/2 w-[1000px] z-60 pointer-events-none"
-                    />
-                    <div className='cta-heading'>
+                <section id="r1-cta" className='cta2'>
+                    <div className='cta-heading' >
                         <h1>Need Help Planning Your Kids' Party?</h1>
                         <h2>Contact Us Today!</h2>
                     </div>
@@ -209,10 +215,11 @@ function Home() {
                 <section id='r1-social' className="relative h-screen overflow-visible">
                     <InstagramFeed />
                     <img
-                        src="/imgs/cloud_group5.svg"
+                        src="/imgs/confetti.svg"
                         alt="cloud overflow"
-                        className="absolute bottom-[-58px] left-1/2 transform -translate-x-1/2 w-[900px] z-60 pointer-events-none"
+                        className="absolute bottom-[-50px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
                     />
+                    <a href="#r1-intro" className='scroll-up'><FontAwesomeIcon icon={faHandPointUp} /></a>
                 </section>
             </main>
         </div>
