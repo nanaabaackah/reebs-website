@@ -27,6 +27,24 @@
     width: 800px;
 }
 
+@media screen and (min-width:400px) and (max-width: 900px){
+  .popup-box {
+    background: #0000006c;
+    padding: 3rem;
+    border-radius: 10px;
+    text-align: center;
+    position: relative;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .popup-box img{
+      width:350px;
+  }
+}
+
 .popup-close {
   position: absolute;
   top: 0.5rem;

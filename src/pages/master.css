@@ -236,15 +236,15 @@ h3{
     font-weight: bolder;
     font-family: "Rubik Doodle Shadow", system-ui;
     text-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
-    color: white;
+    color: var(--black);
     margin-top: 1em;
   }
 
   .intro-back-heading {
     font-family: "Sue Ellen Francisco", cursive;
-    font-size: 1.5em;
+    font-size: 1em;
     margin-top: 0em;
-    color:white;
+    color:var(--dark);
     z-index: 70;
   }
 
