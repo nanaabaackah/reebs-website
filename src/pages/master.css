@@ -1295,7 +1295,7 @@ h3{
   }
 
   .side-menu {
-    overflow-y: hidden;
+    overflow-y: scroll;
   }
 
   .side-menu li a {
