@@ -234,6 +234,7 @@ h3{
     align-items: center;
     justify-content: center;
     text-align: center;
+    background-attachment: scroll;
     background-repeat: no-repeat;
     background-size: cover;
     width: 100%;
@@ -676,7 +677,7 @@ h3{
     position: relative;
     align-items: center;
     justify-content: center;
-    background-attachment: fixed;
+    background-attachment: scroll;
     background-repeat: no-repeat;
     background-size: cover;
     width: 100%;
