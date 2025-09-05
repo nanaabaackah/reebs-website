@@ -1046,7 +1046,7 @@ h3{
 
 .shop-image img{
   width: 250px;
-  height: fit-content;
+  height: 250px;
   object-fit: cover;
   border-top-left-radius: 15px;
   border-bottom-left-radius: 15px;
