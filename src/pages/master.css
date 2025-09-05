@@ -809,6 +809,7 @@ h3{
     margin-top:6em;
     gap: 1em;
     height: fit-content;
+    flex-direction: column-reverse;
   }
 
   #r2-intro .r2-back-image img{
@@ -825,8 +826,8 @@ h3{
     height: 250px;
     z-index: 70;
     position: relative;
-    box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
-    border-radius:10px;
+    box-shadow: none;
+    border-radius:none;
   }
 }
 

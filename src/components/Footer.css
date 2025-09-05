@@ -244,7 +244,7 @@ footer span{
         position: relative;
         justify-content: center;
         align-items: center;
-        width:100vw;
+        width:100%;
         bottom: 0;
         padding:2em 0;
         padding-bottom: 0em;
