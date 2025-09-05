@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import shopItems from "/src/data/shopItems.json"
 import { Link } from 'react-router-dom';
 import './master.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -9,6 +8,7 @@ function Shop() {
     const [currency, setCurrency] = useState("GHS");
     const [rates, setRates] = useState({});
     const [loading, setLoading] = useState(true);
+    const [inventory, setInventory] = useState([]); 
 
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("All");
@@ -20,6 +20,19 @@ function Shop() {
     const addToCart = (item) => {
         setCart([...cart, item]);
     };
+
+    useEffect(() => {
+          fetch("/.netlify/functions/inventory")
+            .then(res => res.json())
+            .then(data => {
+                setInventory(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("❌ Error fetching inventory:", err);
+                setLoading(false);
+            });
+    }, []);
 
     useEffect(() => {
         async function fetchRates() {
@@ -70,12 +83,12 @@ function Shop() {
         }
     }
 
-    const filteredProducts = shopItems.filter((item) => {
+    const filteredProducts = inventory.filter((item) => {
         const matchesSearch = item.name
             .toLowerCase()
             .includes(searchQuery.toLowerCase());
         const matchesCategory =
-            categoryFilter === "All" || item.category === categoryFilter;
+            categoryFilter === "All" || item.type === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 
@@ -112,13 +125,15 @@ function Shop() {
                                 className="category-filter"
                             >
                                 <option value="All">All Categories</option>
-                                <option value="Household Supplies">Household Supplies</option>
-                                <option value="Kid's Toys">Kid's Toys</option>
-                                <option value="Party Supplies">Party Supplies</option>
-                                <option value="Decor">Decor</option>
+                                {Array.from(new Set(inventory.map(item => item.type))).map((cat) => (
+                                    <option key={cat} value={cat}>
+                                        {cat}
+                                    </option>
+                                ))}
                             </select>
 
-                            {/* ✅ Currency Selector */}
+
+                            {/* Currency Selector */}
                             <select
                                 value={currency}
                                 onChange={(e) => setCurrency(e.target.value)}
@@ -154,12 +169,12 @@ function Shop() {
                                 <div key={item.id} className="shop-card">
                                     <div 
                                         className="shop-image"
-                                        onClick={() => setLightboxImage(item.image)}
+                                        onClick={() => setLightboxImage(item.image_url)}
                                     >
-                                        <img src={item.image} alt={item.name}/>
+                                        <img src={item.image_url || "/imgs/placeholder.png"} alt={item.name}/>
                                     </div>
                                     <div className="shop-details">
-                                        <h4>{item.category}</h4>
+                                        <h4>{item.type}</h4>
                                         <h3>{item.name}</h3>
                                         <p className="price">
                                             {formatCurrency(convertPrice(item.price))}

@@ -241,6 +241,7 @@ h3{
     height: 100vh;
     background-image: url("/imgs/background10-a.gif");
   }
+
   .back-heading h1{
     font-size: 3em;
     font-weight: bolder;
@@ -1007,6 +1008,7 @@ h3{
   font-size: 0.7em;
   color: #929292;
   margin-bottom: 2em;
+  text-transform: capitalize;
 }
 
 .shop-image img{
