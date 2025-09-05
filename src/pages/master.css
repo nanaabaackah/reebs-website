@@ -1150,7 +1150,7 @@ h3{
   .shop-image img{
     width: 150px;
     height: fit-content;
-    object-fit: cover;
+    object-fit: contain;
     border-top-left-radius: 15px;
     border-bottom-left-radius: 0px;
   }
