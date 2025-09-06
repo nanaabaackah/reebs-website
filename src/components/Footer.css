@@ -116,7 +116,7 @@ html, body {
     position: relative;
     text-align: center;
     color: #fff;
-    width: fit-content;
+    width: 25px;
     font-size: 1.5em;
 }
     
@@ -297,7 +297,7 @@ footer span{
 
     .f-social-icons {
         align-items: center;
-        margin-top: 1em;
+        margin-top: .5em;
         list-style: none;
         position: relative;
         justify-content: center;
@@ -317,8 +317,7 @@ footer span{
         text-align: center;
         color: #fff;
         fill: #fff;
-        width: fit-content;
-        font-size: 1.2em;
+        width: 20px;
     }
 
     .f-info{
