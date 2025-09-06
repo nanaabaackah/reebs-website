@@ -1283,8 +1283,6 @@ h3{
   #r4-intro{
     flex-direction: column;
     padding:4em 0;
-    height: 100%;
-    overflow: hidden;
   }
 
   #r4-intro h1{
