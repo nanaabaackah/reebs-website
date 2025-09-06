@@ -300,7 +300,7 @@ footer span{
         margin-top: 1em;
         list-style: none;
         position: relative;
-        justify-content: space-between;
+        justify-content: center;
         display: flex;
         color: #fff;
         padding: .5em;
@@ -318,7 +318,7 @@ footer span{
         color: #fff;
         fill: #fff;
         width: fit-content;
-        font-size: 1.5em;
+        font-size: 1.2em;
     }
 
     .f-info{
