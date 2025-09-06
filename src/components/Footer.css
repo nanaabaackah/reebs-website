@@ -305,6 +305,8 @@ footer span{
         color: #fff;
         padding: .5em;
         gap: 1em;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .f-social-icons a svg{
