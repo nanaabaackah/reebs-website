@@ -1219,6 +1219,7 @@ h3{
   gap: 1em;
   width: 100%;
   min-height: 100vh;
+  height: auto;
   padding: 2em;
   z-index: 0;
 }
@@ -1362,13 +1363,14 @@ h3{
   width: 290px;
   height: fit-content;
   object-fit: cover;
-  background-color: none;
+  background-color: transparent;
 }
 
 
 @media screen and (max-width: 599px) {
   #r4-rent-grid {
-  padding: 0 2em;
+    padding: 0 2em;
+    background-color: #242424;
   }
 
   #r4-rent-grid h2{
@@ -1413,9 +1415,9 @@ h3{
   .rent-image img{
     margin-top: -3.6em;
     width: 150px;
-    height: fit-content;
-    object-fit: cover;
-    background-color: none;
+    height: 150px;
+    object-fit: contain;
+    background-color: transparent;
   }
 
   .rent-details a{
