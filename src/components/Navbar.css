@@ -356,13 +356,11 @@ html, body {
         color: white;
         border-radius: 5px;
         border-bottom: none;
-        transition: 0.5s;
     }
 
     .menu li a:focus{
         color: var(--light);
         background-color: none;
-        text-decoration: underline;
     }
     
     .navbar-scrolled-mob {

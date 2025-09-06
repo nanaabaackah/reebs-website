@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './master.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faEnvelope, faHandPointUp, faPhone } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
 import PopupModal from '/src/components/PopupModal';
 import TypingEffect from '/src/components/TypingEffect';
 import CookieBanner from '/src/components/CookieBanner';
@@ -219,7 +219,6 @@ function Home() {
                         alt="cloud overflow"
                         className="absolute bottom-[-50px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
                     />
-                    <a href="#r1-intro" className='scroll-up'><FontAwesomeIcon icon={faHandPointUp} /></a>
                 </section>
             </main>
         </div>
