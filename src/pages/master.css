@@ -1219,7 +1219,6 @@ h3{
   gap: 1em;
   width: 100%;
   min-height: 100vh;
-  height: auto;
   padding: 2em;
   z-index: 0;
 }
@@ -1305,57 +1304,6 @@ h3{
     color: #555;
     font-size: 12px;
     transition: color 0.3s;
-  }
-
-  #r4-rent-grid{
-  padding: 0 5em;
-  }
-
-  .rent-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 2rem;
-    padding: 2em;
-    z-index: 70;
-  }
-
-  .rent-card {
-    z-index: 70;
-    background-color: #f0efef;
-    box-shadow: rgba(0, 0, 0, 0.15) 0px 5px 15px 0px;
-    width: fit-content;
-    display: flex;
-    height: 100px;
-    border-radius: 15px;
-  }
-
-  .rent-details {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    width: 200px;
-  }
-
-  .rent-details h3{
-    font-family: "Sue Ellen Francisco", cursive;
-    font-weight: 900;
-    margin: 0em;
-  }
-
-  .rent-details h4{
-    font-style: italic;
-    font-size: 0.7em;
-    color: #929292;
-    margin: 0em;
-  }
-
-  .rent-image img{
-    margin-top: -5.6em;
-    width: 120px;
-    height: 200px;
-    object-fit: contain;
-    background-color: none;
   }
 
 }
