@@ -134,6 +134,7 @@ html, body {
     padding: 3em 3em 2em ;
     border-bottom: rgb(92, 92, 92) 2px solid;
     font-family: "Syncopate", sans-serif;
+    width: 100%;
 }
 
 #links, 
@@ -313,6 +314,7 @@ footer span{
         position: relative;
         text-align: center;
         color: #fff;
+        fill: #fff;
         width: fit-content;
         font-size: 1.5em;
     }
@@ -323,7 +325,9 @@ footer span{
         justify-content: space-between;
         align-items: center;
         gap: 2em;
-        padding: 3em;
+        padding: 1.5em;
+        width: 100%;
+        box-sizing: border-box;
         border-bottom: rgb(92, 92, 92) 2px solid;
         font-family: "Syncopate", sans-serif;
     }
@@ -378,44 +382,6 @@ footer span{
     transform: translateY(-50%);
     color: var(--black);
 }
-
-.gototop {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 999;
-        opacity: 0;
-        visibility: hidden;
-        -webkit-transition: 0.5s;
-        -o-transition: 0.5s;
-        transition: 0.5s;
-      }
-      .gototop.active {
-        opacity: 1;
-        visibility: visible;
-      }
-      .gototop a {
-        width: 50px;
-        height: 50px;
-        display: table;
-        background: rgba(0, 0, 0, 0.8);
-        color: var(--back);
-        text-align: center;
-        -webkit-border-radius: 50%;
-        -moz-border-radius: 50%;
-        -ms-border-radius: 50%;
-        border-radius: 50%;
-      }
-      .gototop a i {
-        height: 50px;
-        display: table-cell;
-        vertical-align: middle;
-      }
-      .gototop a:hover, .gototop a:active, .gototop a:focus {
-        text-decoration: none;
-        outline: none;
-        color: var(--back);
-      }
 
     footer span{
         display: block;
