@@ -35,7 +35,7 @@ html, body {
     align-items: center;
     width:100%;
     bottom: 0;
-    padding:5em 1em;
+    padding:5em 3em;
     padding-bottom: 0em;
     background-color: var(--black);
     min-height:200px;
@@ -129,9 +129,9 @@ html, body {
 .f-info{
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
-    gap: 10em;
-    padding: 3em 3em 2em ;
+    justify-content: center;
+    gap:10em;
+    padding: 3em 1em;
     border-bottom: rgb(92, 92, 92) 2px solid;
     font-family: "Syncopate", sans-serif;
     width: 100%;

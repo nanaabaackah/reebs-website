@@ -7,6 +7,7 @@
     --other: #f9f546;
     --black: #242424;
     --back: #f1620b;
+    --darkback: #763207;
     --back2: #0e8660;
     --back3: #ec490f;
     
@@ -205,11 +206,11 @@ h3{
   gap: 10em;
 }
 
-.r1-back-buttons button{
-  background-color: var(--back);
+.r1-back-buttons a{
+  background-color: var(--darkback);
   padding: .3em 3em;
   border-radius: 15px;
-  border: 2px var(--back3) solid;
+  border: 2px var(--darkback) solid;
   color: white;
   font-size: 1.2em;
   font-family: "Vibes", system-ui;
@@ -218,9 +219,10 @@ h3{
   font-weight: 900;
   cursor: pointer;
   box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+  text-decoration: none;
 }
 
-.r1-back-buttons button:hover{
+.r1-back-buttons a:hover{
   background-color: transparent;
   color: var(--black);
   transition: 0.3s;
@@ -297,7 +299,7 @@ h3{
     gap: 2em;
   }
 
-  .r1-back-buttons button{
+  .r1-back-buttons a{
     background-color: var(--black);
     padding: .3em 3em;
     border-radius: 15px;
@@ -608,6 +610,7 @@ h3{
 }
 
 #r1-cta, 
+#r1-cta-b, 
 #r2-cta,
 #r3-cta,
 #r4-cta,
@@ -666,7 +669,8 @@ h3{
 
 @media screen and (max-width: 599px){
 
-  #r1-cta, 
+  #r1-cta,
+  #r1-cta-b, 
   #r2-cta,
   #r3-cta,
   #r4-cta,

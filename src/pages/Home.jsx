@@ -22,13 +22,15 @@ function Home() {
                     <div className="r1 back-heading">
                         <h1>REEBS <br/> Party Themes</h1>
                         <h2 >
-                            <TypingEffect text="We promise less hustle, more fun!" speed={120}/>
+                            <span className="sr-only">We promise less hustle, more fun!</span>
+                            <TypingEffect text="We promise less hustle, more fun!" speed={120} aria-hidden />
                         </h2>
                         <div className='r1-back-buttons'>
-                            <Link to="/rentals"><button>View Rentals</button></Link>
-                            <Link to="/shop"><button>Explore Our Shop</button></Link>
-                            <Link to="/contact"><button>Contact Us</button></Link>
+                            <Link className="btn-primary" to="/rentals">View Rentals</Link>
+                            <Link className="btn-primary" to="/shop">Explore Our Shop</Link>
+                            <Link className="btn-primary" to="/contact">Contact Us</Link>
                         </div>
+
                         <a href="#r1-info" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
                     </div>
                 </section>
@@ -38,7 +40,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/easy.png' 
-                                alt='Easy Icon' 
+                                alt="Easy booking"
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Easy Booking</h3>
@@ -46,7 +48,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/delivery.png' 
-                                alt='Delivery Icon' 
+                                alt="Reliable delivery" 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Reliable Delivery</h3>
@@ -54,7 +56,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/sanitize.png' 
-                                alt='Sanitize Icon' 
+                                alt="Sanitized rentals" 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Sanitized Rentals</h3>
@@ -62,7 +64,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/budget.png' 
-                                alt='Easy Icon' 
+                                alt='Budget Flexibility' 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Budget Flexibility</h3>
@@ -70,7 +72,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/support.png' 
-                                alt='Support Icon' 
+                                alt='Fast Support' 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Fast Support</h3>
@@ -79,8 +81,8 @@ function Home() {
                 </section>
                 <section id="r1-cta" className='cta1'>
                     <div className='cta-heading'>
-                        <h1>Have any Questions?</h1>
-                        <h2>Contact Us Today!</h2>
+                        <h2>Have any Questions?</h2>
+                        <h3>Contact Us Today!</h3>
                     </div>
                     <div className='cta-buttons'>
                         <Link to="tel:+233-244-238-419" className='btn'><FontAwesomeIcon icon={faPhone} /></Link>
@@ -89,7 +91,7 @@ function Home() {
                     </div>
                     <img
                         src="/imgs/confetti2.svg"
-                        alt="cloud overflow"
+                        alt="" aria-hidden="true"
                         className="absolute top-[700px] left-1/2 transform -translate-x-1/2 w-[1200px] z-60 pointer-events-none"
                     />
                 </section>
@@ -102,7 +104,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/bouncer.png' 
-                                            alt='Bouncy Castle Icon' 
+                                            alt='BParty Equipment Rentals' 
                                             className='serv-icon'
                                         />
                                         <p>Party Equipment Rentals</p>
@@ -120,7 +122,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/supplies.png' 
-                                            alt='Party Supplies Icon' 
+                                            alt='Party Supplies & Gifts' 
                                             className='serv-icon'
                                         />
                                         <p>Party Supplies & Gifts</p>
@@ -137,7 +139,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/decor.png' 
-                                            alt='Event Decor Icon' 
+                                            alt='Custom Event Decor' 
                                             className='serv-icon'
                                         />
                                         <p>Custom Event Decor</p>
@@ -154,7 +156,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/setup.png' 
-                                            alt='Equipment Icon' 
+                                            alt='EAll-in-One Party Packages' 
                                             className='serv-icon'
                                         />
                                         <p>All-in-One Party Packages</p>
@@ -171,7 +173,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/icons/vendor.png' 
-                                            alt='Network Icon' 
+                                            alt='Extended Vendor Network' 
                                             className='serv-icon'
                                         />
                                         <p>Extended Vendor Network</p>
@@ -188,7 +190,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/setup2.png' 
-                                            alt='Help Icon' 
+                                            alt='Party Planning Help' 
                                             className='serv-icon'
                                         />
                                         <p>Party Planning Help</p>
@@ -201,22 +203,30 @@ function Home() {
                         </div>
                     </div>
                 </section>
-                <section id="r1-cta" className='cta2'>
+                <section id="r1-cta-b" className='cta2'>
                     <div className='cta-heading' >
                         <h1>Need Help Planning Your Kids' Party?</h1>
                         <h2>Contact Us Today!</h2>
                     </div>
                     <div className='cta-buttons'>
-                        <Link to="tel:+233-244-238-419" className='btn'><FontAwesomeIcon icon={faPhone} /></Link>
-                        <Link to="" className='btn'><FontAwesomeIcon icon={faWhatsapp} /></Link>
-                        <Link to="mailto:info@reebspartythemes.com" className='btn'><FontAwesomeIcon icon={faEnvelope} /></Link>
+                        <a href="tel:+233244238419" className='btn' aria-label="Call REEBS Party Themes">
+                            <FontAwesomeIcon icon={faPhone} />
+                        </a>
+                        <a href="https://wa.me/233244238419" target="_blank" rel="noopener noreferrer"
+                            className='btn' aria-label="Chat with us on WhatsApp">
+                            <FontAwesomeIcon icon={faWhatsapp} />
+                        </a>
+                        <a href="mailto:info@reebspartythemes.com" className='btn' aria-label="Email REEBS Party Themes">
+                            <FontAwesomeIcon icon={faEnvelope} />
+                        </a>
                     </div>
+
                 </section>
                 <section id='r1-social' className="relative h-screen overflow-visible">
                     <InstagramFeed />
                     <img
                         src="/imgs/confetti.svg"
-                        alt="cloud overflow"
+                        alt="" aria-hidden="true"
                         className="absolute bottom-[-50px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
                     />
                 </section>
