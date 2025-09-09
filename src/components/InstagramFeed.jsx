@@ -44,7 +44,6 @@ export default function InstagramFeed() {
             {post.media_type === "VIDEO" ? (
               <video
                 src={post.media_url}
-                controls
                 alt={post.caption || "Instagram video"}
               />
             ) : (
