@@ -228,7 +228,7 @@ function Home() {
                     <img
                         src="/imgs/confetti.svg"
                         alt="" aria-hidden="true"
-                        className="absolute bottom-[-50px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
+                        className="absolute bottom-[-270px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
                     />
                 </section>
             </main>

@@ -148,6 +148,10 @@ h3{
   flex-direction: column;
 }
 
+.r1{
+  margin-bottom: 10em;
+}
+
 #r1-intro{
   display: flex;
   position: relative;
@@ -1788,11 +1792,49 @@ button:hover {
   border: 4px solid var(--black);
 }
 
-.post-card p {
-  margin-top: 0.5rem;
+.instagram-caption {
+  padding: 0.75rem;
   font-size: 0.9rem;
+  color: #444;
+  text-align: left;
+}
+
+.instagram-caption p {
+  margin: 0 0 0.5rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instagram-date {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.instagram-footer {
+  margin-top: 5rem;
+  
+}
+
+.instagram-button {
+  background-color: var(--darkback);
+  padding: .8em 2em;
+  border-radius: 10px;
+  border: 2px var(--darkback) solid;
+  color: white;
+  font-size: 1em;
+  text-transform: capitalize;
+  letter-spacing: 1px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+  text-decoration: none;
+}
+
+.instagram-button:hover {
+  background-color: transparent;
   color: var(--black);
-  font-family: Arial, Helvetica, sans-serif;
+  transition: 0.3s;
 }
 
 .social{
