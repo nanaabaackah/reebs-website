@@ -10,7 +10,7 @@
     --back2: #0e8660;
     --back3: #ec490f;
     
-    font-family: "Zeyada", cursive;
+    font-family: "Montserrat Alternates", sans-serif;
     text-transform: none;
 }
 
@@ -133,7 +133,7 @@ html, body {
     gap:10em;
     padding: 3em 1em;
     border-bottom: rgb(92, 92, 92) 2px solid;
-    font-family: "Syncopate", sans-serif;
+    font-family: "Montserrat Alternates", sans-serif;
     width: 100%;
 }
 
@@ -149,7 +149,7 @@ html, body {
     text-decoration: none;
     width: fit-content;
     margin: 0em;
-    font-size: .7em;
+    font-size: .8em;
     margin-bottom: 1em;
     font-weight: 700;
 }

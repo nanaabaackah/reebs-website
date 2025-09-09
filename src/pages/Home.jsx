@@ -13,6 +13,7 @@ import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 function Home() {
     return (
         <>
+            <a href="#main" className="skip-link">Skip to main content</a>
             <CookieBanner />
         <div className="r1">
             {/*<BrushCanvas />*/}
@@ -104,7 +105,7 @@ function Home() {
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/bouncer.png' 
-                                            alt='BParty Equipment Rentals' 
+                                            alt='Party Equipment Rentals' 
                                             className='serv-icon'
                                         />
                                         <p>Party Equipment Rentals</p>
@@ -205,8 +206,8 @@ function Home() {
                 </section>
                 <section id="r1-cta-b" className='cta2'>
                     <div className='cta-heading' >
-                        <h1>Need Help Planning Your Kids' Party?</h1>
-                        <h2>Contact Us Today!</h2>
+                        <h2>Need Help Planning Your Kids' Party?</h2>
+                        <h3>Contact Us Today!</h3>
                     </div>
                     <div className='cta-buttons'>
                         <a href="tel:+233244238419" className='btn' aria-label="Call REEBS Party Themes">

@@ -15,6 +15,11 @@
     text-transform: none;
 }
 
+:focus-visible {
+  outline: 3px solid var(--back2);
+  outline-offset: 3px;
+}
+
 /*********************************************************************************************************************/
 /**************************************            FONT STYLES               *****************************************/
 /*********************************************************************************************************************/
@@ -119,6 +124,22 @@ h3{
   font-size: 1.5em;
 }
 
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: #fff;
+  color: #000;
+  padding: .5rem 1rem;
+  border: 2px solid var(--back2);
+  border-radius: 8px;
+  z-index: 10000;
+}
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
 .back{
   position: relative;
   display: flex;
@@ -208,12 +229,12 @@ h3{
 
 .r1-back-buttons a{
   background-color: var(--darkback);
-  padding: .3em 3em;
-  border-radius: 15px;
+  padding: .8em 3em;
+  border-radius: 10px;
   border: 2px var(--darkback) solid;
   color: white;
-  font-size: 1.2em;
-  font-family: "Vibes", system-ui;
+  font-size: 1em;
+  font-family: "Montserrat", sans-serif;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 900;
@@ -262,12 +283,14 @@ h3{
   }
 
   .info-back-heading{
+    width: 100%;
     font-family: "Sue Ellen Francisco", cursive;
     font-size: 1.5em;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 900;
     text-decoration: underline;
+    text-align: center;
     z-index: 70;
     text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
   }
@@ -295,23 +318,23 @@ h3{
   .r1-back-buttons{
     display: flex;
     flex-direction: column;
-    justify-content: space-evenly;
+    justify-content: center;
     gap: 2em;
+    padding: 8em 2em 1em;
   }
 
   .r1-back-buttons a{
     background-color: var(--black);
-    padding: .3em 3em;
-    border-radius: 15px;
+    padding: .5em 3em;
+    border-radius: 10px;
     border: 2px var(--black) solid;
     color: white;
-    font-size: 1em;
-    font-family: "Vibes", system-ui;
+    font-size: .8em;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 900;
     cursor: pointer;
-    width: 65%;
+    width: 70%;
     box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
   }
 }
@@ -406,7 +429,7 @@ h3{
     align-items: center;
     text-align: center;
     background-color: none;
-    width: 100vw;
+    width: 100%;
     height: fit-content;
     padding: 0em;
     margin-top: 4em;
@@ -528,13 +551,14 @@ h3{
 }
 
 @media screen and (max-width: 599px) {
-  #r1-info .r1-back-card{
+  
+  #r1-services .r1-back-card{
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
     gap: 1em; 
-    padding: 4em;
+    padding: 2em 5em;
     z-index: 65;
-  }
+}
 
   .service {
     position: relative;
@@ -631,7 +655,7 @@ h3{
 }
 
 .cta1{
-  background-image: url("/imgs/background35.svg");
+  background-image: url("/imgs/29.png");
 }
 
 .cta2{
@@ -643,12 +667,14 @@ h3{
   font-family: "Sue Ellen Francisco", cursive;
 }
 
-.cta-heading h1{
+.cta-heading h2{
+  font-family: "Sue Ellen Francisco", cursive;
   font-size: 2.5em;
   text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
 }
 
-.cta-heading h2{
+.cta-heading h3{
+  font-family: "Sue Ellen Francisco", cursive;
   font-size: 2em;
   text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
 }
@@ -691,15 +717,17 @@ h3{
   }
   .cta-heading{
     text-align: center;
-    font-family: "Sue Ellen Francisco", cursive;
+    
   }
 
-  .cta-heading h1{
+  .cta-heading h2{
+    font-family: "Sue Ellen Francisco", cursive;
     font-size: 2em;
     text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
   }
 
-  .cta-heading h2{
+  .cta-heading h3{
+    font-family: "Sue Ellen Francisco", cursive;
     font-size: 1.5em;
     text-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
   }
