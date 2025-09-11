@@ -78,7 +78,9 @@ function Home() {
                             />
                             <h3 className="name-mid">Fast Support</h3>
                         </div>
+                        
                     </div>
+                    <a href="#r1-services" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
                 </section>
                 <section id="r1-cta" className='cta1'>
                     <div className='cta-heading'>
@@ -203,6 +205,7 @@ function Home() {
                             </div>
                         </div>
                     </div>
+                    <a href="#r1-social" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
                 </section>
                 <section id="r1-cta-b" className='cta2'>
                     <div className='cta-heading' >
