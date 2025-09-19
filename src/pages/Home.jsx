@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './master.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faChevronUp, faEnvelope, faPhone } from '@fortawesome/free-solid-svg-icons';
 import PopupModal from '/src/components/PopupModal';
 import TypingEffect from '/src/components/TypingEffect';
 import CookieBanner from '/src/components/CookieBanner';
@@ -18,30 +18,30 @@ function Home() {
         <div className="r1">
             {/*<BrushCanvas />*/}
             <PopupModal />
-            <main className="r1 back">
-                <section id='r1-intro'>
-                    <div className="r1 back-heading">
+            <main className="r1 back" role="main">
+                <section id="r1-intro" aria-labelledby="home-hero-heading">
+                    <div className="r1 back-heading" >
                         <h1>REEBS <br/> Party Themes</h1>
                         <h2 >
                             <span className="sr-only">We promise less hustle, more fun!</span>
                             <TypingEffect text="We promise less hustle, more fun!" speed={120} aria-hidden />
                         </h2>
-                        <div className='r1-back-buttons'>
+                        <div className='r1-back-buttons' aria-label="heading-buttons">
                             <Link className="btn-primary" to="/rentals">View Rentals</Link>
                             <Link className="btn-primary" to="/shop">Explore Our Shop</Link>
                             <Link className="btn-primary" to="/contact">Contact Us</Link>
                         </div>
 
-                        <a href="#r1-info" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
+                        <a href="#r1-info" className='scroll-down' aria-label="Scroll to Why Choose Us"><FontAwesomeIcon icon={faChevronDown} /></a>
                     </div>
                 </section>
-                <section id='r1-info'>
+                <section id='r1-info' aria-labelledby="why-heading">
                     <h2 className='info-back-heading'>Why Choose Us?</h2>
                     <div className='r1-col-why'>
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/easy.png' 
-                                alt="Easy booking"
+                                alt="" role="presentation"
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Easy Booking</h3>
@@ -49,7 +49,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/delivery.png' 
-                                alt="Reliable delivery" 
+                                alt="" role="presentation" 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Reliable Delivery</h3>
@@ -57,7 +57,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/sanitize.png' 
-                                alt="Sanitized rentals" 
+                                alt="" role="presentation"
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Sanitized Rentals</h3>
@@ -65,7 +65,7 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/budget.png' 
-                                alt='Budget Flexibility' 
+                                alt="" role="presentation" 
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Budget Flexibility</h3>
@@ -73,24 +73,31 @@ function Home() {
                         <div className='col-reason'>
                             <img 
                                 src='/imgs/icons/support.png' 
-                                alt='Fast Support' 
+                                alt="" role="presentation"
                                 className='col-reason-icon'
                             />
                             <h3 className="name-mid">Fast Support</h3>
                         </div>
                         
                     </div>
-                    <a href="#r1-services" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
+                    <a href="#r1-services" className='scroll-down' aria-label="Scroll to services"><FontAwesomeIcon icon={faChevronDown} /></a>
                 </section>
-                <section id="r1-cta" className='cta1'>
+                <section id="r1-cta" className='cta1' aria-labelledby="cta1-heading">
                     <div className='cta-heading'>
                         <h2>Have any Questions?</h2>
                         <h3>Contact Us Today!</h3>
                     </div>
                     <div className='cta-buttons'>
-                        <Link to="tel:+233-244-238-419" className='btn'><FontAwesomeIcon icon={faPhone} /></Link>
-                        <Link to="" className='btn'><FontAwesomeIcon icon={faWhatsapp} /></Link>
-                        <Link to="mailto:info@reebspartythemes.com" className='btn'><FontAwesomeIcon icon={faEnvelope} /></Link>
+                        <a href="tel:+233244238419" className='btn' aria-label="Call REEBS Party Themes">
+                            <FontAwesomeIcon icon={faPhone} />
+                        </a>
+                        <a href="https://wa.me/233244238419" target="_blank" rel="noopener noreferrer"
+                            className='btn' aria-label="Chat with us on WhatsApp">
+                            <FontAwesomeIcon icon={faWhatsapp} />
+                        </a>
+                        <a href="mailto:info@reebspartythemes.com" className='btn' aria-label="Email REEBS Party Themes">
+                            <FontAwesomeIcon icon={faEnvelope} />
+                        </a>
                     </div>
                     <img
                         src="/imgs/confetti2.svg"
@@ -98,16 +105,16 @@ function Home() {
                         className="absolute top-[700px] left-1/2 transform -translate-x-1/2 w-[1200px] z-60 pointer-events-none"
                     />
                 </section>
-                <section id='r1-services' className="relative overflow-visible">
+                <section id='r1-services' className="relative overflow-visible" aria-labelledby="services-heading">
                     <h2 className='info-back-heading'>Our Services</h2>
                     <div className='r1-back-card'>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/rentals">
                                 <div className='service' >
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/bouncer.png' 
-                                            alt='Party Equipment Rentals' 
+                                            alt="" role="presentation"
                                             className='serv-icon'
                                         />
                                         <p>Party Equipment Rentals</p>
@@ -120,12 +127,12 @@ function Home() {
                             </div>
                         </div>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/shop">
                                 <div className='service' >
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/supplies.png' 
-                                            alt='Party Supplies & Gifts' 
+                                            alt="" role="presentation" 
                                             className='serv-icon'
                                         />
                                         <p>Party Supplies & Gifts</p>
@@ -137,12 +144,12 @@ function Home() {
                             </div>
                         </div>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/shop">
                                 <div className='service'>
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/decor.png' 
-                                            alt='Custom Event Decor' 
+                                            alt="" role="presentation" 
                                             className='serv-icon'
                                         />
                                         <p>Custom Event Decor</p>
@@ -154,12 +161,12 @@ function Home() {
                             </div>
                         </div>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/rentals">
                                 <div className='service'>
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/setup.png' 
-                                            alt='EAll-in-One Party Packages' 
+                                            alt="" role="presentation"
                                             className='serv-icon'
                                         />
                                         <p>All-in-One Party Packages</p>
@@ -171,12 +178,12 @@ function Home() {
                             </div>
                         </div>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/rentals">
                                 <div className='service'>
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/icons/vendor.png' 
-                                            alt='Extended Vendor Network' 
+                                            alt="" role="presentation" 
                                             className='serv-icon'
                                         />
                                         <p>Extended Vendor Network</p>
@@ -188,12 +195,12 @@ function Home() {
                             </div>
                         </div>
                         <div className='serv'>
-                            <Link to="">
+                            <Link to="/contact">
                                 <div className='service'>
                                     <div className='desc' >
                                         <img 
                                             src='/imgs/setup2.png' 
-                                            alt='Party Planning Help' 
+                                            alt="" role="presentation"
                                             className='serv-icon'
                                         />
                                         <p>Party Planning Help</p>
@@ -205,7 +212,7 @@ function Home() {
                             </div>
                         </div>
                     </div>
-                    <a href="#r1-social" className='scroll-down'><FontAwesomeIcon icon={faChevronDown} /></a>
+                    <a href="#r1-social" className='scroll-down' aria-label="Scroll to Social"><FontAwesomeIcon icon={faChevronDown} /></a>
                 </section>
                 <section id="r1-cta-b" className='cta2'>
                     <div className='cta-heading' >
@@ -228,11 +235,13 @@ function Home() {
                 </section>
                 <section id='r1-social' className="relative h-screen overflow-visible">
                     <InstagramFeed />
+                    
                     <img
                         src="/imgs/confetti.svg"
                         alt="" aria-hidden="true"
                         className="absolute bottom-[-270px] left-2/5 transform -translate-x-1/2 w-[1300px] z-60 pointer-events-none"
                     />
+                    <a href="#r1-intro" className='scroll-up' aria-label="Scroll to Top"><FontAwesomeIcon icon={faChevronUp} /></a>
                 </section>
             </main>
         </div>

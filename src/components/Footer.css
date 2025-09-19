@@ -6,7 +6,7 @@
     --border: #3e4577;
     --other: #f9f546;
     --black: #242424;
-    --back: #f1620b;
+    --back: #763207;
     --back2: #0e8660;
     --back3: #ec490f;
     
@@ -86,9 +86,9 @@ html, body {
     
 .f-menu li a:hover,
 .f-menu button a:hover{
-    color: var(--back);
+    color: white;
     transition: 0.2s;
-    border-bottom: var(--back) 2px solid;
+    border-bottom: white 2px solid;
 }
 
 .f-menu li a:focus,
@@ -122,7 +122,7 @@ html, body {
     
 .f-social-icons a:hover svg{ 
     background:none;
-    color: var(--back);
+    color: var(--back3);
     transition: 0.3s;
 }
 
@@ -160,7 +160,7 @@ html, body {
 #links a:hover,
 #contact a:hover
 {
-    color: var(--back);
+    color: var(--back3);
     transition: 0.3s;
     text-decoration: underline;
 }
@@ -359,7 +359,7 @@ footer span{
 #links a:hover,
 #contact a:hover
 {
-    color: var(--back);
+    color: var(--back3);
     transition: 0.3s;
     text-decoration: underline;
 }

@@ -20,7 +20,6 @@ function AppLayout() {
     <>
     
     <Navbar />
-      <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -31,7 +30,6 @@ function AppLayout() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/Contact" element={<Contact />} />
         </Routes>
-      </main>
       <Footer />
     </>
   );

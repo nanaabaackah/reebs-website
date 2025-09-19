@@ -10,8 +10,8 @@ function About() {
         <>
             <CookieBanner />
             <div className='r2'>
-                <main className="r2 back">
-                    <section id='r2-intro'>
+                <main className="r2 back" role="main">
+                    <section id="r2-intro" aria-labelledby="about-heading">
                         <div className="r2 back-heading">
                             <h1>About us</h1>
                             <p>
@@ -22,29 +22,40 @@ function About() {
                             </p>
                         </div>
                         <div className='r2-back-image'>
-                            <img src='/imgs/r4_b.png'/>
+                            <img 
+                                alt="" 
+                                aria-hidden="true" 
+                                src='/imgs/r4_b.png'
+                            />
                         </div>
                         <img
                             src="/imgs/bees2.svg"
-                            alt="cloud overflow"
+                            alt="" 
+                            aria-hidden="true" 
                             className="absolute bottom-[-400px] left-1/2 transform -translate-x-1/2 w-100px] z-60 pointer-events-none"
                         />
                     </section>
                     <section id='r2-mto' className="relative overflow-visible" >
                         <div className='r2-back-image'>
-                            <img src='/imgs/owner.png'/>
+                            <figure>
+                                <img 
+                                src="/imgs/owner.png" 
+                                alt="Portrait of Sabina Ackah, founder of REEBS Party Themes" 
+                                />
+                                <figcaption className="sr-only">Sabina Ackah, founder of REEBS Party Themes</figcaption>
+                            </figure>
                         </div>
                         <div className='r2-mto-back-heading'>
                             <h2>Meet the Owner</h2>
                             <p>
                             Our founder, <strong>Sabina Ackah</strong>, brings a wealth of creativity and 
                             organizational expertise to every project. With an eye for design and a deep 
-                            passion for event planning, they ensure that each client’s vision is met with 
+                            passion for event planning, she ensures that each client’s vision is met with 
                             precision and flair.
                             </p>
                         </div>
                     </section>
-                    <section id='r2-story' className="relative overflow-visible">
+                    <section id="r2-story" className="relative overflow-visible" aria-labelledby="story-heading">
                         <div className="r2 back-heading">
                             <h2>Our Story</h2>
                         </div>
@@ -57,7 +68,8 @@ function About() {
                         </p>
                         <img
                             src="/imgs/bees.svg"
-                            alt="bees overflow"
+                            alt=""
+                            aria-hidden="true"
                             className="absolute bottom-[-480px] left-2/5 transform -translate-x-1/2 w-[1800px] z-60 pointer-events-none"
                         />
                     </section>
@@ -65,7 +77,8 @@ function About() {
                         <InstagramFeed />
                         <img
                             src="/imgs/bees2.svg"
-                            alt="cloud overflow"
+                            alt=""
+                            aria-hidden="true"
                             className="absolute bottom-[-150px] left-1/2 transform -translate-x-1/2 w-[1500px] z-60 pointer-events-none"
                         />
                     </section>

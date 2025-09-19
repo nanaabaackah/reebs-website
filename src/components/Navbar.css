@@ -100,14 +100,14 @@ html, body {
 .menu li a:hover,
 .menu button a:hover{
     background-color: none;
-    color: var(--black);
-    border-bottom: var(--black) 4px solid;
+    color: var(--back3);
+    border-bottom: var(--back3) 4px solid;
     transition: 0.2s;
     padding: .5em;
 }
 
 .nav-buttons svg:hover{
-    background-color: var(--black);
+    background-color: var(--back3);
     color: white;
     border-radius: 5px;
     border-bottom: none;
