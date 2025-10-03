@@ -49,9 +49,9 @@
         - heading "REEBS Party Themes" [level=1] [ref=e43]:
           - text: REEBS
           - text: Party Themes
-        - heading "We promise less hustle, more fun! We promise le" [level=2] [ref=e44]:
+        - heading "We promise less hustle, more fun! We promise" [level=2] [ref=e44]:
           - generic [ref=e45]: We promise less hustle, more fun!
-          - heading "We promise le" [level=2] [ref=e46]
+          - heading "We promise" [level=2] [ref=e46]
         - generic "heading-buttons" [ref=e47]:
           - link "View Rentals" [ref=e48] [cursor=pointer]:
             - /url: /rentals

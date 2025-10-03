@@ -25,7 +25,7 @@ html, body {
     justify-content: center;
     width: 100vw;
     position: fixed;
-    z-index: 2;
+    z-index: 90;
     text-transform: uppercase;
     transition: 0.8s;
     font-family: "Syncopate", sans-serif;
@@ -67,9 +67,11 @@ html, body {
     padding: 0 3em;
 }
 
-.menu button{
+.menu button,
+.nav-buttons button{
     all:unset;
 }
+
 .menu li, .menu button, .nav-buttons svg{
     margin: 1em;
     text-align: center;
@@ -88,7 +90,7 @@ html, body {
 .nav-buttons svg:visited {
     text-decoration: none;
     display: inline;
-    padding: .5em;
+    padding: 1em;
     color: var(--black);
     position: relative;
 }
@@ -103,7 +105,7 @@ html, body {
     color: var(--back3);
     border-bottom: var(--back3) 4px solid;
     transition: 0.2s;
-    padding: .5em;
+    padding: 1em;
 }
 
 .nav-buttons svg:hover{
@@ -112,6 +114,11 @@ html, body {
     border-radius: 5px;
     border-bottom: none;
     transition: 0.5s;
+}
+
+.nav-buttons button:hover{
+    background-color: transparent;
+    cursor: pointer;
 }
 
 .menu li a:focus{
@@ -199,6 +206,11 @@ html, body {
     background-color: none;
 }
 
+.navbar-scrolled .nav-buttons button{
+    all: unset;
+    cursor: pointer;
+}
+
 .navbar-scrolled li a,
 .navbar-scrolled li a:visited, 
 .navbar-scrolled button a,
@@ -207,7 +219,7 @@ html, body {
 .navbar-scrolled .nav-buttons svg:visited {
     text-decoration: none;
     display: inline;
-    padding: .5em;
+    padding: .7em;
     color: white;
     font-weight: 900;
     position: relative;
@@ -216,6 +228,7 @@ html, body {
 .navbar-scrolled li a:hover,
 .navbar-scrolled button a:hover{
     background-color: none;
+    padding: .7em;
     color: var(--light);
     border-bottom: var(--light) 3px solid;
     transition: 0.2s;

@@ -1,0 +1,105 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner:
+    - navigation [ref=e4]:
+      - link "REEBS Logo" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e7] [cursor=pointer]
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link [ref=e11] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12] [cursor=pointer]
+        - listitem [ref=e14]:
+          - link "About" [ref=e15] [cursor=pointer]:
+            - /url: /About
+        - listitem [ref=e16]:
+          - link "Shop" [ref=e17] [cursor=pointer]:
+            - /url: /Shop
+        - button "Rentals" [ref=e19]:
+          - link "Rentals" [ref=e20] [cursor=pointer]:
+            - /url: /Rentals
+          - img [ref=e21]
+        - listitem [ref=e23]:
+          - link "Contact" [ref=e24] [cursor=pointer]:
+            - /url: /Contact
+      - generic [ref=e25]:
+        - link [ref=e26] [cursor=pointer]:
+          - /url: /Book
+          - img [ref=e27] [cursor=pointer]
+        - link [ref=e29] [cursor=pointer]:
+          - /url: /Cart
+          - img [ref=e30] [cursor=pointer]
+    - navigation
+  - paragraph [ref=e32]: Loading shop...
+  - contentinfo [ref=e33]:
+    - link "REEBS Logo" [ref=e34] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e35] [cursor=pointer]
+    - search [ref=e36]:
+      - img [ref=e37]
+      - searchbox "Search site" [ref=e39]
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - link "Contact & Shop Info" [ref=e42] [cursor=pointer]:
+          - /url: /
+        - link "Refund Policy" [ref=e43] [cursor=pointer]:
+          - /url: /
+        - link "Shipping Policy" [ref=e44] [cursor=pointer]:
+          - /url: /
+        - link "Privacy Policy" [ref=e45] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Terms of Service" [ref=e46] [cursor=pointer]:
+          - /url: /
+      - generic [ref=e47]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e48] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e49] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e51] [cursor=pointer]:
+          - /url: /
+          - img [ref=e52] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e54]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e55]: Holiday Hours may vary
+      - generic [ref=e56]:
+        - link [ref=e57] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e58] [cursor=pointer]
+        - link [ref=e60] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e61] [cursor=pointer]
+        - link [ref=e63] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e64] [cursor=pointer]
+        - link [ref=e66] [cursor=pointer]:
+          - /url: /
+          - img [ref=e67] [cursor=pointer]
+        - link [ref=e69] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e70] [cursor=pointer]
+    - navigation [ref=e73]:
+      - list [ref=e75]:
+        - listitem [ref=e76]:
+          - link "About" [ref=e77] [cursor=pointer]:
+            - /url: /about
+        - listitem [ref=e78]:
+          - link "Shop" [ref=e79] [cursor=pointer]:
+            - /url: /shop
+        - listitem [ref=e80]:
+          - link "Rentals" [ref=e81] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e82]:
+          - link "Gallery" [ref=e83] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e84]:
+          - link "FAQ" [ref=e85] [cursor=pointer]:
+            - /url: /faq
+        - listitem [ref=e86]:
+          - link "Contact" [ref=e87] [cursor=pointer]:
+            - /url: /contact
+    - generic [ref=e88]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+```

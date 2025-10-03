@@ -3,10 +3,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarDays, faCaretDown, faHome, faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 import './Navbar.css'; 
+import { useCart } from "./CartContext";
 
-const Navbar = () => {
+const Navbar = ({ onCartToggle }) => {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const { cart } = useCart();
+
+  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,17 +37,24 @@ const Navbar = () => {
             <div className='drop'>
               <button className='dropbtn'><Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link><FontAwesomeIcon icon={faCaretDown} /></button>
               <div className='dropdown-content'>
-                <Link to="">Kid's Party Equipment</Link>
-                <Link to="">Party Setup Rentals</Link>
-                <Link to="">Event Decor</Link>
+                <Link to="/Rentals#Kid's%20Party%20Rentals">Kid's Party Equipment</Link>
+                <Link to="/Rentals#Party%20Setup%20Rentals">Party Setup Rentals</Link>
+                <Link to="/Rentals#Event%20Decor%20&%20Setup">Event Decor</Link>
               </div>
             </div>
             <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
           </ul>
         </div>
         <div className='nav-buttons'>
-            <Link to="/Book" className={isActive('/Book') ? 'active' : ''}><FontAwesomeIcon icon={ faCalendarDays } /></Link>
-            <Link to="/Cart" className={isActive('/Cart') ? 'active' : ''}><FontAwesomeIcon icon={ faShoppingCart } /></Link>
+          <Link to="/Book" className={isActive('/Book') ? 'active' : ''}>
+            <FontAwesomeIcon icon={faCalendarDays} />
+          </Link>
+          <button className="cart-button" onClick={onCartToggle}>
+            <span className="cart-icon-wrapper">
+              <FontAwesomeIcon icon={faShoppingCart} />
+              {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
+            </span>
+          </button>
         </div>
       </nav>
       <nav className={`navbar ${scrolled ? 'navbar-scrolled-mob' : 'navbar-default'}`}>

@@ -1,0 +1,185 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner:
+    - navigation [ref=e4]:
+      - link "REEBS Logo" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e7] [cursor=pointer]
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link [ref=e11] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12] [cursor=pointer]
+        - listitem [ref=e14]:
+          - link "About" [ref=e15] [cursor=pointer]:
+            - /url: /About
+        - listitem [ref=e16]:
+          - link "Shop" [ref=e17] [cursor=pointer]:
+            - /url: /Shop
+        - button "Rentals" [ref=e19]:
+          - link "Rentals" [ref=e20] [cursor=pointer]:
+            - /url: /Rentals
+          - img [ref=e21]
+        - listitem [ref=e23]:
+          - link "Contact" [ref=e24] [cursor=pointer]:
+            - /url: /Contact
+      - generic [ref=e25]:
+        - link [ref=e26] [cursor=pointer]:
+          - /url: /Book
+          - img [ref=e27] [cursor=pointer]
+        - link [ref=e29] [cursor=pointer]:
+          - /url: /Cart
+          - img [ref=e30] [cursor=pointer]
+    - navigation
+  - main [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - heading "Shop" [level=1] [ref=e36]
+        - paragraph [ref=e37]: Party supplies, toys, and decorations available for purchase.
+      - img "wave overflow"
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - textbox "Search items..." [ref=e41]
+        - combobox [ref=e42]:
+          - option "All Categories" [selected]
+          - option "Kid's Toys"
+          - option "Party Supplies"
+          - option "Household Supplies"
+        - combobox [ref=e43]:
+          - option "GHS"
+          - option "USD" [selected]
+          - option "CAD"
+          - option "GBP"
+          - option "EUR"
+          - option "NGN"
+      - navigation [ref=e44]:
+        - link "Home" [ref=e45] [cursor=pointer]:
+          - /url: /
+        - img [ref=e46]
+        - generic [ref=e48] [cursor=pointer]: Shop
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - img "vtech Spin & Learn Color Flashlight" [ref=e52] [cursor=pointer]
+          - generic [ref=e53]:
+            - heading "Kid's Toys" [level=4] [ref=e54]
+            - heading "vtech Spin & Learn Color Flashlight" [level=3] [ref=e55]
+            - paragraph [ref=e56]: $22.21
+            - button "Add to Cart" [ref=e57] [cursor=pointer]:
+              - img [ref=e58] [cursor=pointer]
+              - text: Add to Cart
+        - generic [ref=e60]:
+          - img "Number Foil Balloon" [ref=e62] [cursor=pointer]
+          - generic [ref=e63]:
+            - heading "Party Supplies" [level=4] [ref=e64]
+            - heading "Number Foil Balloon" [level=3] [ref=e65]
+            - paragraph [ref=e66]: $3.97
+            - button "Add to Cart" [ref=e67] [cursor=pointer]:
+              - img [ref=e68] [cursor=pointer]
+              - text: Add to Cart
+        - generic [ref=e70]:
+          - img "Johnson's® Baby Cotton Buds" [ref=e72] [cursor=pointer]
+          - generic [ref=e73]:
+            - heading "Household Supplies" [level=4] [ref=e74]
+            - heading "Johnson's® Baby Cotton Buds" [level=3] [ref=e75]
+            - paragraph [ref=e76]: $3.97
+            - button "Add to Cart" [ref=e77] [cursor=pointer]:
+              - img [ref=e78] [cursor=pointer]
+              - text: Add to Cart
+        - generic [ref=e80]:
+          - img "Montoy Slime Bave (100g)" [ref=e82] [cursor=pointer]
+          - generic [ref=e83]:
+            - heading "Kid's Toys" [level=4] [ref=e84]
+            - heading "Montoy Slime Bave (100g)" [level=3] [ref=e85]
+            - paragraph [ref=e86]: $11.90
+            - button "Add to Cart" [ref=e87] [cursor=pointer]:
+              - img [ref=e88] [cursor=pointer]
+              - text: Add to Cart
+        - generic [ref=e90]:
+          - img "Shredded Tissue Paper" [ref=e92] [cursor=pointer]
+          - generic [ref=e93]:
+            - heading "Party Supplies" [level=4] [ref=e94]
+            - heading "Shredded Tissue Paper" [level=3] [ref=e95]
+            - paragraph [ref=e96]: $2.38
+            - button "Add to Cart" [ref=e97] [cursor=pointer]:
+              - img [ref=e98] [cursor=pointer]
+              - text: Add to Cart
+        - generic [ref=e100]:
+          - img "Lexibook Premium Stereo Headphones" [ref=e102] [cursor=pointer]
+          - generic [ref=e103]:
+            - heading "Kid's Toys" [level=4] [ref=e104]
+            - heading "Lexibook Premium Stereo Headphones" [level=3] [ref=e105]
+            - paragraph [ref=e106]: $23.79
+            - button "Add to Cart" [ref=e107] [cursor=pointer]:
+              - img [ref=e108] [cursor=pointer]
+              - text: Add to Cart
+  - contentinfo [ref=e110]:
+    - link "REEBS Logo" [ref=e111] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e112] [cursor=pointer]
+    - search [ref=e113]:
+      - img [ref=e114]
+      - searchbox "Search site" [ref=e116]
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - link "Contact & Shop Info" [ref=e119] [cursor=pointer]:
+          - /url: /
+        - link "Refund Policy" [ref=e120] [cursor=pointer]:
+          - /url: /
+        - link "Shipping Policy" [ref=e121] [cursor=pointer]:
+          - /url: /
+        - link "Privacy Policy" [ref=e122] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "Terms of Service" [ref=e123] [cursor=pointer]:
+          - /url: /
+      - generic [ref=e124]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e125] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e126] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e128] [cursor=pointer]:
+          - /url: /
+          - img [ref=e129] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e131]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e132]: Holiday Hours may vary
+      - generic [ref=e133]:
+        - link [ref=e134] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e135] [cursor=pointer]
+        - link [ref=e137] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e138] [cursor=pointer]
+        - link [ref=e140] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e141] [cursor=pointer]
+        - link [ref=e143] [cursor=pointer]:
+          - /url: /
+          - img [ref=e144] [cursor=pointer]
+        - link [ref=e146] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e147] [cursor=pointer]
+    - navigation [ref=e150]:
+      - list [ref=e152]:
+        - listitem [ref=e153]:
+          - link "About" [ref=e154] [cursor=pointer]:
+            - /url: /about
+        - listitem [ref=e155]:
+          - link "Shop" [ref=e156] [cursor=pointer]:
+            - /url: /shop
+        - listitem [ref=e157]:
+          - link "Rentals" [ref=e158] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e159]:
+          - link "Gallery" [ref=e160] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e161]:
+          - link "FAQ" [ref=e162] [cursor=pointer]:
+            - /url: /faq
+        - listitem [ref=e163]:
+          - link "Contact" [ref=e164] [cursor=pointer]:
+            - /url: /contact
+    - generic [ref=e165]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+```

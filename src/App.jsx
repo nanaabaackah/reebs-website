@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ClickSpark from './components/ClickSpark';
 
-import Navbar from './components/Navbar';
+import { CartProvider } from "./components/CartContext";
+import Navbar from "./components/Navbar";
+import CartOverlay from "./components/CartOverlay";
 import Footer from './components/Footer';
 
 import Home from './pages/Home';
@@ -15,22 +17,31 @@ import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/privacy-policy';
 
 function AppLayout() {
-  
+  const [cartOpen, setCartOpen] = useState(false);
   return (
     <>
-    
-    <Navbar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/About" element={<About />} />
-          <Route path="/Shop" element={<Shop />} />
-          <Route path="/Rentals" element={<Rentals />} />
-          <Route path="/Gallery" element={<Gallery />} />
-          <Route path="/faq" element={<FAQ />} />
-          <Route path="/Contact" element={<Contact />} />
-        </Routes>
-      <Footer />
+     <CartProvider>
+        <Navbar onCartToggle={() => setCartOpen(true)} />
+       
+          <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/About" element={<About />} />
+              <Route path="/Shop" element={<Shop />} />
+              <Route path="/Rentals" element={<Rentals />} />
+              <Route path="/Gallery" element={<Gallery />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/Contact" element={<Contact />} />
+          </Routes>
+          <CartOverlay 
+            open={cartOpen} 
+            onClose={() => setCartOpen(false)} 
+            convertPrice={(p) => p} // pass your conversion fn
+            formatCurrency={(p) => p} // pass your format fn
+          />
+        <Footer />
+      </CartProvider>
+      
     </>
   );
 }

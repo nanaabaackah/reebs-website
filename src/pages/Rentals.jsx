@@ -2,6 +2,7 @@ import { React, useEffect, useState } from 'react';
 import rentalItems from "/src/data/rentalItems.json"
 import { Link } from 'react-router-dom';
 import './master.css';
+import SideNav from '/src/components/SideNav';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 //import { faFolder } from '@fortawesome/free-solid-svg-icons';
 
@@ -96,7 +97,7 @@ function Rentals() {
     if (loading) return <p>Loading shop...</p>;
 
     return (
-        <div className='r1'>
+        <div className='r1' id="main" role="main">
             <main className="r1-back">
                 <section id='r4-intro'>
                     <div className="r4 back-heading">
@@ -105,19 +106,18 @@ function Rentals() {
                     </div>
 
                     <div className='r4-back-image'>
-                        <img src='/imgs/r4.png' alt="Rentals" />
+                        <img src='/imgs/r4.png'  alt="" aria-hidden="true" />
                     </div>
 
-                    {/* Sticky Side Menu */}
-                    <div className="side-menu">
-                        <ul>
-                            {Object.keys(groupedRentals).map((category) => (
-                                <li key={category} className={activeCategory === category ? "active" : ""}>
-                                    <a href={`#${category}`}>{category}</a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    {/* Side menu with categories */}
+                    <SideNav
+                        items={Object.keys(groupedRentals).map((category) => ({
+                        id: category,
+                        label: category,
+                        }))}
+                        activeId={activeCategory}
+                        label="Rental categories"
+                    />
                 </section>
 
                 <section id='r4-rent-grid'>
@@ -125,6 +125,7 @@ function Rentals() {
                         <>
                         <div className="shop-controls">
                             {/* Currency Selector */}
+                            <label htmlFor="currencySelector" className="sr-only">Select currency</label>
                             <select
                                 value={currency}
                                 onChange={(e) => setCurrency(e.target.value)}
@@ -161,7 +162,7 @@ function Rentals() {
                                                 ) : (
                                                     formatCurrency(convertPrice(item.price)))} {item.rate}
                                             </p>
-                                            <Link to={item.link}>Explore More</Link>
+                                            <Link to={item.link} aria-label={`Explore more about ${item.name}`}>Explore More</Link>
                                         </div>
                                     </div>
                                 ))}

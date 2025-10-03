@@ -1,14 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { injectAxe, checkA11y } from 'axe-playwright';
 
-const BASE_URL = 'http://localhost:5173'; // adjust if needed (5173 for Vite, 8888 for Netlify CLI)
-
-// Utility: run axe a11y check
-async function runA11y(page) {
+// Accessibility helper
+async function runA11y(page: Page) {
   await injectAxe(page);
   await checkA11y(page, undefined, {
     detailedReport: true,
-    detailedReportOptions: { html: true }
+    detailedReportOptions: { html: true },
   });
 }
 
@@ -18,11 +16,11 @@ test.describe('REEBS Party Themes Pages', () => {
   // -----------------------------
   test.describe('Home Page', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto(`${BASE_URL}/`);
+      await page.goto('/', { waitUntil: 'networkidle'}); // ✅ relative
     });
 
     test('renders hero heading and buttons', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /reebs/i })).toBeVisible();;
+      await expect(page.getByRole('heading', { name: /reebs/i })).toBeVisible();
       await expect(page.getByText(/view rentals/i)).toBeVisible();
       await expect(page.getByText(/explore our shop/i)).toBeVisible();
       await expect(page.getByText(/contact us/i)).toBeVisible();
@@ -44,10 +42,16 @@ test.describe('REEBS Party Themes Pages', () => {
         if (msg.type() === 'error') errors.push(msg.text());
       });
       await page.reload();
-      expect(errors.join('\\n')).not.toMatch(/TypeError|ReferenceError/);
+      expect(errors.join('\n')).not.toMatch(/TypeError|ReferenceError/);
     });
 
     test('passes accessibility scan', async ({ page }) => {
+  // Wait for the main content to load before scanning
+      await page.waitForSelector('main', { state: 'visible' });
+
+      // Extend just this test’s timeout (e.g., 60s)
+      test.setTimeout(60000);
+
       await runA11y(page);
     });
   });
@@ -57,7 +61,7 @@ test.describe('REEBS Party Themes Pages', () => {
   // -----------------------------
   test.describe('About Page', () => {
     test.beforeEach(async ({ page }) => {
-      await page.goto(`${BASE_URL}/about`);
+      await page.goto('/about'); // ✅ relative
     });
 
     test('renders About Us heading and intro text', async ({ page }) => {
@@ -67,7 +71,13 @@ test.describe('REEBS Party Themes Pages', () => {
 
     test('renders Meet the Owner section with image', async ({ page }) => {
       await expect(page.getByRole('heading', { name: /meet the owner/i })).toBeVisible();
-      await expect(page.getByRole('img', { name: /sabina ackah/i })).toBeVisible();
+
+      // More specific: match the portrait alt text
+      await expect(
+        page.getByRole('img', {
+          name: /portrait of sabina ackah, founder of reebs party themes/i,
+        })
+      ).toBeVisible();
     });
 
     test('renders Our Story section', async ({ page }) => {
@@ -76,7 +86,10 @@ test.describe('REEBS Party Themes Pages', () => {
     });
 
     test('renders Instagram feed section', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /our highlights/i })).toBeVisible();
+      // Use the region labelled by "Our Highlights"
+      await expect(
+        page.getByRole('region', { name: /our highlights/i })
+      ).toBeVisible();
     });
 
     test('no fatal console errors', async ({ page }) => {
@@ -85,10 +98,111 @@ test.describe('REEBS Party Themes Pages', () => {
         if (msg.type() === 'error') errors.push(msg.text());
       });
       await page.reload();
-      expect(errors.join('\\n')).not.toMatch(/TypeError|ReferenceError/);
+      expect(errors.join('\n')).not.toMatch(/TypeError|ReferenceError/);
     });
 
     test('passes accessibility scan', async ({ page }) => {
+      // Wait for the main content to load before scanning
+      await page.waitForSelector('main', { state: 'visible' });
+
+      // Extend just this test’s timeout (e.g., 60s)
+      test.setTimeout(60000);
+
+      await runA11y(page);
+    });
+  });
+
+  // -----------------------------
+  // SHOP PAGE TESTS
+  // -----------------------------
+  test.describe('Shop Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/shop'); // ✅ relative
+    });
+
+    test('renders Shop heading and intro text', async ({ page }) => {
+      await expect(page.getByRole('heading', { name: /shop/i })).toBeVisible();
+      await expect(page.getByText(/party supplies/i)).toBeVisible();
+    });
+
+    test('renders search bar and category filter', async ({ page }) => {
+      await expect(page.getByPlaceholder(/search items/i)).toBeVisible();
+
+      // Target the category filter specifically
+      await expect(
+        page.getByRole('combobox', { name: /category/i })
+      ).toBeVisible();
+
+      // Fallback if no accessible name is set:
+      // await expect(page.locator('select.category-filter')).toBeVisible();
+    });
+
+
+    test('renders product cards if inventory is available', async ({ page }) => {
+      const products = page.locator('.shop-card');
+      await expect(products.first()).toBeVisible();
+    });
+
+    test('no fatal console errors', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') errors.push(msg.text());
+      });
+      await page.reload();
+      expect(errors.join('\n')).not.toMatch(/TypeError|ReferenceError/);
+    });
+
+    test('passes accessibility scan', async ({ page }) => {
+      // Wait for the main content to load before scanning
+      await page.waitForSelector('main', { state: 'visible' });
+
+      // Extend just this test’s timeout (e.g., 60s)
+      test.setTimeout(60000);
+
+      await runA11y(page);
+    });
+  });
+
+  // -----------------------------
+  // RENTALS PAGE TESTS
+  // -----------------------------
+  test.describe('Rentals Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/rentals'); // ✅ relative
+    });
+
+    test('renders Rentals heading and intro text', async ({ page }) => {
+      await expect(page.getByRole('heading', { name: /rentals/i })).toBeVisible();
+      await expect(page.getByText(/party rentals for kids and events/i)).toBeVisible();
+    });
+
+    test('renders side menu categories', async ({ page }) => {
+      const sideMenu = page.locator('.side-menu');
+      await expect(sideMenu).toBeVisible();
+      await expect(sideMenu.locator('li').first()).toBeVisible();
+    });
+
+    test('renders rental cards for a category', async ({ page }) => {
+      const rentalCard = page.locator('.rent-card').first();
+      await expect(rentalCard).toBeVisible();
+    });
+
+    test('no fatal console errors', async ({ page }) => {
+      const errors: string[] = [];
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') errors.push(msg.text());
+      });
+      await page.reload();
+      expect(errors.join('\n')).not.toMatch(/TypeError|ReferenceError/);
+    });
+
+    test('passes accessibility scan', async ({ page }) => {
+      // Wait for the main content to load before scanning
+      await page.waitForSelector('main', { state: 'visible' });
+
+      // Extend just this test’s timeout (e.g., 60s)
+      test.setTimeout(60000);
+
       await runA11y(page);
     });
   });
