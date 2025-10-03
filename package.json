@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "netlify": "netlify dev",
     "test:e2e": "PORT=8888 npx playwright test",
     "test:e2e:ui": "PORT=8888 npx playwright test --ui",
