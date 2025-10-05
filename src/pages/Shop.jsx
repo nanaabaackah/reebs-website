@@ -131,6 +131,11 @@ function Shop() {
                       {formatCurrency(convertPrice(item.price))}
                     </p>
                     <AddToCartButton item={item} />
+                    <p className="stock-info">
+                        {item.stock - item.quantity > 0
+                        ? `${item.stock - item.quantity} left in stock`
+                        : "No more stock available"}
+                    </p>
                   </div>
                 </div>
               ))}

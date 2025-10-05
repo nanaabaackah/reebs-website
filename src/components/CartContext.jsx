@@ -75,16 +75,19 @@ export const CartProvider = ({ children }) => {
   const removeFromCart = (id) => setCart((prev) => prev.filter((p) => p.id !== id));
 
   const updateQuantity = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.id === id
-            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
+    setCart(prev =>
+      prev.map(p => {
+        if (p.id === id) {
+          const newQty = p.quantity + delta;
+          if (newQty < 1) return p; // prevent going below 1
+          if (newQty > p.stock) return p; // prevent exceeding stock
+          return { ...p, quantity: newQty };
+        }
+        return p;
+      })
     );
   };
+
 
   const decreaseQty = (id) =>
     setCart((prev) =>

@@ -1314,7 +1314,7 @@ h3{
 
 .subtotal {
   display: flex;
-  gap: 11em;
+  gap: 8.5em;
 }
 
 .text,
@@ -1393,6 +1393,12 @@ h3{
 .foot-link{
   margin-top: 2em;
   text-align: center;
+  width: fit-content;
+ 
+}
+
+.foot-items{
+   align-items: center;
 }
 .add-to-cart:hover {
   color: var(--back2);

@@ -19,7 +19,7 @@ model Inventory {
   name        String
   type        String
   description String
-  quantity    Int
+  stock       Int     @map("quantity")
   price       Float
   status      String
   image_url   String

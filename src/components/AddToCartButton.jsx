@@ -9,14 +9,41 @@ function AddToCartButton({ item }) {
 
   return inCart ? (
     <div className="main-quantity-controls">
-      <button onClick={() => updateQuantity(item.id, -1)}><FontAwesomeIcon icon={faMinus}/></button>
+      {/* Decrease quantity */}
+      <button
+        onClick={() => updateQuantity(item.id, inCart.quantity - 1, item.quantity)}
+        disabled={inCart.quantity <= 1}
+      >
+        <FontAwesomeIcon icon={faMinus} />
+      </button>
+
+      {/* Current qty */}
       <span>{inCart.quantity}</span>
-      <button onClick={() => updateQuantity(item.id, 1)}><FontAwesomeIcon icon={faPlus}/></button>
-      <button className="remove-btn" onClick={() => removeFromCart(item.id)}><FontAwesomeIcon icon={faTrash}/></button>
+
+      {/* Show + only if stock not reached */}
+      {inCart.quantity < item.quantity && (
+        <button
+          onClick={() => updateQuantity(item.id, inCart.quantity + 1, item.quantity)}
+        >
+          <FontAwesomeIcon icon={faPlus} />
+        </button>
+      )}
+
+      {/* Remove item */}
+      <button className="remove-btn" onClick={() => removeFromCart(item.id)}>
+        <FontAwesomeIcon icon={faTrash} />
+      </button>
     </div>
   ) : (
-    <button className="add-to-cart" onClick={() => addToCart(item)}>
-      <FontAwesomeIcon icon={faShoppingCart} /> Add to Cart
+    <button
+      className="add-to-cart"
+      onClick={() => {
+        if (item.quantity > 0) addToCart(item);
+      }}
+      disabled={item.quantity === 0}
+    >
+      <FontAwesomeIcon icon={faShoppingCart} />{" "}
+      {item.quantity > 0 ? "Add to Cart" : "Out of Stock"}
     </button>
   );
 }

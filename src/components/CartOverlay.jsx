@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -6,31 +6,11 @@ import { useCart } from "./CartContext";
 
 function CartOverlay({ open, onClose }) {
   const { cart, updateQuantity, removeFromCart, clearCart, convertPrice, formatCurrency } = useCart();
-  const overlayRef = useRef();
+  
   const subtotal = cart.reduce(
     (acc, item) => acc + convertPrice(item.price) * item.quantity,
     0
   );
-
-  // Close when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (overlayRef.current && !overlayRef.current.contains(event.target)) {
-        onClose();
-      }
-    }
-
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [open, onClose]);
-
 
   return (
     <div className={`cart-overlay ${open ? "open" : ""}`}>
@@ -57,14 +37,27 @@ function CartOverlay({ open, onClose }) {
                     <div className="item-quantity">
                       <div className="quant">
                         <p>Quantity: </p>
-                        <button onClick={() => updateQuantity(item.id, -1)}>
+                        <button 
+                          onClick={() => updateQuantity(item.id, -1)} 
+                          disabled={item.quantity <= 1}
+                        >
                           <FontAwesomeIcon icon={faMinus} />
                         </button>
+
                         <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)}>
+
+                        <button 
+                          onClick={() => updateQuantity(item.id, 1)} 
+                          disabled={item.quantity >= item.stock}
+                        >
                           <FontAwesomeIcon icon={faPlus} />
                         </button>
                       </div>
+                      <p className="stock-info">
+                        {item.stock - item.quantity > 0
+                          ? `${item.stock - item.quantity} left in stock`
+                          : "No more stock available"}
+                      </p>
                       <div className="remove-btn">
                         <button onClick={() => removeFromCart(item.id)}>
                           <FontAwesomeIcon icon={faTrash} />
@@ -94,7 +87,7 @@ function CartOverlay({ open, onClose }) {
             <button className="checkout-btn">Proceed To Bag</button>
             <div className="foot-items">
               <button className="clear-cart" onClick={clearCart}> Clear Cart</button>
-              <Link onClick={onClose} className="foot-link">Continue Shopping</Link>
+              <Link to="" className="foot-link">Continue Shopping</Link>
             </div>
           </div>
         </>
