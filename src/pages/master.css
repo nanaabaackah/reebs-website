@@ -1099,6 +1099,13 @@ h3{
   font-weight: 900;
   margin: 0.5rem 0;
 }
+
+.stock{
+  font-size: 10px;
+  font-style: italic;
+  color: #444;
+}
+
 .add-to-cart {
   background: none;
   color: var(--black);
@@ -1128,8 +1135,9 @@ h3{
 
 .item-quantity{
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0rem;
   padding: 0 1em;
 }
 
@@ -1152,6 +1160,10 @@ h3{
   display: flex;
 }
 
+.quant p{
+  padding: 0em;
+}
+
 .item-quantity-controls button:hover{
   color: var(--back3);
   background: transparent;
@@ -1170,8 +1182,9 @@ h3{
 
 .main-quantity-controls button {
     background: transparent;
+    margin: 0 4px;
     color: var(--black);
-    border: none;
+    border: 1px solid #ccc;
     padding: 4px 10px;
     cursor: pointer;
     font-size: 12px;
@@ -1288,9 +1301,9 @@ h3{
     background:white;
     box-shadow: -2px 0 10px rgba(0,0,0,0.3);
     padding: 20px;
-    overflow-y: auto;
+    overflow-y: scroll;
     transform: translateX(100%);
-    transition: transform 0.3s ease;
+    transition: transform 0.5s ease;
     z-index: 1000;
 }
 
@@ -1299,8 +1312,11 @@ h3{
 }
 
 .cart-header{
-  display: flex;
-  gap: 10em;
+   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
 }
 
 .cart-header button{
@@ -1848,6 +1864,7 @@ h3{
 #r5-cta{
   background-image: url("/imgs/22.png");
 }
+
 #r6-intro{
   display: flex;
   flex-direction: row;
@@ -2043,6 +2060,120 @@ button:hover {
 .hidden {
     display: none;
 }
+
+#r7-intro{
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: space-evenly;
+  text-align: center;
+  background-image: none;
+  gap: 1em;
+  width: 100%;
+  min-height: 50vh;
+  height: auto;
+  padding: 2em;
+  z-index: 0;
+}
+
+#r7-intro .back-heading{
+  margin-top: 1em;
+}
+
+#r7-intro .back-heading h1{
+  margin-top: 0em;
+}
+
+#r7-intro .back-heading p{
+  width: 400px;
+  box-shadow: none;
+}
+
+#r7-intro .back-heading h1,
+#r7-intro .back-heading p{
+  color: var(--black);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#r7-cart-info{
+  height: fit-content;
+  width: 100%;
+  padding: 1em 0;
+  
+}
+.cart-page{
+  padding: 2rem;
+  z-index: 50;
+}
+
+.cart-items{
+  display: flex;
+  flex-direction: column;
+  border-top: 2px solid #a1a1a1;
+  z-index:50;
+}
+
+.cart-item-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 150px 150px 150px 100px;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.cart-item-image img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.cart-item-info h3 {
+  font-size: 1rem;
+  margin: 0 0 5px;
+}
+
+.cart-item-type {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.cart-item-price,
+.cart-item-total,
+.cart-item-quantity {
+  font-weight: bold;
+}
+
+.cart-item-quantity input {
+  width: 60px;
+  text-align: center;
+  padding: 5px;
+}
+
+.cart-item-remove button {
+  background: none;
+  border: none;
+  color: #c00;
+  font-weight: bold;
+  cursor: pointer;
+}
+.cart-item-remove button:hover {
+  text-decoration: underline;
+}
+
+.cart-currency-selector {
+  margin: 1em 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 0.9rem;
+  width: 30%;
+}
+
 /*****************************************************************
 ********************** Instagram *********************************
 *****************************************************************/

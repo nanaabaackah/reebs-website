@@ -10,7 +10,7 @@ const Navbar = ({ onCartToggle }) => {
   const [scrolled, setScrolled] = useState(false);
   const { cart } = useCart();
 
-  const itemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
 
   useEffect(() => {
     const handleScroll = () => {

@@ -5,25 +5,26 @@ import { useCart } from "/src/components/CartContext";
 
 function AddToCartButton({ item }) {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
-  const inCart = cart.find(i => i.id === item.id);
+  const inCart = cart.find((i) => i.id === item.id);
 
   return inCart ? (
     <div className="main-quantity-controls">
       {/* Decrease quantity */}
       <button
-        onClick={() => updateQuantity(item.id, inCart.quantity - 1, item.quantity)}
-        disabled={inCart.quantity <= 1}
+        onClick={() => updateQuantity(item.id, -1)}
+        disabled={inCart.cartQuantity <= 1}
       >
         <FontAwesomeIcon icon={faMinus} />
       </button>
 
       {/* Current qty */}
-      <span>{inCart.quantity}</span>
+      <span>{inCart.cartQuantity}</span>
 
-      {/* Show + only if stock not reached */}
-      {inCart.quantity < item.quantity && (
+      {/* Increase only if stock not reached */}
+      {inCart.cartQuantity < item.quantity && (
         <button
-          onClick={() => updateQuantity(item.id, inCart.quantity + 1, item.quantity)}
+          onClick={() => updateQuantity(item.id, 1)}
+          disabled={inCart.cartQuantity >= item.quantity}
         >
           <FontAwesomeIcon icon={faPlus} />
         </button>

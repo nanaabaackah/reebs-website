@@ -8,14 +8,14 @@ function CartOverlay({ open, onClose }) {
   const { cart, updateQuantity, removeFromCart, clearCart, convertPrice, formatCurrency } = useCart();
   
   const subtotal = cart.reduce(
-    (acc, item) => acc + convertPrice(item.price) * item.quantity,
+    (acc, item) => acc + convertPrice(item.price) * item.cartQuantity,
     0
   );
 
   return (
     <div className={`cart-overlay ${open ? "open" : ""}`}>
       <div className="cart-header">
-        <h2>My Cart</h2>
+        <h2>Your Cart ({cart.reduce((acc, item) => acc + item.cartQuantity, 0)})</h2>
         <button className="close-cart" onClick={onClose}>
           <FontAwesomeIcon icon={faTimes} />
         </button>
@@ -38,34 +38,37 @@ function CartOverlay({ open, onClose }) {
                       <div className="quant">
                         <p>Quantity: </p>
                         <button 
-                          onClick={() => updateQuantity(item.id, -1)} 
-                          disabled={item.quantity <= 1}
+                          onClick={() => updateQuantity(item.id, -1)}
+                          disabled={item.cartQuantity <= 1}
                         >
                           <FontAwesomeIcon icon={faMinus} />
                         </button>
 
-                        <span>{item.quantity}</span>
+                        <span>{item.cartQuantity}</span>
 
                         <button 
-                          onClick={() => updateQuantity(item.id, 1)} 
-                          disabled={item.quantity >= item.stock}
+                          onClick={() => updateQuantity(item.id, 1)}
+                          disabled={item.cartQuantity >= item.quantity}
                         >
                           <FontAwesomeIcon icon={faPlus} />
                         </button>
+                        <div className="remove-btn">
+                          <button onClick={() => removeFromCart(item.id)}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        </div>
                       </div>
-                      <p className="stock-info">
-                        {item.stock - item.quantity > 0
-                          ? `${item.stock - item.quantity} left in stock`
-                          : "No more stock available"}
-                      </p>
-                      <div className="remove-btn">
-                        <button onClick={() => removeFromCart(item.id)}>
-                          <FontAwesomeIcon icon={faTrash} />
-                        </button>
+                      <div className="stock-info">
+                        <p>
+                          {item.quantity - item.cartQuantity > 0
+                            ? `${item.quantity - item.cartQuantity} left in stock`
+                            : "No more stock available"}
+                        </p>
                       </div>
+                      
                     </div>
                     <div className="cart-price">
-                      <span>{formatCurrency(convertPrice(item.price * item.quantity))}</span>
+                      <span>{formatCurrency(convertPrice(item.price * item.cartQuantity))}</span>
                     </div>
                   </div>
                 </div>
@@ -77,17 +80,16 @@ function CartOverlay({ open, onClose }) {
             <p className="subtotal">
               <div className="text">
                 <strong>Subtotal </strong> 
-                ({cart.reduce((acc, item) => acc + item.quantity, 0)}{" "}
-                {cart.reduce((acc, item) => acc + item.quantity, 0) === 1 ? "item" : "items"})
+                ({cart.reduce((acc, item) => acc + item.cartQuantity, 0)}{" "}
+                {cart.reduce((acc, item) => acc + item.cartQuantity, 0) === 1 ? "item" : "items"})
               </div>
               <div className="amount">
                 <strong>{formatCurrency(subtotal)}</strong>
               </div>
             </p>
-            <button className="checkout-btn">Proceed To Bag</button>
+            <Link to="/Cart" ><button className="checkout-btn">Proceed To Bag</button></Link>
             <div className="foot-items">
               <button className="clear-cart" onClick={clearCart}> Clear Cart</button>
-              <Link to="" className="foot-link">Continue Shopping</Link>
             </div>
           </div>
         </>

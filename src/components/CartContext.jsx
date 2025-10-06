@@ -4,15 +4,13 @@ const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
-    // Load cart from localStorage on first render
     const storedCart = localStorage.getItem("cart");
     return storedCart ? JSON.parse(storedCart) : [];
   });
 
-  const [currency, setCurrency] = useState(() => {
-    // Load currency preference from localStorage if available
-    return localStorage.getItem("currency") || "GHS";
-  });
+  const [currency, setCurrency] = useState(
+    () => localStorage.getItem("currency") || "GHS"
+  );
 
   const [rates, setRates] = useState({ GHS: 1 });
   const apiKey = import.meta.env.VITE_CURRENCY_API_KEY;
@@ -21,12 +19,11 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  // Persist currency to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem("currency", currency);
   }, [currency]);
 
-  // Fetch exchange rates once
+  // fetch exchange rates
   useEffect(() => {
     async function fetchRates() {
       try {
@@ -37,20 +34,19 @@ export const CartProvider = ({ children }) => {
         if (data.result === "success") {
           setRates(data.conversion_rates);
 
-          // Detect user region for default currency
           if (!localStorage.getItem("currency")) {
             const region = navigator.language.split("-")[1];
             let defaultCurrency = "GHS";
             if (region === "US") defaultCurrency = "USD";
             else if (region === "GB") defaultCurrency = "GBP";
             else if (region === "CA") defaultCurrency = "CAD";
-            else if (["DE","FR","ES","IT","NL","BE","PT","FI","IE"].includes(region)) {
+            else if (
+              ["DE", "FR", "ES", "IT", "NL", "BE", "PT", "FI", "IE"].includes(region)
+            ) {
               defaultCurrency = "EUR";
             }
             setCurrency(defaultCurrency);
           }
-        } else {
-          console.error("Error fetching rates:", data["error-type"]);
         }
       } catch (error) {
         console.error("Error fetching rates:", error);
@@ -59,44 +55,47 @@ export const CartProvider = ({ children }) => {
     fetchRates();
   }, [apiKey]);
 
-  // Cart actions
+  // 🔹 Cart actions
   const addToCart = (item) => {
     setCart((prev) => {
       const exists = prev.find((p) => p.id === item.id);
       if (exists) {
+        // prevent exceeding stock
+        if (exists.cartQuantity >= item.quantity) return prev;
         return prev.map((p) =>
-          p.id === item.id ? { ...p, quantity: p.quantity + 1 } : p
+          p.id === item.id
+            ? { ...p, cartQuantity: Math.min(p.cartQuantity + 1, item.quantity) }
+            : p
         );
       }
-      return [...prev, { ...item, quantity: 1 }];
+      // initial add
+      return [...prev, { ...item, cartQuantity: 1 }];
     });
   };
 
-  const removeFromCart = (id) => setCart((prev) => prev.filter((p) => p.id !== id));
+  const removeFromCart = (id) =>
+    setCart((prev) => prev.filter((p) => p.id !== id));
 
-  const updateQuantity = (id, delta) => {
-    setCart(prev =>
-      prev.map(p => {
+  // now updateQuantity expects a delta (+1 / -1)
+  const updateQuantity = (id, change) => {
+    setCart((prev) =>
+      prev.map((p) => {
         if (p.id === id) {
-          const newQty = p.quantity + delta;
-          if (newQty < 1) return p; // prevent going below 1
-          if (newQty > p.stock) return p; // prevent exceeding stock
-          return { ...p, quantity: newQty };
+          let newQty = p.cartQuantity + change;
+
+          if (newQty < 1) newQty = 1;
+          if (newQty > p.quantity) newQty = p.quantity; // cap to stock
+
+          return { ...p, cartQuantity: newQty };
         }
         return p;
       })
     );
   };
 
+  const clearCart = () => setCart([]);
 
-  const decreaseQty = (id) =>
-    setCart((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, quantity: Math.max(p.quantity - 1, 1) } : p
-      )
-    );
-
-  // 🔹 Currency helpers
+  // Currency helpers
   const convertPrice = (priceInGHS) => {
     if (!rates || !rates[currency]) return priceInGHS;
     return Number((priceInGHS * rates[currency]).toFixed(2));
@@ -120,7 +119,7 @@ export const CartProvider = ({ children }) => {
         addToCart,
         removeFromCart,
         updateQuantity,
-        decreaseQty,
+        clearCart,
         currency,
         setCurrency,
         convertPrice,

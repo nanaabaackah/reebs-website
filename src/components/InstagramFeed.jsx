@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Papa from "papaparse";
 import { Link } from "react-router-dom";
+import galleryImages from "/src/data/galleryImages.json"
 
 export default function InstagramFeed() {
-  const [posts, setPosts] = useState([]);
+  //const [posts, setPosts] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  useEffect(() => {
+  /*useEffect(() => {
     const sheetUrl =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRPIRMd64886Y_7O6UXTTKhjHaXAsjqQTht0VQgiX5AgT3If31uQBvsmzNx0cyWGFajv4vKWUiLOHMw/pub?gid=0&single=true&output=csv";
 
@@ -26,12 +28,12 @@ export default function InstagramFeed() {
         });
       })
       .catch((err) => console.error("Error fetching posts:", err));
-  }, []);
+  }, []);*/
 
   return (
     <div className="instagram-feed">
       <h2 className="info-back-heading">Our Highlights</h2>
-      <div className="feed-grid">
+      {/*<div className="feed-grid">
         {posts.map((post, idx) => (
           <a
             key={idx}
@@ -71,7 +73,34 @@ export default function InstagramFeed() {
         >
           View More on Instagram →
         </a>
-      </div>
+      </div>*/}
+      <div className="gallery-container">
+        <p>
+            A peek into the beautiful moments we’ve helped create.
+        </p>
+        <div className="gallery-grid">
+            {galleryImages.map((item, index) => (
+            <div key={index} className="gallery-card">
+                <img
+                src={item.src}
+                alt={item.title}
+                onClick={() => setSelectedImage(item)}
+                className="gallery-img"
+                />
+            </div>
+            ))}
+        </div>
+        {selectedImage && (
+            <div className="lightbox" onClick={() => setSelectedImage(null)}>
+                <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+                    <img src={selectedImage.src} alt={selectedImage.title} />
+                    <h3>{selectedImage.title}</h3>
+                    <p>{selectedImage.description}</p>
+                    <button onClick={() => setSelectedImage(null)}>Close</button>
+                </div>
+            </div>
+        )}
+    </div>
     </div>
   );
 }

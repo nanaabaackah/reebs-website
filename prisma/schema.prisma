@@ -14,15 +14,15 @@ datasource db {
 }
 
 model Inventory {
-  id          Int     @id @default(autoincrement())
-  inventoryId String @unique
-  name        String
-  type        String
-  description String
-  stock       Int     @map("quantity")
-  price       Float
-  status      String
-  image_url   String
+  id           Int     @id @default(autoincrement())
+  inventoryId  String @unique
+  name         String
+  type         String
+  description  String
+  num_of_items Int    @map("quantity")
+  price        Float
+  status       String
+  image_url    String
 
   bookings     Booking[]
 }

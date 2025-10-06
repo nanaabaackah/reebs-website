@@ -5,6 +5,7 @@ import ClickSpark from './components/ClickSpark';
 import { CartProvider } from "./components/CartContext";
 import Navbar from "./components/Navbar";
 import CartOverlay from "./components/CartOverlay";
+
 import Footer from './components/Footer';
 
 import Home from './pages/Home';
@@ -15,6 +16,7 @@ import Gallery from './pages/Gallery';
 import FAQ from './pages/faq';
 import Contact from './pages/Contact';
 import PrivacyPolicy from './pages/privacy-policy';
+import Cart from "./pages/Cart";
 
 function AppLayout() {
   const [cartOpen, setCartOpen] = useState(false);
@@ -26,6 +28,7 @@ function AppLayout() {
           <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/Cart" element={<Cart />} />
               <Route path="/About" element={<About />} />
               <Route path="/Shop" element={<Shop />} />
               <Route path="/Rentals" element={<Rentals />} />
