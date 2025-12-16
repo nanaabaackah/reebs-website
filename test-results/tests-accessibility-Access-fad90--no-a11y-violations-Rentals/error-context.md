@@ -1,0 +1,204 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner:
+    - navigation [ref=e4]:
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link [ref=e8] [cursor=pointer]:
+            - /url: /
+            - img [ref=e9] [cursor=pointer]
+        - listitem [ref=e11]:
+          - link "About" [ref=e12] [cursor=pointer]:
+            - /url: /About
+        - listitem [ref=e13]:
+          - link "Shop" [ref=e14] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e15]:
+          - button "Rentals" [ref=e16] [cursor=pointer]:
+            - link "Rentals" [ref=e17] [cursor=pointer]:
+              - /url: /Rentals
+            - img [ref=e18] [cursor=pointer]
+        - listitem [ref=e20]:
+          - link "Contact" [ref=e21] [cursor=pointer]:
+            - /url: /Contact
+      - generic [ref=e22]:
+        - button "Open search" [ref=e23]:
+          - img [ref=e24]
+        - button "Book" [ref=e26] [cursor=pointer]:
+          - img [ref=e27] [cursor=pointer]
+        - button [ref=e29] [cursor=pointer]:
+          - img [ref=e31] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
+          - img [ref=e34] [cursor=pointer]
+  - link "Skip to main content" [ref=e36] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=e37]:
+    - main [ref=e38]:
+      - region "Party rentals styled the REEBS way" [ref=e39]:
+        - generic [ref=e40]:
+          - heading "Party rentals styled the REEBS way" [level=1] [ref=e41]
+          - paragraph [ref=e42]: Bounce houses, decor, concessions, and full setup help. We prep, deliver, and style so you can enjoy the celebration.
+          - generic "Rental highlights" [ref=e43]:
+            - generic [ref=e44]:
+              - img [ref=e45]
+              - text: Styled setups
+            - generic [ref=e47]:
+              - img [ref=e48]
+              - text: Cleaned + kid-safe
+            - generic [ref=e50]:
+              - img [ref=e51]
+              - text: Delivery & pickup
+          - generic [ref=e53]:
+            - link "Browse rentals" [ref=e54] [cursor=pointer]:
+              - /url: "#rentals-grid"
+            - link "Book a setup" [ref=e55] [cursor=pointer]:
+              - /url: /contact
+          - generic "Rental stats" [ref=e56]:
+            - generic [ref=e57]:
+              - strong [ref=e58]: "2"
+              - generic [ref=e59]: Rental items ready
+            - generic [ref=e60]:
+              - strong [ref=e61]: Available
+              - generic [ref=e62]: Same-day in Accra
+      - generic [ref=e64]:
+        - navigation "Rental categories" [ref=e65]:
+          - list [ref=e66]:
+            - listitem [ref=e67]:
+              - link "Kid Bouncers" [ref=e68] [cursor=pointer]:
+                - /url: "#Kid Bouncers"
+            - listitem [ref=e69]:
+              - link "Party Machines" [ref=e70] [cursor=pointer]:
+                - /url: "#Party Machines"
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - paragraph [ref=e75]: 2 items shown · 2 categories
+              - generic [ref=e76]:
+                - generic [ref=e77]: Select currency
+                - combobox "Select currency" [ref=e78]:
+                  - option "GHS" [selected]
+                  - option "USD"
+                  - option "CAD"
+                  - option "GBP"
+                  - option "EUR"
+                  - option "NGN"
+            - generic [ref=e80]:
+              - img
+              - textbox "Search rental items" [ref=e81]
+            - list "Quick category filters" [ref=e82]:
+              - button "All" [pressed] [ref=e83] [cursor=pointer]
+              - button "Kid Bouncers" [ref=e84] [cursor=pointer]
+              - button "Party Machines" [ref=e85] [cursor=pointer]
+          - generic [ref=e86]:
+            - generic [ref=e87]:
+              - paragraph [ref=e88]: Category
+              - heading "Kid Bouncers" [level=2] [ref=e89]
+            - button "Mini Bouncy Castle Kid Bouncers Mini Bouncy Castle GHS 700.00 - GHS 900.00 per day Explore more about Mini Bouncy Castle" [ref=e91]:
+              - generic [ref=e92]:
+                - img "Mini Bouncy Castle" [ref=e93]
+                - generic [ref=e94]: Kid Bouncers
+              - generic [ref=e95]:
+                - heading "Mini Bouncy Castle" [level=3] [ref=e97]
+                - paragraph [ref=e98]: GHS 700.00 - GHS 900.00 per day
+                - link "Explore more about Mini Bouncy Castle" [ref=e100] [cursor=pointer]:
+                  - /url: /Rentals/mini-bouncy-castle
+                  - text: Explore More
+          - generic [ref=e101]:
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: Category
+              - heading "Party Machines" [level=2] [ref=e104]
+            - button "Cotton Candy Machine Party Machines Cotton Candy Machine GHS 250.00 per day Explore more about Cotton Candy Machine" [ref=e106]:
+              - generic [ref=e107]:
+                - img "Cotton Candy Machine" [ref=e108]
+                - generic [ref=e109]: Party Machines
+              - generic [ref=e110]:
+                - heading "Cotton Candy Machine" [level=3] [ref=e112]
+                - paragraph [ref=e113]: GHS 250.00 per day
+                - link "Explore more about Cotton Candy Machine" [ref=e115] [cursor=pointer]:
+                  - /url: /Rentals/cotton-candy-machine
+                  - text: Explore More
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo [ref=e116]:
+    - link "REEBS Logo" [ref=e117] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e118] [cursor=pointer]
+    - search [ref=e119]:
+      - img [ref=e120]
+      - searchbox "Search site" [ref=e122]
+    - generic [ref=e123]:
+      - generic [ref=e124]:
+        - link "Contact & Shop Info" [ref=e125] [cursor=pointer]:
+          - /url: /Contact
+        - link "Refund Policy" [ref=e126] [cursor=pointer]:
+          - /url: /refund-policy
+        - link "Delivery Policy" [ref=e127] [cursor=pointer]:
+          - /url: /delivery-policy
+        - link "Privacy Policy" [ref=e128] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "FAQ" [ref=e129] [cursor=pointer]:
+          - /url: /faq
+        - link "Terms of Service" [ref=e130] [cursor=pointer]:
+          - /url: /terms-of-service
+      - generic [ref=e131]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e132] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e133] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e135] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - img [ref=e136] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e138]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e139]: Holiday Hours may vary
+      - generic [ref=e140]:
+        - link [ref=e141] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e142] [cursor=pointer]
+        - link [ref=e144] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e145] [cursor=pointer]
+        - link [ref=e147] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e148] [cursor=pointer]
+        - link [ref=e150] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - img [ref=e151] [cursor=pointer]
+        - link [ref=e153] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e154] [cursor=pointer]
+    - navigation [ref=e157]:
+      - list [ref=e159]:
+        - listitem [ref=e160]:
+          - link "About" [ref=e161] [cursor=pointer]:
+            - /url: /about
+        - listitem [ref=e162]:
+          - link "Shop" [ref=e163] [cursor=pointer]:
+            - /url: /shop
+        - listitem [ref=e164]:
+          - link "Rentals" [ref=e165] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e166]:
+          - link "Gallery" [ref=e167] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e168]:
+          - link "Contact" [ref=e169] [cursor=pointer]:
+            - /url: /contact
+    - generic [ref=e170]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+```

@@ -1,8 +1,6 @@
 import fs from "fs";
 import Papa from "papaparse";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "./prismaClient.js";
 
 // Function to generate sequential bookingId
 async function generateSequentialBookingId() {
@@ -26,6 +24,15 @@ async function importBookings() {
   for (const row of parsed.data) {
     try {
       const bookingId = await generateSequentialBookingId();
+
+      const exists = await prisma.booking.findFirst({
+        where: { name: row.name },
+      });
+
+      if (exists) {
+        console.log(`Skipping duplicate: ${row.name}`);
+        continue;
+      }
 
       await prisma.booking.create({
         data: {

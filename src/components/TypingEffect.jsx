@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 
-const TypingEffect = ({ text, speed = 100 }) => {
+const TypingEffect = ({
+  text,
+  speed = 100,
+  ariaHidden = false,
+  ariaLive = 'off',
+  className = '',
+}) => {
   const [displayedText, setDisplayedText] = useState('');
 
   useEffect(() => {
@@ -16,7 +22,15 @@ const TypingEffect = ({ text, speed = 100 }) => {
     return () => clearInterval(interval);
   }, [text, speed]);
 
-  return <h2 className='intro-back-heading'>{displayedText}</h2>;
+  return (
+    <span
+      className={className}
+      aria-hidden={ariaHidden}
+      aria-live={ariaLive}
+    >
+      {displayedText}
+    </span>
+  );
 };
 
 export default TypingEffect;

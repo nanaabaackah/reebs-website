@@ -47,9 +47,12 @@ export const CartProvider = ({ children }) => {
             }
             setCurrency(defaultCurrency);
           }
+        } else {
+          setRates({ GHS: 1 });
         }
       } catch (error) {
         console.error("Error fetching rates:", error);
+        setRates({ GHS: 1 });
       }
     }
     fetchRates();
@@ -78,6 +81,7 @@ export const CartProvider = ({ children }) => {
 
   // now updateQuantity expects a delta (+1 / -1)
   const updateQuantity = (id, change) => {
+    if (Number.isNaN(change) || change === 0) return;
     setCart((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -124,6 +128,7 @@ export const CartProvider = ({ children }) => {
         setCurrency,
         convertPrice,
         formatCurrency,
+        rates,
       }}
     >
       {children}

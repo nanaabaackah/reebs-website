@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prismaClient.js';
 import fs from 'fs';
 import Papa from 'papaparse';
-
-const prisma = new PrismaClient();
 
 async function main() {
   // Clear old data

@@ -32,8 +32,8 @@ export default function InstagramFeed() {
 
   return (
     <div className="instagram-feed">
-      <h2 className="info-back-heading">Our Highlights</h2>
-      {/*<div className="feed-grid">
+      {/*<h2 className="info-back-heading">Our Highlights</h2>
+      <div className="feed-grid">
         {posts.map((post, idx) => (
           <a
             key={idx}
@@ -75,6 +75,7 @@ export default function InstagramFeed() {
         </a>
       </div>*/}
       <div className="gallery-container">
+        <h2 className="info-back-heading">Gallery</h2>
         <p>
             A peek into the beautiful moments we’ve helped create.
         </p>

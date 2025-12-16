@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Spiderman Bouncy House",
+    "footprint": "13 ft x 13 ft",
+    "height": "10 ft",
+    "capacity": "Up to 8 kids at a time",
+    "recommendedAge": "Ages 4-10",
+    "priceRange": "GHS 850 - 1,050",
+    "bestFor": "Superhero themes, home parties, photo moments",
+    "features": "Large bounce area, hero graphics, safety step, mesh sides",
+    "image": "/imgs/rentalItems/img_5.png",
+    "images": [
+      "/imgs/rentalItems/img_5.png",
+      "/imgs/rentalItems/img_6.png",
+      "/imgs/rentalItems/img_7.png"
+    ]
+  },
+  {
+    "name": "Princess Bouncer",
+    "footprint": "13 ft x 13 ft",
+    "height": "11 ft",
+    "capacity": "Up to 8 kids at a time",
+    "recommendedAge": "Ages 3-9",
+    "priceRange": "GHS 850 - 1,050",
+    "bestFor": "Princess themes, birthdays, indoor venues with height clearance",
+    "features": "Fairytale graphics, mesh walls, soft entry step",
+    "image": "/imgs/rentalItems/img_4.png",
+    "images": [
+      "/imgs/rentalItems/img_4.png",
+      "/imgs/rentalItems/img_1.png",
+      "/imgs/rentalItems/img_3.png"
+    ]
+  },
+  {
+    "name": "Rock Climber Bouncer",
+    "footprint": "14 ft x 20 ft",
+    "height": "13 ft",
+    "capacity": "Up to 10 kids at a time",
+    "recommendedAge": "Ages 5-12",
+    "priceRange": "GHS 1,050 - 1,350",
+    "bestFor": "Active kids, school fairs, outdoor lawns",
+    "features": "Built-in climb wall, bounce zone, reinforced anchor points",
+    "image": "/imgs/rentalItems/img_6.png",
+    "images": [
+      "/imgs/rentalItems/img_6.png",
+      "/imgs/rentalItems/img_8.png",
+      "/imgs/rentalItems/img_9.png"
+    ]
+  },
+  {
+    "name": "Bouncer + Slide Combo",
+    "footprint": "13 ft x 20 ft",
+    "height": "12 ft",
+    "capacity": "Up to 10 kids at a time",
+    "recommendedAge": "Ages 4-11",
+    "priceRange": "GHS 1,000 - 1,250",
+    "bestFor": "Higher energy parties, mix of ages, photo-ready setups",
+    "features": "Attached slide, basketball hoop, larger bounce zone",
+    "image": "/imgs/rentalItems/img_7.png",
+    "images": [
+      "/imgs/rentalItems/img_7.png",
+      "/imgs/rentalItems/img_5.png",
+      "/imgs/rentalItems/img_6.png"
+    ]
+  },
+  {
+    "name": "Finding Nemo Bouncer",
+    "footprint": "13 ft x 13 ft",
+    "height": "10 ft",
+    "capacity": "Up to 8 kids at a time",
+    "recommendedAge": "Ages 3-9",
+    "priceRange": "GHS 850 - 1,050",
+    "bestFor": "Under-the-sea themes, preschool parties, compact spaces",
+    "features": "Colorful Nemo artwork, mesh walls, cushioned entry step",
+    "image": "/imgs/rentalItems/img_3.png",
+    "images": [
+      "/imgs/rentalItems/img_3.png",
+      "/imgs/rentalItems/img_4.png",
+      "/imgs/rentalItems/img_2.png"
+    ]
+  },
+  {
+    "name": "Double Side Slide Bouncer",
+    "footprint": "15 ft x 26 ft",
+    "height": "14 ft",
+    "capacity": "Up to 12 kids at a time",
+    "recommendedAge": "Ages 5-12",
+    "priceRange": "GHS 1,300 - 1,500",
+    "bestFor": "Large guest counts, outdoor setups, back-to-back play",
+    "features": "Dual slides, wide bounce area, higher walls for taller kids",
+    "image": "/imgs/rentalItems/img_8.png",
+    "images": [
+      "/imgs/rentalItems/img_8.png",
+      "/imgs/rentalItems/img_7.png",
+      "/imgs/rentalItems/img_6.png"
+    ]
+  }
+]

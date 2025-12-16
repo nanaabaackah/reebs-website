@@ -1,0 +1,208 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner:
+    - navigation [ref=e4]:
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link [ref=e8] [cursor=pointer]:
+            - /url: /
+            - img [ref=e9] [cursor=pointer]
+        - listitem [ref=e11]:
+          - link "About" [ref=e12] [cursor=pointer]:
+            - /url: /About
+        - listitem [ref=e13]:
+          - link "Shop" [ref=e14] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e15]:
+          - button "Rentals" [ref=e16] [cursor=pointer]:
+            - link "Rentals" [ref=e17] [cursor=pointer]:
+              - /url: /Rentals
+            - img [ref=e18] [cursor=pointer]
+        - listitem [ref=e20]:
+          - link "Contact" [ref=e21] [cursor=pointer]:
+            - /url: /Contact
+      - generic [ref=e22]:
+        - button "Open search" [ref=e23]:
+          - img [ref=e24]
+        - button "Book" [ref=e26] [cursor=pointer]:
+          - img [ref=e27] [cursor=pointer]
+        - button [ref=e29] [cursor=pointer]:
+          - img [ref=e31] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
+          - img [ref=e34] [cursor=pointer]
+  - main [ref=e36]:
+    - region "Delivery Policy" [ref=e37]:
+      - generic [ref=e38]:
+        - paragraph [ref=e39]: "Updated: July 2025"
+        - heading "Delivery Policy" [level=1] [ref=e40]
+        - paragraph [ref=e41]: Smooth drop-offs, careful setup, and on-time pickups—so the only surprise is how good your party looks.
+        - generic "Delivery highlights" [ref=e42]:
+          - generic [ref=e43]: 1-hour windows
+          - generic [ref=e44]: Live updates
+          - generic [ref=e45]: Safety first
+      - generic [ref=e46]:
+        - paragraph [ref=e47]: Fun arrives ready to go.
+        - list [ref=e48]:
+          - listitem [ref=e49]: We confirm the best route and time before dispatch.
+          - listitem [ref=e50]: Setup includes safety checks for power and placement.
+          - listitem [ref=e51]: Pickups match your venue hours—no lingering gear.
+        - generic [ref=e53]: Less hustle. More on-time magic.
+    - region "What to expect" [ref=e57]:
+      - generic [ref=e58]:
+        - paragraph [ref=e59]: Quick look
+        - heading "What to expect" [level=2] [ref=e60]
+      - generic [ref=e61]:
+        - article [ref=e62]:
+          - paragraph [ref=e63]: Routing
+          - heading "Smart scheduling" [level=3] [ref=e64]
+          - paragraph [ref=e65]: We batch routes to hit your window reliably, even on busy weekends.
+        - article [ref=e66]:
+          - paragraph [ref=e67]: Readiness
+          - heading "Tested & clean" [level=3] [ref=e68]
+          - paragraph [ref=e69]: Inflatables, decor, and machines are cleaned, tested, and pre-packed before dispatch.
+        - article [ref=e70]:
+          - paragraph [ref=e71]: Sign-off
+          - heading "Condition confirmed" [level=3] [ref=e72]
+          - paragraph [ref=e73]: We document setup and pickup condition with quick photos for everyone’s peace of mind.
+    - region "Delivery policy details" [ref=e74]:
+      - article [ref=e75]:
+        - paragraph [ref=e76]: 1. Timing
+        - generic [ref=e77]:
+          - heading "Delivery & pickup windows" [level=2] [ref=e78]
+          - paragraph [ref=e79]: We keep your schedule tight, with clear communication.
+        - list [ref=e80]:
+          - listitem [ref=e81]: "Standard delivery windows: 1-hour slots across Accra, Tema, and nearby areas."
+          - listitem [ref=e82]: We text/WhatsApp when we’re en route and on arrival.
+          - listitem [ref=e83]: Pickup is same day or next morning depending on your venue hours; we’ll confirm during booking.
+          - listitem [ref=e84]: Need late-night or early-morning service? We can arrange it for an added convenience fee.
+      - article [ref=e85]:
+        - paragraph [ref=e86]: 2. Coverage
+        - generic [ref=e87]:
+          - heading "Where we deliver" [level=2] [ref=e88]
+          - paragraph [ref=e89]: From neighborhood backyards to event halls, we’ve got you covered.
+        - list [ref=e90]:
+          - listitem [ref=e91]: "Accra & Tema: full coverage with standard rates."
+          - listitem [ref=e92]: "Greater Accra & Eastern: available with adjusted fees based on distance and crew time."
+          - listitem [ref=e93]: High-rise or multi-level deliveries may require an extra hand or lift access—let us know in advance.
+      - article [ref=e94]:
+        - paragraph [ref=e95]: 3. Setup
+        - generic [ref=e96]:
+          - heading "Setup & placement" [level=2] [ref=e97]
+          - paragraph [ref=e98]: We place items where you need them and confirm power and safety.
+        - list [ref=e99]:
+          - listitem [ref=e100]: Bouncy castles and machines require stable ground and safe power sources; our team will guide placement.
+          - listitem [ref=e101]: Decor installs include basic styling and safety checks; complex builds may require longer windows.
+          - listitem [ref=e102]: If a location change is requested on arrival, timing may shift and fees may be adjusted.
+      - article [ref=e103]:
+        - paragraph [ref=e104]: 4. Care on-site
+        - generic [ref=e105]:
+          - heading "While rentals are with you" [level=2] [ref=e106]
+          - paragraph [ref=e107]: Keep things fun and safe until pickup.
+        - list [ref=e108]:
+          - listitem [ref=e109]: Keep inflatables away from sharp objects, open flames, and heavy winds.
+          - listitem [ref=e110]: Do not relocate electrical equipment without our approval.
+          - listitem [ref=e111]: Please have an adult present during delivery and pickup to sign off on condition.
+      - article [ref=e112]:
+        - paragraph [ref=e113]: 5. Fees
+        - generic [ref=e114]:
+          - heading "Delivery fees & changes" [level=2] [ref=e115]
+          - paragraph [ref=e116]: No hidden extras—just clear rates.
+        - list [ref=e117]:
+          - listitem [ref=e118]: Fees are based on distance, vehicle type, and crew size.
+          - listitem [ref=e119]: Stairs-only access or difficult parking may add a handling fee (we’ll flag it in your quote).
+          - listitem [ref=e120]: Address or time changes may update your delivery fee; we’ll confirm before proceeding.
+    - region "Chat with logistics" [ref=e121]:
+      - generic [ref=e122]:
+        - paragraph [ref=e123]: Need a specific window?
+        - heading "Chat with logistics" [level=2] [ref=e124]
+        - paragraph [ref=e125]: Ask about coverage, access requirements, or special delivery times before you book.
+      - generic [ref=e126]:
+        - link "info@reebspartythemes.com" [ref=e127] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+        - 'link "WhatsApp: +233 244 238 419" [ref=e128] [cursor=pointer]':
+          - /url: https://wa.me/233244238419
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo [ref=e129]:
+    - link "REEBS Logo" [ref=e130] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e131] [cursor=pointer]
+    - search [ref=e132]:
+      - img [ref=e133]
+      - searchbox "Search site" [ref=e135]
+    - generic [ref=e136]:
+      - generic [ref=e137]:
+        - link "Contact & Shop Info" [ref=e138] [cursor=pointer]:
+          - /url: /Contact
+        - link "Refund Policy" [ref=e139] [cursor=pointer]:
+          - /url: /refund-policy
+        - link "Delivery Policy" [ref=e140] [cursor=pointer]:
+          - /url: /delivery-policy
+        - link "Privacy Policy" [ref=e141] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "FAQ" [ref=e142] [cursor=pointer]:
+          - /url: /faq
+        - link "Terms of Service" [ref=e143] [cursor=pointer]:
+          - /url: /terms-of-service
+      - generic [ref=e144]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e145] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e146] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e148] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - img [ref=e149] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e151]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e152]: Holiday Hours may vary
+      - generic [ref=e153]:
+        - link [ref=e154] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e155] [cursor=pointer]
+        - link [ref=e157] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e158] [cursor=pointer]
+        - link [ref=e160] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e161] [cursor=pointer]
+        - link [ref=e163] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - img [ref=e164] [cursor=pointer]
+        - link [ref=e166] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e167] [cursor=pointer]
+    - navigation [ref=e170]:
+      - list [ref=e172]:
+        - listitem [ref=e173]:
+          - link "About" [ref=e174] [cursor=pointer]:
+            - /url: /about
+        - listitem [ref=e175]:
+          - link "Shop" [ref=e176] [cursor=pointer]:
+            - /url: /shop
+        - listitem [ref=e177]:
+          - link "Rentals" [ref=e178] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e179]:
+          - link "Gallery" [ref=e180] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e181]:
+          - link "Contact" [ref=e182] [cursor=pointer]:
+            - /url: /contact
+    - generic [ref=e183]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+```

@@ -1,43 +1,37 @@
 [
         {
-            "src":"/imgs/gallery/img1.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
-        
+            "src": "/imgs/gallery/img1.jpg",
+            "title": "Giant Jungle Bounce",
+            "description": "Tema Sports Park · Inflatable obstacle bounce with shade canopy — perfect for high-energy party crews."
         },
         {
             "src": "/imgs/gallery/img2.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "Princess Castle Bounce",
+            "description": "Accra · Pink-and-blue palace jumper with mesh windows and Disney princess artwork for birthday magic."
         },
         {
             "src": "/imgs/gallery/img3.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "Spider Hero Bounce",
+            "description": "School courtyard · Covered Spider-Man themed bounce house ready for superhero jumping adventures."
         },
         {
             "src": "/imgs/gallery/img4.JPEG",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "School Bags",
+            "description": "Assorted backpacks in bright colors and patterns, prepped for filling with party goodies and favors."
         },
         {
             "src": "/imgs/gallery/img5.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "Creative Station",
+            "description": "Crayons, pencils, paints, and craft kits laid out for a kids’ art corner to keep little guests busy."
         },
         {
             "src": "/imgs/gallery/img6.png",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
-        },
-        {
-            "src": "/imgs/gallery/img7.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "Fresh Popcorn Cups",
+            "description": "Butter popcorn served in branded cups — a party snack favorite alongside games and kids’ toys."
         },
         {
             "src": "/imgs/gallery/img8.jpg",
-            "title": "Princess Birthday Party",
-            "description": "Accra · March 2024 · Bouncy Castle, Decor, Cake Table"
+            "title": "Snow Cone",
+            "description": "Accra · March 2024 · Renatal, Kid's Party, Concession"
         }
     ]

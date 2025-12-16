@@ -4,152 +4,217 @@
 - generic [ref=e3]:
   - banner:
     - navigation [ref=e4]:
-      - link "REEBS Logo" [ref=e6] [cursor=pointer]:
-        - /url: /
-        - img "REEBS Logo" [ref=e7] [cursor=pointer]
-      - list [ref=e9]:
-        - listitem [ref=e10]:
-          - link [ref=e11] [cursor=pointer]:
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link [ref=e8] [cursor=pointer]:
             - /url: /
-            - img [ref=e12] [cursor=pointer]
-        - listitem [ref=e14]:
-          - link "About" [ref=e15] [cursor=pointer]:
+            - img [ref=e9] [cursor=pointer]
+        - listitem [ref=e11]:
+          - link "About" [ref=e12] [cursor=pointer]:
             - /url: /About
-        - listitem [ref=e16]:
-          - link "Shop" [ref=e17] [cursor=pointer]:
+        - listitem [ref=e13]:
+          - link "Shop" [ref=e14] [cursor=pointer]:
             - /url: /Shop
-        - button "Rentals" [ref=e19]:
-          - link "Rentals" [ref=e20] [cursor=pointer]:
-            - /url: /Rentals
-          - img [ref=e21]
-        - listitem [ref=e23]:
-          - link "Contact" [ref=e24] [cursor=pointer]:
+        - listitem [ref=e15]:
+          - button "Rentals" [ref=e16] [cursor=pointer]:
+            - link "Rentals" [ref=e17] [cursor=pointer]:
+              - /url: /Rentals
+            - img [ref=e18] [cursor=pointer]
+        - listitem [ref=e20]:
+          - link "Contact" [ref=e21] [cursor=pointer]:
             - /url: /Contact
-      - generic [ref=e25]:
-        - link [ref=e26] [cursor=pointer]:
-          - /url: /Book
+      - generic [ref=e22]:
+        - button "Open search" [ref=e23]:
+          - img [ref=e24]
+        - button "Book" [ref=e26] [cursor=pointer]:
           - img [ref=e27] [cursor=pointer]
-        - link [ref=e29] [cursor=pointer]:
-          - /url: /Cart
-          - img [ref=e30] [cursor=pointer]
-    - navigation
-  - generic [ref=e32]:
-    - generic [ref=e33]:
-      - text: We use cookies to improve your experience, analyze traffic, and show personalized content.
-      - link "Learn more" [ref=e34] [cursor=pointer]:
-        - /url: /privacy-policy
-    - generic [ref=e35]:
-      - button "Decline cookies" [ref=e36] [cursor=pointer]: Reject
-      - button "Accept cookies" [ref=e37] [cursor=pointer]: Accept All
-  - main [ref=e39]:
-    - region [ref=e40]:
-      - generic [ref=e41]:
-        - heading "About us" [level=1] [ref=e42]
-        - paragraph [ref=e43]: REEBS Party Themes is your go-to destination for unforgettable celebrations. We provide unique party themes, high-quality rentals, and a curated selection of party supplies to bring your vision to life. From small gatherings to large events, we ensure every detail is taken care of so you can enjoy the moment.
-      - img [ref=e45]
-      - img
-    - generic [ref=e46]:
-      - figure "Sabina Ackah, founder of REEBS Party Themes" [ref=e48]:
-        - img "Portrait of Sabina Ackah, founder of REEBS Party Themes" [ref=e49]
-        - generic [ref=e50]: Sabina Ackah, founder of REEBS Party Themes
-      - generic [ref=e51]:
-        - heading "Meet the Owner" [level=2] [ref=e52]
-        - paragraph [ref=e53]:
-          - text: Our founder,
-          - strong [ref=e54]: Sabina Ackah
-          - text: ", brings a wealth of creativity and organizational expertise to every project. With an eye for design and a deep passion for event planning, she ensures that each client’s vision is met with precision and flair."
-    - region [ref=e55]:
-      - heading "Our Story" [level=2] [ref=e57]
-      - paragraph [ref=e58]: What started as a passion for creating memorable experiences quickly turned into a growing business. REEBS Party Themes was founded with the belief that every celebration deserves a personal touch. Over the years, we have helped countless clients turn their dream events into reality, combining creativity, quality, and exceptional customer service.
-      - img
-    - generic [ref=e59]:
-      - generic [ref=e60]:
-        - heading "Our Highlights" [level=2] [ref=e61]
+        - button [ref=e29] [cursor=pointer]:
+          - img [ref=e31] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
+          - img [ref=e34] [cursor=pointer]
+  - link "Skip to main content" [ref=e36] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=e37]:
+    - region "Sleek setups. Joyful memories. REEBS Party Themes is your go-to team for playful, design-forward celebrations. We pair modern decor with dependable logistics so you can show up, smile, and soak in every moment." [ref=e38]:
+      - generic [ref=e39]:
+        - heading "Sleek setups. Joyful memories." [level=1] [ref=e40]
+        - paragraph [ref=e41]: REEBS Party Themes is your go-to team for playful, design-forward celebrations. We pair modern decor with dependable logistics so you can show up, smile, and soak in every moment.
+        - generic "What you can expect from us" [ref=e42]:
+          - generic [ref=e43]: Ghana-wide delivery
+          - generic [ref=e44]: Same-day options
+          - generic [ref=e45]: Free planning consult
+          - generic [ref=e46]: Kid-friendly crew
+        - generic "About page actions" [ref=e47]:
+          - link "Browse rentals" [ref=e48] [cursor=pointer]:
+            - /url: /Rentals
+          - link "Plan with us" [ref=e49] [cursor=pointer]:
+            - /url: /Contact
+    - region "Company highlights" [ref=e50]:
+      - generic "Highlights" [ref=e51]:
+        - heading "By the numbers" [level=2] [ref=e52]
+        - generic [ref=e53]:
+          - strong [ref=e54]: 3+
+          - generic [ref=e55]: Rental items
+        - generic [ref=e56]:
+          - strong [ref=e57]: 3+
+          - generic [ref=e58]: Shop items
+        - generic [ref=e59]:
+          - strong [ref=e60]: 2k+
+          - generic [ref=e61]: Parties styled
         - generic [ref=e62]:
-          - 'link "Our mood for a booked and busy holiday weekend . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #partyrentals #morefunlesshustle #fyp #foryoupage #accraghana🇬🇭 4/21/2025" [ref=e63] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DItNuQuCnDG/
-            - generic [ref=e65] [cursor=pointer]:
-              - paragraph [ref=e66] [cursor=pointer]: "Our mood for a booked and busy holiday weekend . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #partyrentals #morefunlesshustle #fyp #foryoupage #accraghana🇬🇭"
-              - generic [ref=e67] [cursor=pointer]: 4/21/2025
-          - 'link "New Week Energy✨ . The 4-day Easter weekend is approaching, so it’s celebration time! Pass by our store for all your party needs. . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #theynotlikeus #accraghana🇬🇭 4/14/2025" [ref=e68] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DIbXRKWCWEp/
-            - generic [ref=e70] [cursor=pointer]:
-              - paragraph [ref=e71] [cursor=pointer]: "New Week Energy✨ . The 4-day Easter weekend is approaching, so it’s celebration time! Pass by our store for all your party needs. . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #theynotlikeus #accraghana🇬🇭"
-              - generic [ref=e72] [cursor=pointer]: 4/14/2025
-          - 'link "Looking for something? Call us, coz we just may have it☺️ . Find us in Sakumono, at the Glorex Plaza- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #accraghana🇬🇭 4/8/2025" [ref=e73] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DIL0pR8ipW-/
-            - generic [ref=e75] [cursor=pointer]:
-              - paragraph [ref=e76] [cursor=pointer]: "Looking for something? Call us, coz we just may have it☺️ . Find us in Sakumono, at the Glorex Plaza- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #accraghana🇬🇭"
-              - generic [ref=e77] [cursor=pointer]: 4/8/2025
-        - link "View More on Instagram →" [ref=e79] [cursor=pointer]:
-          - /url: https://instagram.com/reebspartythemes_/
-      - img
-  - contentinfo [ref=e80]:
-    - link "REEBS Logo" [ref=e81] [cursor=pointer]:
-      - /url: /
-      - img "REEBS Logo" [ref=e82] [cursor=pointer]
-    - search [ref=e83]:
-      - img [ref=e84]
-      - searchbox "Search site" [ref=e86]
-    - generic [ref=e87]:
-      - generic [ref=e88]:
-        - link "Contact & Shop Info" [ref=e89] [cursor=pointer]:
-          - /url: /
-        - link "Refund Policy" [ref=e90] [cursor=pointer]:
-          - /url: /
-        - link "Shipping Policy" [ref=e91] [cursor=pointer]:
-          - /url: /
-        - link "Privacy Policy" [ref=e92] [cursor=pointer]:
-          - /url: /privacy-policy
-        - link "Terms of Service" [ref=e93] [cursor=pointer]:
-          - /url: /
-      - generic [ref=e94]:
-        - link "Sakumono Broadway, Tema, Ghana" [ref=e95] [cursor=pointer]:
-          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-          - img [ref=e96] [cursor=pointer]
-          - text: Sakumono Broadway, Tema, Ghana
-        - link "+233 24 423 8419" [ref=e98] [cursor=pointer]:
-          - /url: /
-          - img [ref=e99] [cursor=pointer]
-          - text: +233 24 423 8419
-        - paragraph [ref=e101]:
-          - text: Open Monday to Saturday | 8:30am - 7pm
-          - emphasis [ref=e102]: Holiday Hours may vary
-      - generic [ref=e103]:
-        - link [ref=e104] [cursor=pointer]:
-          - /url: https://www.facebook.com/reebspartythemes
-          - img [ref=e105] [cursor=pointer]
-        - link [ref=e107] [cursor=pointer]:
-          - /url: https://www.instagram.com/reebspartythemes_/
-          - img [ref=e108] [cursor=pointer]
-        - link [ref=e110] [cursor=pointer]:
-          - /url: https://www.tiktok.com/@reebspartythemes_
-          - img [ref=e111] [cursor=pointer]
-        - link [ref=e113] [cursor=pointer]:
-          - /url: /
-          - img [ref=e114] [cursor=pointer]
-        - link [ref=e116] [cursor=pointer]:
+          - strong [ref=e63]: 6+
+          - generic [ref=e64]: Cities served
+        - generic [ref=e65]:
+          - strong [ref=e66]: under 1 hr
+          - generic [ref=e67]: Average response
+    - generic [ref=e68]:
+      - figure "Sabina Ackah, founder of REEBS Party Themes" [ref=e70]:
+        - img "Portrait of Sabina Ackah, founder of REEBS Party Themes" [ref=e71]
+        - generic [ref=e72]: Sabina Ackah, founder of REEBS Party Themes
+      - generic [ref=e73]:
+        - heading "Meet the Owner" [level=2] [ref=e74]
+        - paragraph [ref=e75]:
+          - text: Our founder,
+          - strong [ref=e76]: Sabina Ackah
+          - text: ", brings a wealth of creativity and organizational expertise to every project. With an eye for design and a deep passion for event planning, she ensures that each client’s vision is met with precision and flair."
+    - region "Our mission & promise" [ref=e77]:
+      - generic [ref=e78]:
+        - paragraph [ref=e79]: What drives us
+        - heading "Our mission & promise" [level=2] [ref=e80]
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - heading "Memorable without the mayhem" [level=3] [ref=e83]
+          - paragraph [ref=e84]: We design parties that feel intentional and immersive, then back them with punctual delivery, sanitized rentals, and friendly coordinators who keep everything on track.
+          - list [ref=e85]:
+            - listitem [ref=e86]:
+              - generic [ref=e87]: ▪
+              - generic [ref=e88]: Curated themes and decor that feel fresh every season.
+            - listitem [ref=e89]:
+              - generic [ref=e90]: ▪
+              - generic [ref=e91]: Clear timelines so you always know what happens next.
+            - listitem [ref=e92]:
+              - generic [ref=e93]: ▪
+              - generic [ref=e94]: "Flexible options: full setup, partial styling, or DIY kits."
+        - generic [ref=e95]:
+          - heading "Local roots. Wide reach." [level=3] [ref=e96]
+          - paragraph [ref=e97]: We call Ghana home and proudly serve families, schools, and brands across Accra, Kumasi, Cape Coast, Takoradi, and beyond.
+          - generic [ref=e98]:
+            - generic [ref=e99]: Corporate family days
+            - generic [ref=e100]: Kid birthdays
+            - generic [ref=e101]: School funfairs
+            - generic [ref=e102]: Bridal & baby showers
+    - region "Values you can feel on party day" [ref=e103]:
+      - generic [ref=e104]:
+        - paragraph [ref=e105]: How we show up
+        - heading "Values you can feel on party day" [level=2] [ref=e106]
+      - list [ref=e107]:
+        - listitem [ref=e108]:
+          - heading "Playful design with polish" [level=3] [ref=e109]
+          - paragraph [ref=e110]: Modern palettes, curated props, and on-trend styling that still feels warm and family-friendly.
+        - listitem [ref=e111]:
+          - heading "Zero-stress coordination" [level=3] [ref=e112]
+          - paragraph [ref=e113]: We plan logistics, timelines, and vendor handoffs so you can stay present with your guests.
+        - listitem [ref=e114]:
+          - heading "Safety first, always" [level=3] [ref=e115]
+          - paragraph [ref=e116]: Sanitized rentals, kid-safe setups, and trained crew members who care about every detail.
+        - listitem [ref=e117]:
+          - heading "Flexible for every budget" [level=3] [ref=e118]
+          - paragraph [ref=e119]: From DIY party boxes to full-service decor, we tailor packages to what matters most to you.
+    - region "Let’s make your party effortless" [ref=e120]:
+      - generic [ref=e121]:
+        - paragraph [ref=e122]: Ready when you are
+        - heading "Let’s make your party effortless" [level=2] [ref=e123]
+        - heading "Tell us the theme, we’ll handle the sparkle." [level=3] [ref=e124]
+      - generic [ref=e125]:
+        - link "Call REEBS Party Themes" [ref=e126] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - text: Call us
+        - link "Chat with us on WhatsApp" [ref=e127] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - text: WhatsApp
+        - link "Email REEBS Party Themes" [ref=e128] [cursor=pointer]:
           - /url: mailto:info@reebspartythemes.com
-          - img [ref=e117] [cursor=pointer]
-    - navigation [ref=e120]:
-      - list [ref=e122]:
-        - listitem [ref=e123]:
-          - link "About" [ref=e124] [cursor=pointer]:
+          - text: Email
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo [ref=e129]:
+    - link "REEBS Logo" [ref=e130] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e131] [cursor=pointer]
+    - search [ref=e132]:
+      - img [ref=e133]
+      - searchbox "Search site" [ref=e135]
+    - generic [ref=e136]:
+      - generic [ref=e137]:
+        - link "Contact & Shop Info" [ref=e138] [cursor=pointer]:
+          - /url: /Contact
+        - link "Refund Policy" [ref=e139] [cursor=pointer]:
+          - /url: /refund-policy
+        - link "Delivery Policy" [ref=e140] [cursor=pointer]:
+          - /url: /delivery-policy
+        - link "Privacy Policy" [ref=e141] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "FAQ" [ref=e142] [cursor=pointer]:
+          - /url: /faq
+        - link "Terms of Service" [ref=e143] [cursor=pointer]:
+          - /url: /terms-of-service
+      - generic [ref=e144]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e145] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e146] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e148] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - img [ref=e149] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e151]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e152]: Holiday Hours may vary
+      - generic [ref=e153]:
+        - link [ref=e154] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e155] [cursor=pointer]
+        - link [ref=e157] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e158] [cursor=pointer]
+        - link [ref=e160] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e161] [cursor=pointer]
+        - link [ref=e163] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - img [ref=e164] [cursor=pointer]
+        - link [ref=e166] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e167] [cursor=pointer]
+    - navigation [ref=e170]:
+      - list [ref=e172]:
+        - listitem [ref=e173]:
+          - link "About" [ref=e174] [cursor=pointer]:
             - /url: /about
-        - listitem [ref=e125]:
-          - link "Shop" [ref=e126] [cursor=pointer]:
+        - listitem [ref=e175]:
+          - link "Shop" [ref=e176] [cursor=pointer]:
             - /url: /shop
-        - listitem [ref=e127]:
-          - link "Rentals" [ref=e128] [cursor=pointer]:
+        - listitem [ref=e177]:
+          - link "Rentals" [ref=e178] [cursor=pointer]:
             - /url: /rentals
-        - listitem [ref=e129]:
-          - link "Gallery" [ref=e130] [cursor=pointer]:
+        - listitem [ref=e179]:
+          - link "Gallery" [ref=e180] [cursor=pointer]:
             - /url: /gallery
-        - listitem [ref=e131]:
-          - link "FAQ" [ref=e132] [cursor=pointer]:
-            - /url: /faq
-        - listitem [ref=e133]:
-          - link "Contact" [ref=e134] [cursor=pointer]:
+        - listitem [ref=e181]:
+          - link "Contact" [ref=e182] [cursor=pointer]:
             - /url: /contact
-    - generic [ref=e135]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+    - generic [ref=e183]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
 ```

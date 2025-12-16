@@ -4,231 +4,305 @@
 - generic [ref=e3]:
   - banner:
     - navigation [ref=e4]:
-      - link "REEBS Logo" [ref=e6] [cursor=pointer]:
-        - /url: /
-        - img "REEBS Logo" [ref=e7] [cursor=pointer]
-      - list [ref=e9]:
-        - listitem [ref=e10]:
-          - link [ref=e11] [cursor=pointer]:
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link [ref=e8] [cursor=pointer]:
             - /url: /
-            - img [ref=e12] [cursor=pointer]
-        - listitem [ref=e14]:
-          - link "About" [ref=e15] [cursor=pointer]:
+            - img [ref=e9] [cursor=pointer]
+        - listitem [ref=e11]:
+          - link "About" [ref=e12] [cursor=pointer]:
             - /url: /About
-        - listitem [ref=e16]:
-          - link "Shop" [ref=e17] [cursor=pointer]:
+        - listitem [ref=e13]:
+          - link "Shop" [ref=e14] [cursor=pointer]:
             - /url: /Shop
-        - button "Rentals" [ref=e19]:
-          - link "Rentals" [ref=e20] [cursor=pointer]:
-            - /url: /Rentals
-          - img [ref=e21]
-        - listitem [ref=e23]:
-          - link "Contact" [ref=e24] [cursor=pointer]:
+        - listitem [ref=e15]:
+          - button "Rentals" [ref=e16] [cursor=pointer]:
+            - link "Rentals" [ref=e17] [cursor=pointer]:
+              - /url: /Rentals
+            - img [ref=e18] [cursor=pointer]
+        - listitem [ref=e20]:
+          - link "Contact" [ref=e21] [cursor=pointer]:
             - /url: /Contact
-      - generic [ref=e25]:
-        - link [ref=e26] [cursor=pointer]:
-          - /url: /Book
+      - generic [ref=e22]:
+        - button "Open search" [ref=e23]:
+          - img [ref=e24]
+        - button "Book" [ref=e26] [cursor=pointer]:
           - img [ref=e27] [cursor=pointer]
-        - link [ref=e29] [cursor=pointer]:
-          - /url: /Cart
-          - img [ref=e30] [cursor=pointer]
-    - navigation
-  - link "Skip to main content" [ref=e32] [cursor=pointer]:
+        - button [ref=e29] [cursor=pointer]:
+          - img [ref=e31] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
+          - img [ref=e34] [cursor=pointer]
+  - link "Skip to main content" [ref=e36] [cursor=pointer]:
     - /url: "#main"
-  - generic [ref=e33]:
-    - generic [ref=e34]:
-      - text: We use cookies to improve your experience, analyze traffic, and show personalized content.
-      - link "Learn more" [ref=e35] [cursor=pointer]:
-        - /url: /privacy-policy
-    - generic [ref=e36]:
-      - button "Decline cookies" [ref=e37] [cursor=pointer]: Reject
-      - button "Accept cookies" [ref=e38] [cursor=pointer]: Accept All
-  - main [ref=e40]:
-    - region [ref=e41]:
+  - main [ref=e37]:
+    - region "REEBS Party Themes We promise less hustle, more fun!" [ref=e38]:
       - generic [ref=e42]:
-        - heading "REEBS Party Themes" [level=1] [ref=e43]:
-          - text: REEBS
-          - text: Party Themes
-        - heading "We promise less hustle, more fun! We promise" [level=2] [ref=e44]:
-          - generic [ref=e45]: We promise less hustle, more fun!
-          - heading "We promise" [level=2] [ref=e46]
-        - generic "heading-buttons" [ref=e47]:
-          - link "View Rentals" [ref=e48] [cursor=pointer]:
+        - paragraph [ref=e43]: Party rentals, decor, and supplies across Ghana
+        - heading "REEBS Party Themes" [level=1] [ref=e44]
+        - heading "We promise less hustle, more fun!" [level=2] [ref=e45]:
+          - generic [ref=e46]: We promise less hustle, more fun!
+          - generic [ref=e47]: We promise less
+        - paragraph [ref=e48]: Bouncy castles, full setups, balloons, and curated party boxes delivered or set up for you.
+        - generic "heading-buttons" [ref=e49]:
+          - link "View Rentals" [ref=e50] [cursor=pointer]:
             - /url: /rentals
-          - link "Explore Our Shop" [ref=e49] [cursor=pointer]:
+          - link "Explore Our Shop" [ref=e51] [cursor=pointer]:
             - /url: /shop
-          - link "Contact Us" [ref=e50] [cursor=pointer]:
+          - link "Talk to Us" [ref=e52] [cursor=pointer]:
             - /url: /contact
-        - link "Scroll to Why Choose Us" [ref=e51] [cursor=pointer]:
-          - /url: "#r1-info"
-          - img [ref=e52] [cursor=pointer]
-    - region [ref=e54]:
-      - heading "Why Choose Us?" [level=2] [ref=e55]
-      - generic [ref=e56]:
-        - heading "Easy Booking" [level=3] [ref=e58]
-        - heading "Reliable Delivery" [level=3] [ref=e60]
-        - heading "Sanitized Rentals" [level=3] [ref=e62]
-        - heading "Budget Flexibility" [level=3] [ref=e64]
-        - heading "Fast Support" [level=3] [ref=e66]
-      - link "Scroll to services" [ref=e67] [cursor=pointer]:
-        - /url: "#r1-services"
-        - img [ref=e68] [cursor=pointer]
-    - region [ref=e70]:
-      - generic [ref=e71]:
-        - heading "Have any Questions?" [level=2] [ref=e72]
-        - heading "Contact Us Today!" [level=3] [ref=e73]
-      - generic [ref=e74]:
-        - link "Call REEBS Party Themes" [ref=e75] [cursor=pointer]:
+        - generic "Highlights" [ref=e53]:
+          - generic [ref=e54]:
+            - strong [ref=e55]: 2k+
+            - generic [ref=e56]: Happy parties
+          - generic [ref=e57]:
+            - strong [ref=e58]: Same-day
+            - generic [ref=e59]: Delivery available
+          - generic [ref=e60]:
+            - strong [ref=e61]: Free
+            - generic [ref=e62]: Planning consult
+    - region "Less hustle. More fun." [ref=e63]:
+      - generic [ref=e64]:
+        - paragraph [ref=e65]: Why choose us
+        - heading "Less hustle. More fun." [level=2] [ref=e66]
+      - list [ref=e67]:
+        - listitem [ref=e68]:
+          - heading "Easy Booking" [level=3] [ref=e69]
+          - paragraph [ref=e70]: Reserve online in minutes and we’ll confirm fast.
+        - listitem [ref=e71]:
+          - heading "Reliable Delivery" [level=3] [ref=e72]
+          - paragraph [ref=e73]: On-time drop-offs and pickup windows that work for you.
+        - listitem [ref=e74]:
+          - heading "Sanitized Rentals" [level=3] [ref=e75]
+          - paragraph [ref=e76]: Every item is cleaned and checked before it leaves.
+        - listitem [ref=e77]:
+          - heading "Budget Flexibility" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Mix-and-match packages to fit your spend.
+        - listitem [ref=e80]:
+          - heading "Fast Support" [level=3] [ref=e81]
+          - paragraph [ref=e82]: Reach us by phone or WhatsApp for quick answers.
+    - region "From idea to confetti" [ref=e83]:
+      - generic [ref=e84]:
+        - paragraph [ref=e85]: Our flow
+        - heading "From idea to confetti" [level=2] [ref=e86]
+      - list [ref=e87]:
+        - listitem [ref=e88]:
+          - generic [ref=e89]: "1"
+          - generic [ref=e90]:
+            - heading "Dream & Define" [level=3] [ref=e91]
+            - paragraph [ref=e92]: Tell us the vibe, theme, and guest list. We share a mini moodboard within 24 hours.
+        - listitem [ref=e93]:
+          - generic [ref=e94]: "2"
+          - generic [ref=e95]:
+            - heading "Design & Prep" [level=3] [ref=e96]
+            - paragraph [ref=e97]: We lock rentals, decor, and supplies, then prep everything in our studio before your date.
+        - listitem [ref=e98]:
+          - generic [ref=e99]: "3"
+          - generic [ref=e100]:
+            - heading "Deliver & Style" [level=3] [ref=e101]
+            - paragraph [ref=e102]: Our crew sets up, tests every item, and adds playful touches so the space feels party-ready.
+        - listitem [ref=e103]:
+          - generic [ref=e104]: "4"
+          - generic [ref=e105]:
+            - heading "Wrap & Wow" [level=3] [ref=e106]
+            - paragraph [ref=e107]: Pickup is on time, with a quick sweep to leave the venue as tidy as we found it.
+    - region "Have any Questions?" [ref=e108]:
+      - generic [ref=e109]:
+        - paragraph [ref=e110]: Need guidance?
+        - heading "Have any Questions?" [level=2] [ref=e111]
+        - heading "Talk to the REEBS team today." [level=3] [ref=e112]
+      - generic [ref=e113]:
+        - link "Call REEBS Party Themes" [ref=e114] [cursor=pointer]:
           - /url: tel:+233244238419
-          - img [ref=e76] [cursor=pointer]
-        - link "Chat with us on WhatsApp" [ref=e78] [cursor=pointer]:
+          - img [ref=e115] [cursor=pointer]
+          - generic [ref=e117] [cursor=pointer]: Call us
+        - link "Chat with us on WhatsApp" [ref=e118] [cursor=pointer]:
           - /url: https://wa.me/233244238419
-          - img [ref=e79] [cursor=pointer]
-        - link "Email REEBS Party Themes" [ref=e81] [cursor=pointer]:
+          - img [ref=e119] [cursor=pointer]
+          - generic [ref=e121] [cursor=pointer]: WhatsApp
+        - link "Email REEBS Party Themes" [ref=e122] [cursor=pointer]:
           - /url: mailto:info@reebspartythemes.com
-          - img [ref=e82] [cursor=pointer]
-      - img
-    - region [ref=e84]:
-      - heading "Our Services" [level=2] [ref=e85]
-      - generic [ref=e86]:
-        - generic [ref=e87]:
-          - link "Party Equipment Rentals" [ref=e88] [cursor=pointer]:
-            - /url: /rentals
-            - paragraph [ref=e91] [cursor=pointer]: Party Equipment Rentals
-          - paragraph [ref=e93]: Bouncy castles, popcorn machines, cotton candy, tents, tables, chairs, etc. for your events. Available for delivery or pickup.
-        - generic [ref=e94]:
-          - link "Party Supplies & Gifts" [ref=e95] [cursor=pointer]:
-            - /url: /shop
-            - paragraph [ref=e98] [cursor=pointer]: Party Supplies & Gifts
-          - paragraph [ref=e100]: Shop for birthday decorations, balloons, toys, stationery, and themed gift sets for all ages.
-        - generic [ref=e101]:
-          - link "Custom Event Decor" [ref=e102] [cursor=pointer]:
-            - /url: /shop
-            - paragraph [ref=e105] [cursor=pointer]: Custom Event Decor
-          - paragraph [ref=e107]: We design and set up stunning balloon arches, table styling, and more.
-        - generic [ref=e108]:
-          - link "All-in-One Party Packages" [ref=e109] [cursor=pointer]:
-            - /url: /rentals
-            - paragraph [ref=e112] [cursor=pointer]: All-in-One Party Packages
-          - paragraph [ref=e114]: "Bundle your event with our curated packages: rental + decor + supplies = hassle-free parties."
-        - generic [ref=e115]:
-          - link "Extended Vendor Network" [ref=e116] [cursor=pointer]:
-            - /url: /rentals
-            - paragraph [ref=e119] [cursor=pointer]: Extended Vendor Network
-          - paragraph [ref=e121]: Need something extra? We can outsource tents, catering, entertainment, and more via trusted partners.
-        - generic [ref=e122]:
-          - link "Party Planning Help" [ref=e123] [cursor=pointer]:
-            - /url: /contact
-            - paragraph [ref=e126] [cursor=pointer]: Party Planning Help
-          - paragraph [ref=e128]: Don’t know where to start? Book a free consultation to plan your celebration step-by-step.
-      - link "Scroll to Social" [ref=e129] [cursor=pointer]:
-        - /url: "#r1-social"
-        - img [ref=e130] [cursor=pointer]
-    - generic [ref=e132]:
-      - generic [ref=e133]:
-        - heading "Need Help Planning Your Kids' Party?" [level=2] [ref=e134]
-        - heading "Contact Us Today!" [level=3] [ref=e135]
-      - generic [ref=e136]:
-        - link "Call REEBS Party Themes" [ref=e137] [cursor=pointer]:
+          - img [ref=e123] [cursor=pointer]
+          - generic [ref=e125] [cursor=pointer]: Email
+    - region "Our Services" [ref=e126]:
+      - generic [ref=e127]:
+        - paragraph [ref=e128]: What we offer
+        - heading "Our Services" [level=2] [ref=e129]
+      - list [ref=e130]:
+        - listitem [ref=e131]:
+          - link "Party Equipment Rentals" [ref=e132] [cursor=pointer]:
+            - /url: /Rentals#Kid's%20Party%20Rentals
+          - paragraph [ref=e133]: Bouncy castles, popcorn machines, cotton candy, tents, tables, chairs, etc. for your events. Available for delivery or pickup.
+        - listitem [ref=e134]:
+          - link "Party Supplies & Gifts" [ref=e135] [cursor=pointer]:
+            - /url: /Shop
+          - paragraph [ref=e136]: Shop for birthday decorations, balloons, toys, stationery, and themed gift sets for all ages.
+        - listitem [ref=e137]:
+          - link "Custom Event Decor" [ref=e138] [cursor=pointer]:
+            - /url: /Rentals#Event%20Decor%20&%20Setup
+          - paragraph [ref=e139]: We design and set up stunning balloon arches, table styling, and more.
+        - listitem [ref=e140]:
+          - link "All-in-One Party Packages" [ref=e141] [cursor=pointer]:
+            - /url: /Rentals#Event%20Decor%20&%20Setup
+          - paragraph [ref=e142]: "Bundle your event with our curated packages: rental + decor + supplies = hassle-free parties."
+        - listitem [ref=e143]:
+          - link "Extended Vendor Network" [ref=e144] [cursor=pointer]:
+            - /url: /Contact
+          - paragraph [ref=e145]: Need something extra? We can outsource tents, catering, entertainment, and more via trusted partners.
+        - listitem [ref=e146]:
+          - link "Party Planning Help" [ref=e147] [cursor=pointer]:
+            - /url: /Contact
+          - paragraph [ref=e148]: Don’t know where to start? Book a free consultation to plan your celebration step-by-step.
+    - region "Popular picks right now" [ref=e149]:
+      - generic [ref=e150]:
+        - paragraph [ref=e151]: Try these
+        - heading "Popular picks right now" [level=2] [ref=e152]
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - heading "Top Rentals" [level=3] [ref=e155]
+          - list [ref=e156]:
+            - listitem [ref=e157]:
+              - img [ref=e158]
+              - generic [ref=e159]:
+                - paragraph [ref=e160]: Mini Bouncy Castle
+                - paragraph [ref=e161]: Kid Bouncers
+              - link "View rental" [ref=e162] [cursor=pointer]:
+                - /url: /Rentals#Kid%20Bouncers
+            - listitem [ref=e163]:
+              - img [ref=e164]
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: Cotton Candy Machine
+                - paragraph [ref=e167]: Party Machines
+              - link "View rental" [ref=e168] [cursor=pointer]:
+                - /url: /Rentals#Party%20Machines
+            - listitem [ref=e169]:
+              - img [ref=e170]
+              - generic [ref=e171]:
+                - paragraph [ref=e172]: Trampoline
+                - paragraph [ref=e173]: Kid Bouncers
+              - link "View rental" [ref=e174] [cursor=pointer]:
+                - /url: /Rentals#Kid%20Bouncers
+        - generic [ref=e175]:
+          - heading "Shop Favourites" [level=3] [ref=e176]
+          - list [ref=e177]:
+            - listitem [ref=e178]:
+              - img [ref=e179]
+              - generic [ref=e180]:
+                - paragraph [ref=e181]: Rainbow Balloon Set
+                - paragraph [ref=e182]: Party Supplies
+              - link "Shop now" [ref=e183] [cursor=pointer]:
+                - /url: /Shop
+            - listitem [ref=e184]:
+              - img [ref=e185]
+              - generic [ref=e186]:
+                - paragraph [ref=e187]: Cotton Candy Kit
+                - paragraph [ref=e188]: Party Supplies
+              - link "Shop now" [ref=e189] [cursor=pointer]:
+                - /url: /Shop
+            - listitem [ref=e190]:
+              - img [ref=e191]
+              - generic [ref=e192]:
+                - paragraph [ref=e193]: Kids Headphones
+                - paragraph [ref=e194]: Kid's Toys
+              - link "Shop now" [ref=e195] [cursor=pointer]:
+                - /url: /Shop
+    - region "Need Help Planning Your Kids' Party?" [ref=e196]:
+      - generic [ref=e197]:
+        - paragraph [ref=e198]: Ready to go?
+        - heading "Need Help Planning Your Kids' Party?" [level=2] [ref=e199]
+        - heading "Contact Us Today!" [level=3] [ref=e200]
+      - generic [ref=e201]:
+        - link "Call REEBS Party Themes" [ref=e202] [cursor=pointer]:
           - /url: tel:+233244238419
-          - img [ref=e138] [cursor=pointer]
-        - link "Chat with us on WhatsApp" [ref=e140] [cursor=pointer]:
+          - img [ref=e203] [cursor=pointer]
+          - generic [ref=e205] [cursor=pointer]: Call us
+        - link "Chat with us on WhatsApp" [ref=e206] [cursor=pointer]:
           - /url: https://wa.me/233244238419
-          - img [ref=e141] [cursor=pointer]
-        - link "Email REEBS Party Themes" [ref=e143] [cursor=pointer]:
-          - /url: mailto:info@reebspartythemes.com
-          - img [ref=e144] [cursor=pointer]
-    - generic [ref=e146]:
-      - generic [ref=e147]:
-        - heading "Our Highlights" [level=2] [ref=e148]
-        - generic [ref=e149]:
-          - 'link "Our mood for a booked and busy holiday weekend . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #partyrentals #morefunlesshustle #fyp #foryoupage #accraghana🇬🇭 4/21/2025" [ref=e150] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DItNuQuCnDG/
-            - generic [ref=e152] [cursor=pointer]:
-              - paragraph [ref=e153] [cursor=pointer]: "Our mood for a booked and busy holiday weekend . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #partyrentals #morefunlesshustle #fyp #foryoupage #accraghana🇬🇭"
-              - generic [ref=e154] [cursor=pointer]: 4/21/2025
-          - 'link "New Week Energy✨ . The 4-day Easter weekend is approaching, so it’s celebration time! Pass by our store for all your party needs. . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #theynotlikeus #accraghana🇬🇭 4/14/2025" [ref=e155] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DIbXRKWCWEp/
-            - generic [ref=e157] [cursor=pointer]:
-              - paragraph [ref=e158] [cursor=pointer]: "New Week Energy✨ . The 4-day Easter weekend is approaching, so it’s celebration time! Pass by our store for all your party needs. . Find us at the Glorex Plaza in Sakumono- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #theynotlikeus #accraghana🇬🇭"
-              - generic [ref=e159] [cursor=pointer]: 4/14/2025
-          - 'link "Looking for something? Call us, coz we just may have it☺️ . Find us in Sakumono, at the Glorex Plaza- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #accraghana🇬🇭 4/8/2025" [ref=e160] [cursor=pointer]':
-            - /url: https://www.instagram.com/reel/DIL0pR8ipW-/
-            - generic [ref=e162] [cursor=pointer]:
-              - paragraph [ref=e163] [cursor=pointer]: "Looking for something? Call us, coz we just may have it☺️ . Find us in Sakumono, at the Glorex Plaza- directly opposite the NTHC Estates #reebspartythemes #kidsparty #giftshop #partyfavors #morefunlesshustle #accraghana🇬🇭"
-              - generic [ref=e164] [cursor=pointer]: 4/8/2025
-        - link "View More on Instagram →" [ref=e166] [cursor=pointer]:
-          - /url: https://instagram.com/reebspartythemes_/
-      - img
-      - link "Scroll to Top" [ref=e167] [cursor=pointer]:
-        - /url: "#r1-intro"
-        - img [ref=e168] [cursor=pointer]
-  - contentinfo [ref=e170]:
-    - link "REEBS Logo" [ref=e171] [cursor=pointer]:
-      - /url: /
-      - img "REEBS Logo" [ref=e172] [cursor=pointer]
-    - search [ref=e173]:
-      - img [ref=e174]
-      - searchbox "Search site" [ref=e176]
-    - generic [ref=e177]:
-      - generic [ref=e178]:
-        - link "Contact & Shop Info" [ref=e179] [cursor=pointer]:
-          - /url: /
-        - link "Refund Policy" [ref=e180] [cursor=pointer]:
-          - /url: /
-        - link "Shipping Policy" [ref=e181] [cursor=pointer]:
-          - /url: /
-        - link "Privacy Policy" [ref=e182] [cursor=pointer]:
-          - /url: /privacy-policy
-        - link "Terms of Service" [ref=e183] [cursor=pointer]:
-          - /url: /
-      - generic [ref=e184]:
-        - link "Sakumono Broadway, Tema, Ghana" [ref=e185] [cursor=pointer]:
-          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-          - img [ref=e186] [cursor=pointer]
-          - text: Sakumono Broadway, Tema, Ghana
-        - link "+233 24 423 8419" [ref=e188] [cursor=pointer]:
-          - /url: /
-          - img [ref=e189] [cursor=pointer]
-          - text: +233 24 423 8419
-        - paragraph [ref=e191]:
-          - text: Open Monday to Saturday | 8:30am - 7pm
-          - emphasis [ref=e192]: Holiday Hours may vary
-      - generic [ref=e193]:
-        - link [ref=e194] [cursor=pointer]:
-          - /url: https://www.facebook.com/reebspartythemes
-          - img [ref=e195] [cursor=pointer]
-        - link [ref=e197] [cursor=pointer]:
-          - /url: https://www.instagram.com/reebspartythemes_/
-          - img [ref=e198] [cursor=pointer]
-        - link [ref=e200] [cursor=pointer]:
-          - /url: https://www.tiktok.com/@reebspartythemes_
-          - img [ref=e201] [cursor=pointer]
-        - link [ref=e203] [cursor=pointer]:
-          - /url: /
-          - img [ref=e204] [cursor=pointer]
-        - link [ref=e206] [cursor=pointer]:
-          - /url: mailto:info@reebspartythemes.com
           - img [ref=e207] [cursor=pointer]
-    - navigation [ref=e210]:
-      - list [ref=e212]:
-        - listitem [ref=e213]:
-          - link "About" [ref=e214] [cursor=pointer]:
+          - generic [ref=e209] [cursor=pointer]: WhatsApp
+        - link "Email REEBS Party Themes" [ref=e210] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e211] [cursor=pointer]
+          - generic [ref=e213] [cursor=pointer]: Email
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo [ref=e214]:
+    - link "REEBS Logo" [ref=e215] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e216] [cursor=pointer]
+    - search [ref=e217]:
+      - img [ref=e218]
+      - searchbox "Search site" [ref=e220]
+    - generic [ref=e221]:
+      - generic [ref=e222]:
+        - link "Contact & Shop Info" [ref=e223] [cursor=pointer]:
+          - /url: /Contact
+        - link "Refund Policy" [ref=e224] [cursor=pointer]:
+          - /url: /refund-policy
+        - link "Delivery Policy" [ref=e225] [cursor=pointer]:
+          - /url: /delivery-policy
+        - link "Privacy Policy" [ref=e226] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "FAQ" [ref=e227] [cursor=pointer]:
+          - /url: /faq
+        - link "Terms of Service" [ref=e228] [cursor=pointer]:
+          - /url: /terms-of-service
+      - generic [ref=e229]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e230] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e231] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e233] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - img [ref=e234] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e236]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e237]: Holiday Hours may vary
+      - generic [ref=e238]:
+        - link [ref=e239] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e240] [cursor=pointer]
+        - link [ref=e242] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e243] [cursor=pointer]
+        - link [ref=e245] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e246] [cursor=pointer]
+        - link [ref=e248] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - img [ref=e249] [cursor=pointer]
+        - link [ref=e251] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e252] [cursor=pointer]
+    - navigation [ref=e255]:
+      - list [ref=e257]:
+        - listitem [ref=e258]:
+          - link "About" [ref=e259] [cursor=pointer]:
             - /url: /about
-        - listitem [ref=e215]:
-          - link "Shop" [ref=e216] [cursor=pointer]:
+        - listitem [ref=e260]:
+          - link "Shop" [ref=e261] [cursor=pointer]:
             - /url: /shop
-        - listitem [ref=e217]:
-          - link "Rentals" [ref=e218] [cursor=pointer]:
+        - listitem [ref=e262]:
+          - link "Rentals" [ref=e263] [cursor=pointer]:
             - /url: /rentals
-        - listitem [ref=e219]:
-          - link "Gallery" [ref=e220] [cursor=pointer]:
+        - listitem [ref=e264]:
+          - link "Gallery" [ref=e265] [cursor=pointer]:
             - /url: /gallery
-        - listitem [ref=e221]:
-          - link "FAQ" [ref=e222] [cursor=pointer]:
-            - /url: /faq
-        - listitem [ref=e223]:
-          - link "Contact" [ref=e224] [cursor=pointer]:
+        - listitem [ref=e266]:
+          - link "Contact" [ref=e267] [cursor=pointer]:
             - /url: /contact
-    - generic [ref=e225]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+    - generic [ref=e268]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
 ```

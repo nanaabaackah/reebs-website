@@ -1,0 +1,222 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner:
+    - navigation [ref=e4]:
+      - list [ref=e6]:
+        - listitem [ref=e7]:
+          - link [ref=e8] [cursor=pointer]:
+            - /url: /
+            - img [ref=e9] [cursor=pointer]
+        - listitem [ref=e11]:
+          - link "About" [ref=e12] [cursor=pointer]:
+            - /url: /About
+        - listitem [ref=e13]:
+          - link "Shop" [ref=e14] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e15]:
+          - button "Rentals" [ref=e16] [cursor=pointer]:
+            - link "Rentals" [ref=e17] [cursor=pointer]:
+              - /url: /Rentals
+            - img [ref=e18] [cursor=pointer]
+        - listitem [ref=e20]:
+          - link "Contact" [ref=e21] [cursor=pointer]:
+            - /url: /Contact
+      - generic [ref=e22]:
+        - button "Open search" [ref=e23]:
+          - img [ref=e24]
+        - button "Book" [ref=e26] [cursor=pointer]:
+          - img [ref=e27] [cursor=pointer]
+        - button [ref=e29] [cursor=pointer]:
+          - img [ref=e31] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
+          - img [ref=e34] [cursor=pointer]
+  - main [ref=e36]:
+    - region "Privacy Policy" [ref=e37]:
+      - generic [ref=e38]:
+        - paragraph [ref=e39]: "Updated: July 2025"
+        - heading "Privacy Policy" [level=1] [ref=e40]
+        - paragraph [ref=e41]: At REEBS Party Themes, your details stay protected while we bring the fun. Here’s exactly how we collect, use, and care for your information.
+        - generic "Policy highlights" [ref=e42]:
+          - generic [ref=e43]: GDPR-aligned
+          - generic [ref=e44]: Ghana DPA ready
+          - generic [ref=e45]: HTTPS everywhere
+      - generic [ref=e46]:
+        - paragraph [ref=e47]: Fast answers, no surprises.
+        - list [ref=e48]:
+          - listitem [ref=e49]: We only use data to run your event smoothly.
+          - listitem [ref=e50]: No selling of data. Ever.
+          - listitem [ref=e51]: Opt out anytime—one message is enough.
+        - generic [ref=e53]: Less hustle. More trust.
+    - region "How your data moves" [ref=e57]:
+      - generic [ref=e58]:
+        - paragraph [ref=e59]: Quick look
+        - heading "How your data moves" [level=2] [ref=e60]
+      - generic [ref=e61]:
+        - article [ref=e62]:
+          - paragraph [ref=e63]: Collect
+          - heading "When you reach out" [level=3] [ref=e64]
+          - paragraph [ref=e65]: Forms, WhatsApp, and bookings capture just enough info to plan your party.
+        - article [ref=e66]:
+          - paragraph [ref=e67]: Protect
+          - heading "Secured in transit" [level=3] [ref=e68]
+          - paragraph [ref=e69]: HTTPS on every page plus minimal third-party access keeps your details safe.
+        - article [ref=e70]:
+          - paragraph [ref=e71]: Control
+          - heading "Your say, always" [level=3] [ref=e72]
+          - paragraph [ref=e73]: Ask for your data, correct it, delete it, or opt out of marketing anytime.
+    - region "Policy details" [ref=e74]:
+      - article [ref=e75]:
+        - paragraph [ref=e76]: 1. What we collect
+        - generic [ref=e77]:
+          - heading "Information We Collect" [level=2] [ref=e78]
+          - paragraph [ref=e79]: We only ask for what helps us plan and deliver your celebration.
+        - list [ref=e80]:
+          - listitem [ref=e81]: Personal details (name, email, phone, event notes) when you fill out a form or contact us.
+          - listitem [ref=e82]: Usage data like pages visited, time on site, and browser type via Google Analytics.
+          - listitem [ref=e83]: Device and approximate location when you view our store on Google Maps (only if you allow it).
+          - listitem [ref=e84]: Social content you interact with from TikTok, Facebook, and Instagram embeds.
+      - article [ref=e85]:
+        - paragraph [ref=e86]: 2. How we use it
+        - generic [ref=e87]:
+          - heading "How We Use Your Information" [level=2] [ref=e88]
+          - paragraph [ref=e89]: Your data powers smooth bookings and a better site experience.
+        - list [ref=e90]:
+          - listitem [ref=e91]: Replying to inquiries and delivering rentals, decor, or supplies.
+          - listitem [ref=e92]: Improving site performance and spotting what visitors enjoy most.
+          - listitem [ref=e93]: Showing location-based info like maps and nearby services.
+          - listitem [ref=e94]: Curating social media highlights for inspiration.
+          - listitem [ref=e95]: Sending updates or offers if you opt in via WhatsApp or our forms.
+      - article [ref=e96]:
+        - paragraph [ref=e97]: 3. Your control
+        - generic [ref=e98]:
+          - heading "Your Rights" [level=2] [ref=e99]
+          - paragraph [ref=e100]: "Under Ghana’s Data Protection Act and global standards, you can:"
+        - list [ref=e101]:
+          - listitem [ref=e102]: Request access to the data we hold about you.
+          - listitem [ref=e103]: Ask us to correct or delete your data.
+          - listitem [ref=e104]: Withdraw consent for marketing messages at any time.
+      - article [ref=e105]:
+        - paragraph [ref=e106]: 4. Data care
+        - generic [ref=e107]:
+          - heading "Retention & Security" [level=2] [ref=e108]
+          - paragraph [ref=e109]: We minimize what we store and secure what we keep.
+        - list [ref=e110]:
+          - listitem [ref=e111]: Contact details are typically retained for up to 12 months for service history.
+          - listitem [ref=e112]: We secure data with HTTPS, form validation, and limited third-party access.
+          - listitem [ref=e113]: We update this policy as tools change and note the new effective date.
+    - region "Third-party partners" [ref=e114]:
+      - generic [ref=e115]:
+        - paragraph [ref=e116]: Trusted tools
+        - heading "Third-party partners" [level=2] [ref=e117]
+        - paragraph [ref=e118]: We pick reputable platforms to deliver features like analytics, maps, and messaging. Each service only accesses the data it needs.
+      - list [ref=e119]:
+        - listitem [ref=e120]:
+          - paragraph [ref=e121]: Netlify
+          - paragraph [ref=e122]: Hosts our site and may log basic metadata (e.g., IP, request time).
+        - listitem [ref=e123]:
+          - paragraph [ref=e124]: Zapier
+          - paragraph [ref=e125]: Automates bringing TikTok, Facebook, and Instagram posts into our feed.
+        - listitem [ref=e126]:
+          - paragraph [ref=e127]: Google Analytics
+          - paragraph [ref=e128]: Tracks anonymous usage to improve the experience.
+        - listitem [ref=e129]:
+          - paragraph [ref=e130]: Google Maps
+          - paragraph [ref=e131]: Shows store/event location if you permit location access.
+        - listitem [ref=e132]:
+          - paragraph [ref=e133]: WhatsApp
+          - paragraph [ref=e134]: Lets you message us directly for quotes or updates.
+    - region "Talk to the REEBS team" [ref=e135]:
+      - generic [ref=e136]:
+        - paragraph [ref=e137]: Need clarity?
+        - heading "Talk to the REEBS team" [level=2] [ref=e138]
+        - paragraph [ref=e139]: Ask for your data, request deletion, or change how we contact you. We respond quickly.
+      - generic [ref=e140]:
+        - link "info@reebspartythemes.com" [ref=e141] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+        - 'link "WhatsApp: +233 244 238 419" [ref=e142] [cursor=pointer]':
+          - /url: https://wa.me/233244238419
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo [ref=e143]:
+    - link "REEBS Logo" [ref=e144] [cursor=pointer]:
+      - /url: /
+      - img "REEBS Logo" [ref=e145] [cursor=pointer]
+    - search [ref=e146]:
+      - img [ref=e147]
+      - searchbox "Search site" [ref=e149]
+    - generic [ref=e150]:
+      - generic [ref=e151]:
+        - link "Contact & Shop Info" [ref=e152] [cursor=pointer]:
+          - /url: /Contact
+        - link "Refund Policy" [ref=e153] [cursor=pointer]:
+          - /url: /refund-policy
+        - link "Delivery Policy" [ref=e154] [cursor=pointer]:
+          - /url: /delivery-policy
+        - link "Privacy Policy" [ref=e155] [cursor=pointer]:
+          - /url: /privacy-policy
+        - link "FAQ" [ref=e156] [cursor=pointer]:
+          - /url: /faq
+        - link "Terms of Service" [ref=e157] [cursor=pointer]:
+          - /url: /terms-of-service
+      - generic [ref=e158]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e159] [cursor=pointer]:
+          - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+          - img [ref=e160] [cursor=pointer]
+          - text: Sakumono Broadway, Tema, Ghana
+        - link "+233 24 423 8419" [ref=e162] [cursor=pointer]:
+          - /url: tel:+233244238419
+          - img [ref=e163] [cursor=pointer]
+          - text: +233 24 423 8419
+        - paragraph [ref=e165]:
+          - text: Open Monday to Saturday | 8:30am - 7pm
+          - emphasis [ref=e166]: Holiday Hours may vary
+      - generic [ref=e167]:
+        - link [ref=e168] [cursor=pointer]:
+          - /url: https://www.facebook.com/reebspartythemes
+          - img [ref=e169] [cursor=pointer]
+        - link [ref=e171] [cursor=pointer]:
+          - /url: https://www.instagram.com/reebspartythemes_/
+          - img [ref=e172] [cursor=pointer]
+        - link [ref=e174] [cursor=pointer]:
+          - /url: https://www.tiktok.com/@reebspartythemes_
+          - img [ref=e175] [cursor=pointer]
+        - link [ref=e177] [cursor=pointer]:
+          - /url: https://wa.me/233244238419
+          - img [ref=e178] [cursor=pointer]
+        - link [ref=e180] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+          - img [ref=e181] [cursor=pointer]
+    - navigation [ref=e184]:
+      - list [ref=e186]:
+        - listitem [ref=e187]:
+          - link "About" [ref=e188] [cursor=pointer]:
+            - /url: /about
+        - listitem [ref=e189]:
+          - link "Shop" [ref=e190] [cursor=pointer]:
+            - /url: /shop
+        - listitem [ref=e191]:
+          - link "Rentals" [ref=e192] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e193]:
+          - link "Gallery" [ref=e194] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e195]:
+          - link "Contact" [ref=e196] [cursor=pointer]:
+            - /url: /contact
+    - generic [ref=e197]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+```

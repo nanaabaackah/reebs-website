@@ -1,99 +1,158 @@
 import React from "react";
-import { Link } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "./CartContext";
 
+const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
+
 function CartOverlay({ open, onClose }) {
-  const { cart, updateQuantity, removeFromCart, clearCart, convertPrice, formatCurrency } = useCart();
-  
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    convertPrice,
+    formatCurrency,
+    currency,
+    setCurrency,
+  } = useCart();
+  const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const subtotal = cart.reduce(
     (acc, item) => acc + convertPrice(item.price) * item.cartQuantity,
     0
   );
 
   return (
-    <div className={`cart-overlay ${open ? "open" : ""}`}>
-      <div className="cart-header">
-        <h2>Your Cart ({cart.reduce((acc, item) => acc + item.cartQuantity, 0)})</h2>
-        <button className="close-cart" onClick={onClose}>
-          <FontAwesomeIcon icon={faTimes} />
-        </button>
-      </div>
+    <div className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
+      <div className="cart-backdrop" onClick={onClose} />
+      <aside
+        className={`cart-overlay ${open ? "open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-title"
+      >
+        <div className="cart-header">
+          <div>
+            <p className="cart-kicker">Bag</p>
+            <h2 id="cart-title">Your Cart ({itemCount})</h2>
+          </div>
+          <div className="cart-header-actions">
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="cart-currency"
+              aria-label="Select currency"
+            >
+              {CURRENCIES.map((cur) => (
+                <option key={cur} value={cur}>
+                  {cur}
+                </option>
+              ))}
+            </select>
+            <button className="close-cart" onClick={onClose} aria-label="Close cart">
+              <FontAwesomeIcon icon={faTimes} />
+            </button>
+          </div>
+        </div>
 
-      {cart.length === 0 ? (
-        <p>Your cart is empty</p>
-      ) : (
-        <>
-          <div className="cart-items">
-            {cart.map((item) => (
-              <div key={item.id} className="cart-item">
-                <div className="cart-name">
-                  <p>{item.name}</p>
-                </div>
-                <div className="individual">
-                  <img className="cart-image" src={item.image_url || "/imgs/placeholder.png"} alt={item.name} />
-                  <div className="item-quantity-controls">
-                    <div className="item-quantity">
-                      <div className="quant">
-                        <p>Quantity: </p>
-                        <button 
-                          onClick={() => updateQuantity(item.id, -1)}
-                          disabled={item.cartQuantity <= 1}
+        {cart.length === 0 ? (
+          <div className="cart-empty">
+            <p>Your cart is empty.</p>
+            <Link to="/shop" className="checkout-btn ghost" onClick={onClose}>
+              Browse the shop
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="cart-items">
+              {cart.map((item) => {
+                const available = item.quantity - item.cartQuantity;
+                return (
+                  <div key={item.id} className="cart-item">
+                    <img
+                      className="cart-image"
+                      src={item.image_url || "/imgs/placeholder.png"}
+                      alt={item.name}
+                    />
+                    <div className="cart-item-body">
+                      <div className="cart-item-top">
+                        <div>
+                          <p className="cart-item-name">{item.name}</p>
+                          <span className="cart-item-type">{item.type}</span>
+                        </div>
+                        <button
+                          className="cart-remove"
+                          onClick={() => removeFromCart(item.id)}
+                          aria-label="Remove item"
                         >
-                          <FontAwesomeIcon icon={faMinus} />
+                          <FontAwesomeIcon icon={faTrash} />
                         </button>
+                      </div>
 
-                        <span>{item.cartQuantity}</span>
-
-                        <button 
-                          onClick={() => updateQuantity(item.id, 1)}
-                          disabled={item.cartQuantity >= item.quantity}
-                        >
-                          <FontAwesomeIcon icon={faPlus} />
-                        </button>
-                        <div className="remove-btn">
-                          <button onClick={() => removeFromCart(item.id)}>
-                            <FontAwesomeIcon icon={faTrash} />
+                      <div className="cart-item-meta">
+                        <div className="cart-qty-controls">
+                          <button
+                            onClick={() =>
+                              item.cartQuantity <= 1
+                                ? removeFromCart(item.id)
+                                : updateQuantity(item.id, -1)
+                            }
+                            aria-label="Decrease quantity"
+                          >
+                            <FontAwesomeIcon icon={faMinus} />
                           </button>
+                          <span>{item.cartQuantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            disabled={item.cartQuantity >= item.quantity}
+                            aria-label="Increase quantity"
+                          >
+                            <FontAwesomeIcon icon={faPlus} />
+                          </button>
+                          <p className="cart-stock">
+                            {available > 0 ? `${available} left` : "Max stock"}
+                          </p>
+                        </div>
+                        <div className="cart-price">
+                          <span className="cart-price-each">
+                            {formatCurrency(convertPrice(item.price))} ea
+                          </span>
+                          <span className="cart-price-total">
+                            {formatCurrency(convertPrice(item.price * item.cartQuantity))}
+                          </span>
                         </div>
                       </div>
-                      <div className="stock-info">
-                        <p>
-                          {item.quantity - item.cartQuantity > 0
-                            ? `${item.quantity - item.cartQuantity} left in stock`
-                            : "No more stock available"}
-                        </p>
-                      </div>
-                      
-                    </div>
-                    <div className="cart-price">
-                      <span>{formatCurrency(convertPrice(item.price * item.cartQuantity))}</span>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+
+            <div className="cart-footer">
+              <div className="subtotal">
+                <div className="text">
+                  <strong>Subtotal</strong>
+                  <span>
+                    {itemCount} {itemCount === 1 ? "item" : "items"}
+                  </span>
+                </div>
+                <div className="amount">
+                  <strong>{formatCurrency(subtotal)}</strong>
                 </div>
               </div>
-            ))}
-          </div>
-
-          <div className="cart-footer">
-            <p className="subtotal">
-              <div className="text">
-                <strong>Subtotal </strong> 
-                ({cart.reduce((acc, item) => acc + item.cartQuantity, 0)}{" "}
-                {cart.reduce((acc, item) => acc + item.cartQuantity, 0) === 1 ? "item" : "items"})
+              <p className="cart-note">Taxes and delivery calculated at checkout.</p>
+              <Link to="/Cart" onClick={onClose}>
+                <button className="checkout-btn">Proceed To Bag</button>
+              </Link>
+              <div className="foot-items">
+                <button className="clear-cart" onClick={clearCart}>Clear Cart</button>
+                <button className="ghost-btn" onClick={onClose}>Continue shopping</button>
               </div>
-              <div className="amount">
-                <strong>{formatCurrency(subtotal)}</strong>
-              </div>
-            </p>
-            <Link to="/Cart" ><button className="checkout-btn">Proceed To Bag</button></Link>
-            <div className="foot-items">
-              <button className="clear-cart" onClick={clearCart}> Clear Cart</button>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </aside>
     </div>
   );
 }

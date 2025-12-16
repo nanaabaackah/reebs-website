@@ -1,20 +1,26 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-function SideNav({ items, activeId, label = "Page sections" }) {
+function SideNav({ items, activeId, label = "Page sections", className = "" }) {
+  if (!items || !items.length) return null;
+
   return (
-    <nav className="side-menu" aria-label={label}>
+    <nav className={`side-menu ${className}`.trim()} aria-label={label}>
       <ul>
-        {items.map((item) => (
-          <li key={item.id}>
+        {items.map((item) => {
+          const isActive = activeId === item.id;
+          return (
+          <li key={item.id} className={isActive ? "active" : undefined}>
             <a
               href={`#${item.id}`}
-              aria-current={activeId === item.id ? "true" : undefined}
+              aria-current={isActive ? "true" : undefined}
+              className={isActive ? "is-active" : undefined}
             >
               {item.label}
             </a>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </nav>
   );
@@ -29,6 +35,7 @@ SideNav.propTypes = {
   ).isRequired,
   activeId: PropTypes.string,
   label: PropTypes.string,
+  className: PropTypes.string,
 };
 
 export default SideNav;

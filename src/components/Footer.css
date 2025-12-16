@@ -35,12 +35,15 @@ html, body {
     align-items: center;
     width:100%;
     bottom: 0;
-    padding:5em 3em;
-    padding-bottom: 0em;
-    background-color: var(--black);
-    min-height:200px;
-    color: white;
-    font-family: "Sue Ellen Francisco", cursive;
+    padding:4em 2.5em 2.5em;
+    background: #86868648;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.5);
+    min-height:220px;
+    color: var(--black);
+    font-family: "Montserrat", sans-serif;
+    box-shadow: 0 -18px 36px rgba(0,0,0,0.08);
 }
     
 .f-nav-links{
@@ -65,11 +68,11 @@ html, body {
 
 .f-menu li,
 .f-menu button{
-    margin-right: 5em;
+    margin-right: 2.5em;
     text-align: center;
     margin-left: 2em;
-    font-size: .7em;
-    font-weight: bolder;
+    font-size: .8em;
+    font-weight: 800;
     list-style :none;
 }
 
@@ -79,22 +82,22 @@ html, body {
 .f-menu button a:visited {
     text-decoration: none;
     display: inline;
-    color: white;
+    color: var(--black);
     position: relative;
     padding: .5em;
 }
     
 .f-menu li a:hover,
 .f-menu button a:hover{
-    color: white;
+    color: var(--back3);
     transition: 0.2s;
-    border-bottom: white 2px solid;
+    border-bottom: var(--back3) 2px solid;
 }
 
 .f-menu li a:focus,
 .f-menu button a:focus{
     color: var(--light);
-    background-color: var(--black);
+    background-color: transparent;
 }
 
 .f-social-icons {
@@ -104,9 +107,9 @@ html, body {
     position: relative;
     justify-content: space-between;
     display: flex;
-    color: #fff;
-    padding: 2em;
-    gap: 2em;
+    color: var(--black);
+    padding: 1.5em;
+    gap: 1.5em;
 }
     
 .f-social-icons a svg{
@@ -115,13 +118,18 @@ html, body {
     align-items: center;
     position: relative;
     text-align: center;
-    color: #fff;
-    width: 25px;
-    font-size: 1.5em;
+    color: var(--black);
+    width: 18px;
+    height: 18px;
+    padding: 0.6em;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
 }
     
 .f-social-icons a:hover svg{ 
-    background:none;
+    background: rgba(255,255,255,0.9);
     color: var(--back3);
     transition: 0.3s;
 }
@@ -130,10 +138,10 @@ html, body {
     display: flex;
     flex-direction: row;
     justify-content: center;
-    gap:10em;
-    padding: 3em 1em;
-    border-bottom: rgb(92, 92, 92) 2px solid;
-    font-family: "Montserrat Alternates", sans-serif;
+    gap:6em;
+    padding: 2.5em 1em;
+    border-bottom: rgba(0,0,0,0.08) 1px solid;
+    font-family: "Montserrat", sans-serif;
     width: 100%;
 }
 
@@ -145,12 +153,12 @@ html, body {
 #links a,
 #contact a,
 #contact p{
-    color: white;
+    color: var(--black);
     text-decoration: none;
     width: fit-content;
     margin: 0em;
-    font-size: .8em;
-    margin-bottom: 1em;
+    font-size: .9em;
+    margin-bottom: 0.8em;
     font-weight: 700;
 }
 #contact em{
@@ -169,12 +177,17 @@ html, body {
 }
 
 .f-search-input {
-    padding: 0.5em 2.5em 0.5em 2.5em;
-    font-size: .8em;
-    border: 2px solid #ccc;
-    border-radius: 10px;
+    padding: 0.55em 2.5em 0.55em 2.5em;
+    font-size: .9em;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
     outline: none;
-    width: 250px;
+    width: 260px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    color: var(--black);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.06);
 }
 
 .f-search-icon {
@@ -183,6 +196,39 @@ html, body {
     left: 10px;
     transform: translateY(-50%);
     color: var(--black);
+}
+
+[data-theme="dark"] .site-footer{
+    background: rgba(16, 20, 32, 0.75);
+    border-top-color: rgba(255,255,255,0.1);
+    box-shadow: 0 -18px 36px rgba(0,0,0,0.4);
+    color: #eaf2ff;
+}
+[data-theme="dark"] .f-menu li a,
+[data-theme="dark"] .f-menu li a:visited,
+[data-theme="dark"] #links a,
+[data-theme="dark"] #contact a,
+[data-theme="dark"] #contact p{
+    color: #eaf2ff;
+}
+[data-theme="dark"] .f-menu li a:hover,
+[data-theme="dark"] #links a:hover,
+[data-theme="dark"] #contact a:hover{
+    color: #ffe2d1;
+    border-bottom-color: #ffe2d1;
+}
+[data-theme="dark"] .f-search-input{
+    background: rgba(255,255,255,0.08);
+    color: #eaf2ff;
+    border-color: rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .f-social-icons a svg{
+    background: rgba(255,255,255,0.1);
+    color: #eaf2ff;
+    border-color: rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .f-social-icons a:hover svg{
+    color: #ffe2d1;
 }
 
 .gototop {
@@ -228,7 +274,7 @@ footer span{
     position: relative;
     bottom: 0;
     font-size: 10px;
-    color: white;
+    color: var(--dark);
     margin-top: 2em;
     right: 0;
     text-transform: none;    

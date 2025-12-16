@@ -1,45 +1,92 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-model Inventory {
-  id           Int     @id @default(autoincrement())
-  inventoryId  String @unique
-  name         String
-  type         String
-  description  String
-  num_of_items Int    @map("quantity")
-  price        Float
-  status       String
-  image_url    String
 
-  bookings     Booking[]
-}
-
-model Booking {
-  id           Int      @id @default(autoincrement())
-  bookingId    String   @unique
-  customerName String
-  phone        String?
-  email        String?
-  eventDate    DateTime
-  returnDate   DateTime?
-  status       String   @default("pending")
-  totalAmount  Float?
-
-  itemId   Int
-  item     Inventory @relation(fields: [itemId], references: [id])
-
+model Customer {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  phone     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime
+  Order     Order[]
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  orderNumber String      @unique
+  status      OrderStatus @default(pending)
+  totalCents  Int
+  currency    String      @default("USD")
+  customerId  Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  Customer    Customer    @relation(fields: [customerId], references: [id])
+  OrderItem   OrderItem[]
+}
+
+model OrderItem {
+  id             Int     @id @default(autoincrement())
+  orderId        Int
+  productId      Int
+  quantity       Int
+  unitPriceCents Int
+  lineTotalCents Int
+  Order          Order   @relation(fields: [orderId], references: [id])
+  Product        Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Product {
+  id                   Int      @id @default(autoincrement())
+  sku                  String   @unique
+  name                 String
+  description          String?
+  
+  sourceCategoryCode   String   // Stays as 'Inventory' or 'Rental'
+  specificCategory     String?  // <--- NEW FIELD: Mapped from 'type' (inventory) or 'category' (rentals)
+  rate                 String?
+  page                 String?
+  age                  String?  
+  
+  priceCents           Int
+  currency             String   @default("GHS")
+  stock                Int      @default(0)
+  isActive             Boolean  @default(true)
+  imageUrl             String?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  OrderItem            OrderItem[]
+  StockMovement        StockMovement[]
+  
+  @@map("product")
+}
+
+model StockMovement {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  delta     Int
+  reason    String
+  reference String?
+  createdAt DateTime @default(now())
+  Product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+}
+
+enum OrderStatus {
+  pending
+  paid
+  canceled
+  fulfilled
+  refunded
 }

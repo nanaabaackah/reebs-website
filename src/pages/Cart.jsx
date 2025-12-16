@@ -1,114 +1,220 @@
 import React from "react";
-import { useCart } from "../components/CartContext";
-import AddToCartButton from "/src/components/AddToCartButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faGift, faLock, faTruck } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
+import { useCart } from "../components/CartContext";
 import "./master.css";
-//import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
+
+const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
 
 const Cart = () => {
-  const { currency, setCurrency, cart, removeFromCart, updateQuantity, convertPrice, formatCurrency } = useCart();
+  const {
+    currency,
+    setCurrency,
+    cart,
+    removeFromCart,
+    updateQuantity,
+    convertPrice,
+    formatCurrency,
+    clearCart,
+  } = useCart();
 
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.cartQuantity), 0);
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.cartQuantity, 0);
+
+  const handleQtyChange = (item, value) => {
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.min(Math.max(parsed, 1), item.quantity);
+    updateQuantity(item.id, clamped - item.cartQuantity);
+  };
+
+  const stockLeft = (item) => Math.max(item.quantity - item.cartQuantity, 0);
 
   return (
-    <div className="r1">
-      <main className="r1-back">
-        <section id="r7-intro">
-          <div className="r7 back-heading">
-            <h1>Your Cart</h1>
-            <p>Party supplies, toys, and decorations available for purchase.</p>
+    <main className="cart-shell" id="main">
+      <section className="cart-hero" id="cart-intro" aria-labelledby="cart-heading">
+        <div className="cart-hero-copy back-heading">
+          <p className="cart-hero-kicker">Bags & bundles</p>
+          <h1 id="cart-heading">Your Cart</h1>
+          <p className="cart-hero-sub">
+            Curate the party stack you love—switch currency, tweak quantities, and checkout when you are ready.
+          </p>
+          <div className="cart-hero-pills" aria-label="Cart highlights">
+            <span className="pill">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
+            <span className="pill pill-ghost">Realtime stock holds your picks</span>
+            <span className="pill pill-accent">Dark-mode ready ✨</span>
           </div>
-          <img
-            src="/imgs/blue2.svg"
-            alt="wave overflow"
-            className="absolute top-[500px] left-1/2 transform -translate-x-1/2 w-[1600px] z-60 pointer-events-none"
-          />
-        </section>
-        <section id="r7-cart-info">
-          <div className="cart-page">
-            {cart.length === 0 ? (
-              <p className="empty-cart">Your cart is empty.</p>
-              
-            ) : (
-              <>
-                <div className="cart-items">
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="cart-currency-selector"
-                  >
-                    {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
-                      <option key={cur} value={cur}>
-                        {cur}
-                      </option>
-                    ))}
-                  </select>
-                  {cart.map((item) => (
-                    <div className="cart-item-row" key={item.id}>
-                      {/* Image */}
-                      <div className="cart-item-image">
-                        <img src={item.image_url} alt={item.name} />
-                        
+        </div>
+        <div className="cart-hero-card">
+          <div className="hero-card-top">
+            <div>
+              <p className="kicker">Current subtotal</p>
+              <strong>{formatCurrency(convertPrice(subtotal))}</strong>
+            </div>
+            <div className="currency-picker">
+              <label htmlFor="currency-select">Currency</label>
+              <select
+                id="currency-select"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+              >
+                {CURRENCIES.map((cur) => (
+                  <option key={cur} value={cur}>
+                    {cur}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="hero-card-perks">
+            <span><FontAwesomeIcon icon={faTruck} /> Same-day delivery options</span>
+            <span><FontAwesomeIcon icon={faLock} /> Secure checkout</span>
+            <span><FontAwesomeIcon icon={faGift} /> We pack with care</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="cart-body" id="cart-info">
+        {cart.length === 0 ? (
+          <div className="cart-empty-card">
+            <div className="cart-empty-illus" aria-hidden="true">⋆</div>
+            <h2>Cart feels a little lonely</h2>
+            <p>Add rentals or supplies to see them shine here.</p>
+            <div className="cart-empty-actions">
+              <Link className="hero-btn hero-btn-primary" to="/Shop">Browse shop</Link>
+              <Link className="hero-btn hero-btn-ghost" to="/Rentals">View rentals</Link>
+            </div>
+          </div>
+        ) : (
+          <div className="cart-grid cart-page">
+            <div className="cart-main">
+              <div className="cart-toolbar">
+                <div>
+                  <p className="kicker">Bag</p>
+                  <h3>{itemCount} {itemCount === 1 ? "item" : "items"} saved</h3>
+                </div>
+                <div className="toolbar-actions">
+                  <button className="ghost-btn clear-all" onClick={clearCart}>Clear cart</button>
+                  <Link className="pill-link" to="/Shop">
+                    <FontAwesomeIcon icon={faArrowLeft} /> Continue shopping
+                  </Link>
+                </div>
+              </div>
+
+              <div className="cart-list">
+                {cart.map((item) => (
+                  <article className="cart-line" key={item.id}>
+                    <div className="cart-line-media">
+                      <img src={item.image_url} alt={item.name} loading="lazy" />
+                      {item.type && <span className="cart-chip">{item.type}</span>}
+                    </div>
+                    <div className="cart-line-content">
+                      <div className="cart-line-top">
+                        <div>
+                          <h3>{item.name}</h3>
+                          <p className="cart-line-stock">
+                            {stockLeft(item) > 0
+                              ? `${stockLeft(item)} left in stock`
+                              : "Reserved to the max"}
+                          </p>
+                        </div>
+                        <button
+                          className="pill-link danger"
+                          onClick={() => removeFromCart(item.id)}
+                          aria-label={`Remove ${item.name}`}
+                        >
+                          Remove
+                        </button>
                       </div>
 
-                      {/* Name & details */}
-                      <div className="cart-item-info">
-                        <h3>{item.name}</h3>
-                        {/* optional: add type or description */}
-                        <p className="cart-item-type">{item.type}</p>
-                        <p className="stock">
-                          {item.quantity} available in stock
-                        </p>
-                      </div>
+                      <div className="cart-line-grid">
+                        <div className="cart-line-price">
+                          <p className="label">Price</p>
+                          <strong>{formatCurrency(convertPrice(item.price))}</strong>
+                          <span className="muted">per item</span>
+                        </div>
 
-                      {/* Price */}
-                      <div className="cart-item-price">
-                        <p>Price</p>
-                        {formatCurrency(convertPrice(item.price))}
-                      </div>
+                        <div className="cart-line-qty">
+                          <p className="label">Quantity</p>
+                          <div className="qty-input">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                item.cartQuantity <= 1
+                                  ? removeFromCart(item.id)
+                                  : updateQuantity(item.id, -1)
+                              }
+                              aria-label={`Decrease ${item.name} quantity`}
+                            >
+                              −
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              max={item.quantity}
+                              value={item.cartQuantity}
+                              onChange={(e) => handleQtyChange(item, e.target.value)}
+                              aria-label={`${item.name} quantity`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, 1)}
+                              disabled={item.cartQuantity >= item.quantity}
+                              aria-label={`Increase ${item.name} quantity`}
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="muted">
+                            {item.quantity} available • {formatCurrency(convertPrice(item.price * item.cartQuantity))}
+                          </span>
+                        </div>
 
-                      {/* Quantity (use input with stepper) */}
-                      <div className="cart-item-quantity">
-                        <p>Quantity</p>
-                        <input
-                          type="number"
-                          min="1"
-                          max={item.quantity}
-                          value={item.cartQuantity}
-                          onChange={(e) =>
-                            updateQuantity(item.id, parseInt(e.target.value) - item.cartQuantity)
-                          }
-                        />
-                      </div>
-
-                      {/* Total */}
-                      <div className="cart-item-total">
-                        <p>Total</p>
-                        {formatCurrency(convertPrice(item.price * item.cartQuantity))}
-                      </div>
-
-                      {/* Remove */}
-                      <div className="cart-item-remove">
-                        <button onClick={() => removeFromCart(item.id)}>Remove ✕</button>
+                        <div className="cart-line-total">
+                          <p className="label">Line total</p>
+                          <strong>{formatCurrency(convertPrice(item.price * item.cartQuantity))}</strong>
+                          <span className="muted">
+                            {stockLeft(item) > 0 ? `${stockLeft(item)} spare` : "Max stock reached"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </article>
+                ))}
+              </div>
+            </div>
 
-
-                <div className="cart-summary">
-                  <h3>Subtotal ({itemCount} {itemCount === 1 ? "item" : "items"}):</h3>
-                  <p>{formatCurrency(convertPrice(subtotal))}</p>
-                  <button className="checkout-btn">Proceed to Checkout</button>
+            <aside className="cart-summary-card" aria-label="Order summary">
+              <div className="summary-head">
+                <p className="kicker">Summary</p>
+                <h3>Ready to book?</h3>
+                <p className="muted">Taxes and delivery calculated at checkout.</p>
+              </div>
+              <div className="summary-rows">
+                <div className="summary-row">
+                  <span>Items</span>
+                  <span>{itemCount}</span>
                 </div>
-              </>
-            )}
+                <div className="summary-row">
+                  <span>Subtotal</span>
+                  <strong>{formatCurrency(convertPrice(subtotal))}</strong>
+                </div>
+              </div>
+              <div className="summary-perks">
+                <span><FontAwesomeIcon icon={faLock} /> Safe checkout</span>
+                <span><FontAwesomeIcon icon={faTruck} /> We deliver & pick up</span>
+                <span><FontAwesomeIcon icon={faGift} /> Styled for fun</span>
+              </div>
+              <button className="checkout-btn">Proceed to Checkout</button>
+              <Link className="ghost-btn summary-continue" to="/Shop">
+                Keep adding items
+              </Link>
+            </aside>
           </div>
-        </section>
-      </main>
-    </div>
+        )}
+      </section>
+    </main>
   );
 };
 
