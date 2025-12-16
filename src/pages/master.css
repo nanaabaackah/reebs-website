@@ -1805,7 +1805,8 @@ h3{
 
   .about-hero-copy{
     width:90%;
-    margin-top: 3rem;
+    margin-top: 7rem;
+    padding: 0 2rem;
 }
   .about-step-list{
     grid-template-columns: 1fr;
@@ -4206,10 +4207,9 @@ body.shop-theme{
 
 .rent-image img{
   width: 100%;
-
-  height: 280px;
+  height: 260px;
   object-fit: contain;
-  margin-top: -4rem;
+  margin-top: 0;
   display: block;
 }
 
@@ -4427,8 +4427,8 @@ body.shop-theme{
 }
 .bouncy-card-grid{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 3.5rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2.5rem 1.5rem;
   margin-top: 1rem;
 }
 .bouncy-card{
@@ -4449,7 +4449,8 @@ body.shop-theme{
 .bouncy-card-media img{
   width: 100%;
   height: 220px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fff;
   display: block;
 }
 .bouncy-nav{
