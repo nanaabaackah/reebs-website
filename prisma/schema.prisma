@@ -74,9 +74,9 @@ model StockMovement {
   quantity  Int
   date      DateTime
   notes     String?
-  
-  Product   Product  @relation(fields: [productId], references: [id])
+  reference String?  // <--- Ensure this line exists
 
+  Product   Product  @relation(fields: [productId], references: [id])
   @@index([productId])
   @@map("stockMovement")
 }

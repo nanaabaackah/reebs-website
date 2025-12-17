@@ -1,11 +1,5 @@
-productId,type,quantity,date,notes
-1,StockIn,5,2025-11-15T10:00:00Z,Initial shipment.
-1,StockOut,1,2025-11-20T11:30:00Z,Demo unit used.
-5,StockIn,20,2025-12-01T14:00:00Z,New batch received.
-5,StockOut,5,2025-12-05T09:00:00Z,Sold in bulk.
-1,StockIn,3,2025-12-10T12:00:00Z,Small restock.
-10,StockIn,15,2025-12-12T10:00:00Z,New toy arrival.
-7,StockOut,1,2025-12-15T09:00:00Z,Sold (Product #7).
-5,StockIn,10,2025-12-15T15:00:00Z,Rush delivery restock.
-8,StockIn,5,2025-12-16T12:00:00Z,New item added.
-1,StockOut,1,2025-12-16T14:00:00Z,Sale (Order 5).
+productId,type,quantity,notes,reference,date
+1,StockIn,50,Initial stock,OPENING-BAL,2023-10-01
+1,StockOut,5,Sold to John,ORD-1001,2023-10-05
+4,StockIn,20,New shipment,INV-9922,2023-10-10
+2,StockOut,2,Damaged,WASTE-01,2023-10-12

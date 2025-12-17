@@ -1,5 +1,5 @@
-/* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
+/* eslint-disable no-unused-vars */
 // Filename: stock.js
 // Netlify Function to manage stock movements (Stock In/Out) and update Product stock.
 
@@ -46,17 +46,7 @@ export async function handler(event) {
   }
 
   // Determine the stock change based on the type
-  let stockDelta;
-  if (type.toLowerCase() === 'stockin') {
-    stockDelta = productQuantity;
-  } else if (type.toLowerCase() === 'stockout') {
-    stockDelta = -productQuantity;
-  } else {
-    return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Invalid 'type'. Must be 'StockIn' or 'StockOut'." }),
-    };
-  }
+  const stockDelta = type.toLowerCase() === 'stockin' ? productQuantity : -productQuantity;
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -66,20 +56,20 @@ export async function handler(event) {
   try {
     await client.connect();
     
-    // Start a transaction for atomicity
+    // Start a transaction
     await client.query('BEGIN');
     
-    // 4. Update the product stock (atomically)
+    // 4. Update the product stock
+    // Added quotes around "stock" and "id" for absolute safety with Prisma
     const updateProductQuery = `
       UPDATE "product"
-      SET stock = stock + $1
-      WHERE id = $2
-      RETURNING id, stock;
+      SET "stock" = "stock" + $1
+      WHERE "id" = $2
+      RETURNING "id", "stock";
     `;
     const updateResult = await client.query(updateProductQuery, [stockDelta, productId]);
 
     if (updateResult.rowCount === 0) {
-      // If the product ID doesn't exist, we must rollback
       await client.query('ROLLBACK');
       return {
         statusCode: 404,
@@ -88,20 +78,20 @@ export async function handler(event) {
     }
     
     // 5. Insert the StockMovement record
+    // CRITICAL: Double quotes added to "type", "quantity", "notes", "reference", and "date"
+    // This prevents PostgreSQL from converting them to lowercase or tripping on keywords.
     const insertMovementQuery = `
       INSERT INTO "stockMovement" (
         "productId", 
-        type, 
-        quantity, 
-        notes, 
-        reference,
-        date 
+        "type", 
+        "quantity", 
+        "notes", 
+        "reference",
+        "date" 
       )
       VALUES ($1, $2, $3, $4, $5, NOW())
-      RETURNING id, "productId";
     `;
-    // We insert the ABSOLUTE value of quantity for the record, 
-    // and let the 'type' field indicate if it was an in or out.
+    
     await client.query(insertMovementQuery, [
         productId, 
         type, 
@@ -115,24 +105,25 @@ export async function handler(event) {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*" 
+      },
       body: JSON.stringify({ 
-        message: `${type} successful. Product stock updated.`,
+        message: `${type} successful.`,
         productId: productId,
         newStock: updateResult.rows[0].stock,
       }),
     };
 
   } catch (err) {
-    // If anything fails, rollback the transaction
-    await client.query('ROLLBACK').catch(rollbackErr => console.error('Rollback error:', rollbackErr));
-    
+    await client.query('ROLLBACK').catch(() => {});
     console.error("❌ Transaction failed:", err);
 
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Failed to process stock transaction.", details: err.message }),
+      body: JSON.stringify({ error: "Database error", details: err.message }),
     };
 
   } finally {

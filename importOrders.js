@@ -111,6 +111,7 @@ async function importTransactionalData() {
         type: row.type, 
         quantity: parseInt(row.quantity, 10),
         date: new Date(row.date),
+        reference: row.reference || null,
         notes: row.notes || null,
     }));
     await prisma.stockMovement.createMany({ data: stockMovementsToCreate, skipDuplicates: true });
