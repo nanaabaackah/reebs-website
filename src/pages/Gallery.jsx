@@ -26,19 +26,19 @@ function Gallery() {
         const rentalMapped = rentals.slice(0, 8).map((item) => ({
             id: `rental-${item.id}`,
             name: item.name,
-            tag: item.specificCategory || item.category || 'Rental',
-            price: item.rate || item.price || (typeof item.priceCents === 'number' ? item.priceCents / 100 : undefined),
-            image: item.imageUrl || item.image || '/imgs/placeholder.png',
-            href: `/Rentals#${encodeURIComponent(item.specificCategory || '')}`,
+            tag: item.specificCategory || item.specificcategory || item.category || 'Rental',
+            price: item.price ?? (typeof item.priceCents === 'number' ? item.priceCents / 100 : undefined),
+            image: item.image || item.imageUrl || '/imgs/placeholder.png',
+            href: `/Rentals#${encodeURIComponent(item.specificCategory || item.specificcategory || '')}`,
             type: 'Rental'
         }));
 
         const shopMapped = shopItems.slice(0, 8).map((item) => ({
             id: `shop-${item.id}`,
             name: item.name,
-            tag: item.specificCategory || item.type || 'Party shop',
+            tag: item.specificCategory || item.specificcategory || item.type || 'Party shop',
             price: item.price ?? (typeof item.priceCents === 'number' ? item.priceCents / 100 : undefined),
-            image: item.imageUrl || '/imgs/placeholder.png',
+            image: item.image || item.imageUrl || '/imgs/placeholder.png',
             href: '/Shop',
             type: 'Shop'
         }));
@@ -50,29 +50,26 @@ function Gallery() {
         let isMounted = true;
         const load = async () => {
             try {
-                const [rentalsRes, shopRes] = await Promise.allSettled([
-                    fetch('/.netlify/functions/rentals'),
-                    fetch('/.netlify/functions/inventory')
-                ]);
+                const res = await fetch('/.netlify/functions/inventory');
+                if (!res.ok) throw new Error(`Bad response ${res.status}`);
 
-                if (isMounted && rentalsRes.status === 'fulfilled') {
-                    const data = await rentalsRes.value.json();
-                    const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isRental = source ? source === 'rental' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isRental && active;
-                    });
+                const data = await res.json();
+                const records = Array.isArray(data) ? data : [];
+                const rentalsOnly = records.filter((item) => {
+                    const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
+                    const isRental = source ? source === 'rental' : true;
+                    const active = (item.status ?? item.isActive) !== false;
+                    return isRental && active;
+                });
+                const inventoryOnly = records.filter((item) => {
+                    const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
+                    const isInventory = source ? source === 'inventory' : true;
+                    const active = (item.status ?? item.isActive) !== false;
+                    return isInventory && active;
+                });
+
+                if (isMounted) {
                     setRentals(rentalsOnly || []);
-                }
-                if (isMounted && shopRes.status === 'fulfilled') {
-                    const data = await shopRes.value.json();
-                    const inventoryOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isInventory = source ? source === 'inventory' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isInventory && active;
-                    });
                     setShopItems(inventoryOnly || []);
                 }
             } catch (err) {

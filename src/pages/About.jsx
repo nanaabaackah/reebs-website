@@ -17,30 +17,22 @@ function About() {
         let isMounted = true;
         const loadCounts = async () => {
             try {
-                const [rentalsRes, productsRes] = await Promise.allSettled([
-                    fetch("/.netlify/functions/rentals"),
-                    fetch("/.netlify/functions/inventory")
-                ]);
+                // 1. Fetch only the single combined endpoint (inventory.js)
+                const productsRes = await fetch("/.netlify/functions/inventory");
+                
+                if (productsRes.ok) {
+                    const data = await productsRes.json();
+                    
+                    if (isMounted) {
+                        // 2. Calculate counts based on the new sourceCategoryCode
+                        const rentals = (Array.isArray(data) ? data : [])
+                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'RENTAL');
+                        const products = (Array.isArray(data) ? data : [])
+                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'INVENTORY');
 
-                if (rentalsRes.status === "fulfilled") {
-                    const data = await rentalsRes.value.json();
-                    const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isRental = source ? source === 'rental' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isRental && active;
-                    });
-                    if (isMounted) setRentalsCount(rentalsOnly.length || null);
-                }
-                if (productsRes.status === "fulfilled") {
-                    const data = await productsRes.value.json();
-                    const productsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isInventory = source ? source === 'inventory' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isInventory && active;
-                    });
-                    if (isMounted) setProductsCount(productsOnly.length || null);
+                        setRentalsCount(rentals.length);
+                        setProductsCount(products.length);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading counts:", err);

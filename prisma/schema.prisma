@@ -6,28 +6,23 @@ datasource db {
   provider = "postgresql"
 }
 
-
-model Customer {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-  Order     Order[]
-}
-
 model Order {
-  id          Int         @id @default(autoincrement())
-  orderNumber String      @unique
-  status      OrderStatus @default(pending)
-  totalCents  Int
-  currency    String      @default("USD")
-  customerId  Int
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime
-  Customer    Customer    @relation(fields: [customerId], references: [id])
-  OrderItem   OrderItem[]
+  id              Int           @id @default(autoincrement())
+  orderNumber     String        @unique
+  customerId      Int
+  customerName    String
+  status          String
+  total_amount    Int           
+  orderDate       DateTime
+  deliveryDate    DateTime?
+  
+  customer        Customer      @relation(fields: [customerId], references: [id]) 
+  orderItems      OrderItem[]
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@map("order")
 }
 
 model OrderItem {
@@ -35,13 +30,14 @@ model OrderItem {
   orderId        Int
   productId      Int
   quantity       Int
-  unitPriceCents Int
-  lineTotalCents Int
+  unit_price     Int     
+  total_amount   Int     
   Order          Order   @relation(fields: [orderId], references: [id])
   Product        Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
+  @@map("orderItem")
 }
 
 model Product {
@@ -50,21 +46,21 @@ model Product {
   name                 String
   description          String?
   
-  sourceCategoryCode   String   // Stays as 'Inventory' or 'Rental'
-  specificCategory     String?  // <--- NEW FIELD: Mapped from 'type' (inventory) or 'category' (rentals)
+  sourceCategoryCode   String
+  specificCategory     String?
   rate                 String?
   page                 String?
   age                  String?  
   
-  priceCents           Int
+  price                Int      
   currency             String   @default("GHS")
   stock                Int      @default(0)
   isActive             Boolean  @default(true)
   imageUrl             String?
   
   createdAt            DateTime @default(now())
-  updatedAt            DateTime
-
+  updatedAt            DateTime @default(now()) 
+  
   OrderItem            OrderItem[]
   StockMovement        StockMovement[]
   
@@ -74,19 +70,44 @@ model Product {
 model StockMovement {
   id        Int      @id @default(autoincrement())
   productId Int
-  delta     Int
-  reason    String
-  reference String?
-  createdAt DateTime @default(now())
+  type      String
+  quantity  Int
+  date      DateTime
+  notes     String?
+  
   Product   Product  @relation(fields: [productId], references: [id])
 
   @@index([productId])
+  @@map("stockMovement")
 }
 
-enum OrderStatus {
-  pending
-  paid
-  canceled
-  fulfilled
-  refunded
+enum StockType {
+  StockIn
+  StockOut
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   
+  name      String?
+  role      String   @default("Staff") 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("user")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String?  @unique
+  phone     String?
+  
+  orders    Order[] 
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("customer")
 }

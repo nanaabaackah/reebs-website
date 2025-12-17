@@ -74,13 +74,13 @@ function Book() {
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    fetch("/.netlify/functions/rentals")
+    fetch("/.netlify/functions/inventory")
       .then((res) => res.json())
       .then((data) => {
         const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-          const source = (item.sourceCategoryCode || "").toString().toLowerCase();
+          const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
           const isRental = source ? source === "rental" : true;
-          const isActive = item.isActive === undefined ? true : item.isActive;
+          const isActive = (item.status ?? item.isActive) !== false;
           return isRental && isActive;
         });
         setRentals(rentalsOnly);
@@ -121,6 +121,7 @@ function Book() {
       return (
         item.name.toLowerCase().includes(q) ||
         item.specificCategory?.toLowerCase().includes(q) ||
+        item.specificcategory?.toLowerCase().includes(q) ||
         item.category?.toLowerCase().includes(q)
       );
     });
@@ -144,7 +145,7 @@ function Book() {
   };
 
   const itemsSummaryValue = selectedRentals
-    .map((item) => `${item.name} (${item.specificCategory || item.category || "Rental"})`)
+    .map((item) => `${item.name} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`)
     .join(", ");
   const itemsSummaryDisplay = itemsSummaryValue || "Add rentals to your booking";
 
@@ -430,7 +431,7 @@ function Book() {
                       className={`booking-rental-card glass-card ${selected ? "is-selected" : ""}`}
                     >
                       <div className="booking-rental-media">
-                        <img src={item.imageUrl || item.image} alt={item.name} />
+                        <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name} />
                         <span className="rent-tag">{item.specificCategory || item.category}</span>
                       </div>
                       <div className="booking-rental-body">

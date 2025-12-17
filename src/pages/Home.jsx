@@ -18,33 +18,27 @@ function Home() {
         let isMounted = true;
         const loadData = async () => {
             try {
-                const [rentalsRes, productsRes] = await Promise.allSettled([
-                    fetch("/.netlify/functions/rentals"),
-                    fetch("/.netlify/functions/inventory")
-                ]);
-
-                if (rentalsRes.status === "fulfilled") {
-                    const data = await rentalsRes.value.json();
-                    const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isRental = source ? source === 'rental' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isRental && active;
-                    });
-                    if (isMounted) setSuggestedRentals(rentalsOnly.slice(0, 3));
-                }
-                if (productsRes.status === "fulfilled") {
-                    const data = await productsRes.value.json();
-                    const inventoryOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                        const source = (item.sourceCategoryCode || '').toLowerCase();
-                        const isInventory = source ? source === 'inventory' : true;
-                        const active = item.isActive === undefined ? true : item.isActive;
-                        return isInventory && active;
-                    });
-                    if (isMounted) setSuggestedProducts(inventoryOnly.slice(0, 3));
+                // 1. Fetch only the single combined endpoint (inventory.js)
+                const productsRes = await fetch("/.netlify/functions/inventory");
+                
+                if (productsRes.ok) {
+                    const data = await productsRes.json();
+                    
+                    if (isMounted) {
+                        // 2. Filter data by the new sourceCategoryCode
+                        const inventoryItems = (Array.isArray(data) ? data : [])
+                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'INVENTORY');
+                        const rentalItems = (Array.isArray(data) ? data : [])
+                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'RENTAL');
+                        
+                        setSuggestedRentals(rentalItems.slice(0, 3));
+                        setSuggestedProducts(inventoryItems.slice(0, 3));
+                    }
+                } else {
+                    console.error(`Error fetching products: ${productsRes.status}`);
                 }
             } catch (err) {
-                console.error("Error loading suggestions:", err);
+                console.error("Error loading data:", err);
             }
         };
 
@@ -303,16 +297,16 @@ function Home() {
                                 {suggestedRentals.map((item) => (
                                     <li key={item.id} className="suggested-card">
                                         <img
-                                            src={item.imageUrl || '/imgs/placeholder.png'}
+                                            src={item.image || item.imageUrl || '/imgs/placeholder.png'}
                                             alt=""
                                             aria-hidden="true"
                                             loading="lazy"
                                         />
                                         <div>
                                             <p className="suggested-title">{item.name}</p>
-                                            {item.specificCategory && <p className="suggested-meta">{item.specificCategory}</p>}
+                                            {(item.specificCategory || item.specificcategory) && <p className="suggested-meta">{item.specificCategory || item.specificcategory}</p>}
                                         </div>
-                                        <Link to={`/Rentals#${encodeURIComponent(item.specificCategory || '')}`} className="suggested-link">
+                                        <Link to={`/Rentals#${encodeURIComponent(item.specificCategory || item.specificcategory || '')}`} className="suggested-link">
                                             View rental
                                         </Link>
                                     </li>
@@ -326,14 +320,14 @@ function Home() {
                                 {suggestedProducts.map((item) => (
                                     <li key={item.id} className="suggested-card">
                                         <img
-                                            src={item.imageUrl || '/imgs/placeholder.png'}
+                                            src={item.image || item.imageUrl || '/imgs/placeholder.png'}
                                             alt=""
                                             aria-hidden="true"
                                             loading="lazy"
                                         />
                                         <div>
                                             <p className="suggested-title">{item.name}</p>
-                                            {item.specificCategory && <p className="suggested-meta">{item.specificCategory}</p>}
+                                            {(item.specificCategory || item.specificcategory) && <p className="suggested-meta">{item.specificCategory || item.specificcategory}</p>}
                                         </div>
                                         <Link to="/Shop" className="suggested-link">
                                             Shop now

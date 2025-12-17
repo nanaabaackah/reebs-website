@@ -27,9 +27,9 @@ function Shop() {
   const { currency, setCurrency, convertPrice, formatCurrency, rates } = useCart();
   const getPrice = (item) =>
     item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
-  const getQuantity = (item) => item.stock ?? item.quantity ?? 0;
+  const getQuantity = (item) => item.quantity ?? item.stock ?? 0;
   const categories = Array.from(
-    new Set(inventory.map((item) => item.specificCategory || item.type || "Other"))
+    new Set(inventory.map((item) => item.specificCategory || item.specificcategory || item.type || "Other"))
   );
   const popularCurrencies = ["USD", "GBP", "EUR", "CAD", "NGN"];
   const ratesAvailable = rates && Object.keys(rates || {}).length > 1;
@@ -60,7 +60,7 @@ function Shop() {
       .then((res) => res.json())
       .then((data) => {
         const productsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-          const source = (item.sourceCategoryCode || "").toLowerCase();
+          const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
           const isInventory = source ? source === "inventory" : true;
           return isInventory;
         });
@@ -109,7 +109,10 @@ function Shop() {
 
   useEffect(() => {
     const baseFiltered = inventory.filter(
-      (item) => categoryFilter === "All" || item.specificCategory === categoryFilter
+      (item) =>
+        categoryFilter === "All" ||
+        item.specificCategory === categoryFilter ||
+        item.specificcategory === categoryFilter
     );
 
     if (debouncedQuery.trim() === "") {
@@ -340,18 +343,18 @@ function Shop() {
                   >
                     <div
                       className="shop-image"
-                      onClick={() => setLightboxImage(item.imageUrl)}
+                      onClick={() => setLightboxImage(item.image || item.imageUrl || null)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setLightboxImage(item.imageUrl);
+                          setLightboxImage(item.image || item.imageUrl || null);
                         }
                       }}
                     >
                       <img
-                        src={item.imageUrl || "/imgs/placeholder.png"}
+                        src={item.image || item.imageUrl || "/imgs/placeholder.png"}
                         alt={item.name}
                       />
                       {isSoldOut && (
@@ -367,7 +370,7 @@ function Shop() {
                           {formatCurrency(convertPrice(getPrice(item) || 0))}
                         </p>
                       </div>
-                      <div className="shop-pill">{item.specificCategory}</div>
+                      <div className="shop-pill">{item.specificCategory || item.specificcategory}</div>
                       <h3>{item.name}</h3>
                       <p className="stock">
                         {isSoldOut ? "Unavailable" : `${getQuantity(item)} left in stock`}
@@ -443,6 +446,7 @@ function Shop() {
                   <div className="popular-img">
                     <img
                       src={
+                        popularItems[popularIndex].image ||
                         popularItems[popularIndex].imageUrl ||
                         "/imgs/placeholder.png"
                       }
@@ -454,7 +458,7 @@ function Shop() {
                   </div>
                   <div className="popular-details">
                     <span className="shop-pill">
-                      {popularItems[popularIndex].specificCategory}
+                      {popularItems[popularIndex].specificCategory || popularItems[popularIndex].specificcategory}
                     </span>
                     <h4>{popularItems[popularIndex].name}</h4>
                     <p className="price">

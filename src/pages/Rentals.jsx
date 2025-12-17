@@ -21,9 +21,9 @@ const rentalPath = (item) => {
     return `/Rentals/${pageSlug || nameSlug || item?.id || ""}`;
 };
 
-const getCategory = (item = {}) => item.specificCategory || item.category || "Other";
+const getCategory = (item = {}) => item.specificCategory || item.specificcategory || item.category || "Other";
 const isContactPricing = (item = {}) => {
-    const text = `${item.specificCategory || ""} ${item.category || ""} ${item.name || ""}`.toLowerCase();
+    const text = `${item.specificCategory || item.specificcategory || ""} ${item.category || ""} ${item.name || ""}`.toLowerCase(); 
     return (
         text.includes("bouncy") ||
         text.includes("castle") ||
@@ -43,22 +43,39 @@ function Rentals() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch("/.netlify/functions/rentals")
-            .then((res) => res.json())
-            .then((data) => {
-                const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-                    const source = (item.sourceCategoryCode || '').toLowerCase();
-                    const isRental = source ? source === 'rental' : true;
-                    const active = item.isActive === undefined ? true : item.isActive;
-                    return isRental && active;
-                });
-                setRentals(rentalsOnly);
-                setLoading(false);
-        })
-        .catch((err) => {
-            console.error("❌ Error fetching inventory:", err);
-            setLoading(false);
-        });
+        let isMounted = true;
+        setLoading(true);
+
+        const loadRentals = async () => {
+            try {
+                const res = await fetch("/.netlify/functions/inventory");
+                if (res.ok) {
+                    const data = await res.json();
+                    const rentalItems = (Array.isArray(data) ? data : [])
+                        .filter((item) => {
+                            const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+                            const isRental = source ? source === "rental" : true;
+                            const isActive = (item.status ?? item.isActive) !== false;
+                            return isRental && isActive;
+                        });
+                        
+                    if (isMounted) {
+                        setRentals(rentalItems);
+                    }
+                } else {
+                    console.error("Failed to fetch rentals:", res.status);
+                }
+            } catch (err) {
+                console.error("Error loading rentals:", err);
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        loadRentals();
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -262,8 +279,8 @@ function Rentals() {
                                             }}
                                         >
                                             <div className="rent-image">
-                                                <img src={item.imageUrl || item.image || "/imgs/placeholder.png"} alt={item.name}/>
-                                                <span className="rent-tag">{item.specificCategory || item.category}</span>
+                                                <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name}/>
+                                                <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
                                             </div>
                                             <div className="rent-details">
                                                 <div className="rent-title-row">

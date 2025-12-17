@@ -29,11 +29,14 @@ const rentalPath = (item) => {
 
 const formatRentalPrice = (item, convertPrice, formatCurrency) => {
   if (item?.id === 8) return "Contact for more info.";
-  const priceValue = item?.price ?? (typeof item?.priceCents === "number" ? item.priceCents / 100 : undefined);
+  
+  // Prefer the new price column but keep a fallback for legacy priceCents
+  const priceValue = item?.price ?? (typeof item?.priceCents === "number" ? item.priceCents / 100 : undefined); 
+  
   if (!priceValue || priceValue === "0" || priceValue === 0) {
     return "Contact for price";
   }
-
+  
   if (typeof priceValue === "string" && priceValue.includes("-")) {
     const [min, max] = priceValue.split("-").map((part) => Number(part.trim()));
     if (!Number.isNaN(min) && !Number.isNaN(max)) {
@@ -147,13 +150,13 @@ function RentalItem() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/.netlify/functions/rentals")
+    fetch("/.netlify/functions/inventory")
       .then((res) => res.json())
       .then((data) => {
         const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-          const source = (item.sourceCategoryCode || "").toLowerCase();
+          const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
           const isRental = source ? source === "rental" : true;
-          const active = item.isActive === undefined ? true : item.isActive;
+          const active = (item.status ?? item.isActive) !== false;
           return isRental && active;
         });
         setRentals(rentalsOnly);
@@ -185,11 +188,11 @@ const rental = useMemo(() => {
 
   const similar = useMemo(() => {
     if (!rental) return [];
-    const category = rental.specificCategory || rental.category || "";
+    const category = rental.specificCategory || rental.specificcategory || rental.category || "";
     if (!category) return [];
     return rentals
       .filter((item) => {
-        const itemCategory = item.specificCategory || item.category || "";
+        const itemCategory = item.specificCategory || item.specificcategory || item.category || "";
         return itemCategory === category && item.id !== rental.id;
       })
       .slice(0, 3);
@@ -272,8 +275,8 @@ const rental = useMemo(() => {
 
           <section className="rental-hero-card glass-card">
             <div className="rental-hero-media">
-              <img src={rental.imageUrl || rental.image || "/imgs/placeholder.png"} alt={rental.name} />
-              <span className="rent-tag">{rental.specificCategory || rental.category}</span>
+              <img src={rental.image || rental.imageUrl || "/imgs/placeholder.png"} alt={rental.name} />
+              <span className="rent-tag">{rental.specificCategory || rental.specificcategory || rental.category}</span>
             </div>
             <div className="rental-hero-copy">
               <p className="kicker">Rental highlight</p>
@@ -310,7 +313,7 @@ const rental = useMemo(() => {
 
               <div className="rental-meta-grid">
                 <div>
-                  <strong>{rental.specificCategory || rental.category}</strong>
+                  <strong>{rental.specificCategory || rental.specificcategory || rental.category}</strong>
                 </div>
                 <div>
                   <span className="rent-meta">Rate</span>
@@ -407,9 +410,9 @@ const rental = useMemo(() => {
                     to={rentalPath(item)}
                     className="rental-similar-card glass-card"
                   >
-                    <img src={item.imageUrl || item.image || "/imgs/placeholder.png"} alt={item.name} />
+                    <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name} />
                     <div>
-                      <span className="rent-meta">{item.specificCategory || item.category}</span>
+                      <span className="rent-meta">{item.specificCategory || item.specificcategory || item.category}</span>
                       <h3>{item.name}</h3>
                       <p className="price">
                         {formatRentalPrice(item, convertPrice, formatCurrency)}
