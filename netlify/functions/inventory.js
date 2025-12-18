@@ -25,7 +25,7 @@ export async function handler() {
         rate,
         page,
         age,
-        ("priceCents"::numeric / 100) AS price, -- convert stored cents to currency units for the frontend
+        ("price"::numeric / 100) AS price, -- convert stored cents-in-price to currency units for the frontend
         stock AS quantity,     -- Renamed to 'quantity' for frontend compatibility
         "imageUrl" AS image, -- Renamed to 'image' for frontend compatibility
         "isActive" AS status,  -- Mapped isActive back to status for frontend compatibility

@@ -1,0 +1,418 @@
+/* eslint-disable no-unused-vars */
+import React, { useEffect, useMemo, useState } from "react";
+import "./master.css";
+import AdminBreadcrumb from "../components/AdminBreadcrumb";
+
+const getUnitPrice = (item) => {
+  if (typeof item?.price === "number") return item.price;
+  if (typeof item?.price === "string") {
+    const parsed = Number(item.price);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (typeof item?.priceCents === "number") return item.priceCents / 100;
+  if (typeof item?.priceCents === "string") {
+    const parsed = Number(item.priceCents);
+    return Number.isFinite(parsed) ? parsed / 100 : 0;
+  }
+  return 0;
+};
+
+const getQuantity = (item) => {
+  const raw = item?.quantity ?? item?.stock ?? 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeCurrency = (currency) => {
+  if (typeof currency !== "string") return "GBP";
+  const trimmed = currency.trim();
+  return trimmed ? trimmed.toUpperCase() : "GBP";
+};
+
+const formatCurrency = (amount, currency = "GBP") => {
+  const normalizedCurrency = normalizeCurrency(currency);
+  try {
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: normalizedCurrency,
+      maximumFractionDigits: 2,
+    }).format(amount || 0);
+  } catch (err) {
+    const value = Number(amount || 0).toFixed(2);
+    if (normalizedCurrency === "GBP") return `£${value}`;
+    if (normalizedCurrency === "USD") return `$${value}`;
+    if (normalizedCurrency === "EUR") return `€${value}`;
+    if (normalizedCurrency === "NGN") return `₦${value}`;
+    return `${normalizedCurrency} ${value}`;
+  }
+};
+
+function OrderBuilder() {
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [status, setStatus] = useState("pending");
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    document.body.classList.add("admin-theme");
+    return () => document.body.classList.remove("admin-theme");
+  }, []);
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const [customerRes, inventoryRes] = await Promise.all([
+          fetch("/.netlify/functions/customers"),
+          fetch("/.netlify/functions/inventory"),
+        ]);
+
+        if (!customerRes.ok || !inventoryRes.ok) {
+          throw new Error("Failed to load order data.");
+        }
+
+        const [customerData, inventoryData] = await Promise.all([
+          customerRes.json(),
+          inventoryRes.json(),
+        ]);
+
+        const inventoryOnly = (Array.isArray(inventoryData) ? inventoryData : []).filter(
+          (item) => {
+            const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
+            return source ? source === "inventory" : true;
+          }
+        );
+
+        setCustomers(Array.isArray(customerData) ? customerData : []);
+        setProducts(inventoryOnly);
+      } catch (err) {
+        console.error("Failed to load order data", err);
+        setError("We couldn't load customers or products.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  const filteredCustomers = useMemo(() => {
+    const query = customerQuery.trim().toLowerCase();
+    if (!query) return customers;
+    return customers.filter((customer) => {
+      return (
+        customer.name?.toLowerCase().includes(query) ||
+        customer.email?.toLowerCase().includes(query) ||
+        customer.phone?.toLowerCase().includes(query)
+      );
+    });
+  }, [customers, customerQuery]);
+
+  const filteredProducts = useMemo(() => {
+    const query = productQuery.trim().toLowerCase();
+    const list = [...products].sort((a, b) => {
+      const nameA = (a?.name || "").toLowerCase();
+      const nameB = (b?.name || "").toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+    if (!query) return list;
+    return list.filter((item) => {
+      return (
+        item.name?.toLowerCase().includes(query) ||
+        item.sku?.toLowerCase().includes(query)
+      );
+    });
+  }, [products, productQuery]);
+
+  const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null;
+    return customers.find((customer) => String(customer.id) === String(selectedCustomerId)) || null;
+  }, [customers, selectedCustomerId]);
+
+  const orderTotal = useMemo(() => {
+    return cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  }, [cartItems]);
+
+  const orderCurrency = useMemo(() => {
+    if (!cartItems.length) return "GBP";
+    const currencies = new Set(
+      cartItems.map((item) => normalizeCurrency(item.currency || "GBP"))
+    );
+    if (currencies.size === 1) return [...currencies][0];
+    return "MIXED";
+  }, [cartItems]);
+
+  const addToCart = (product) => {
+    const stock = getQuantity(product);
+    if (stock <= 0) return;
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.productId === product.id);
+      if (existing) {
+        if (existing.quantity >= stock) return prev;
+        return prev.map((item) =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          name: product.name,
+          unitPrice: getUnitPrice(product),
+          currency: normalizeCurrency(product.currency || "GBP"),
+          quantity: 1,
+          stock,
+        },
+      ];
+    });
+  };
+
+  const updateCartQuantity = (productId, nextValue) => {
+    setCartItems((prev) => {
+      return prev
+        .map((item) => {
+          if (item.productId !== productId) return item;
+          const next = Math.max(1, Math.min(item.stock, Number(nextValue) || 1));
+          return { ...item, quantity: next };
+        })
+        .filter((item) => item.quantity > 0);
+    });
+  };
+
+  const removeFromCart = (productId) => {
+    setCartItems((prev) => prev.filter((item) => item.productId !== productId));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitError("");
+    setSuccess("");
+
+    if (!selectedCustomerId) {
+      setSubmitError("Select a customer before creating the order.");
+      return;
+    }
+
+    if (!cartItems.length) {
+      setSubmitError("Add at least one product to the order.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch("/.netlify/functions/createOrder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: Number(selectedCustomerId),
+          status,
+          items: cartItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.unitPrice,
+          })),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to create order.");
+      }
+
+      setSuccess(`Order #${payload.orderId} created.`);
+      setCartItems([]);
+      setProducts((prev) =>
+        prev.map((product) => {
+          const match = cartItems.find((item) => item.productId === product.id);
+          if (!match) return product;
+          const updatedStock = Math.max(getQuantity(product) - match.quantity, 0);
+          return { ...product, quantity: updatedStock, stock: updatedStock };
+        })
+      );
+    } catch (err) {
+      console.error("Order creation failed", err);
+      setSubmitError(err.message || "Failed to create order.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="order-builder">
+      <div className="order-shell">
+        <AdminBreadcrumb items={[{ label: "Orders", to: "/admin/orders" }, { label: "New" }]} />
+        <header className="order-header">
+          <div>
+            <p className="order-eyebrow">Order builder</p>
+            <h1>Create Order</h1>
+            <p className="order-subtitle">
+              Select a customer, add products, and confirm stock updates in one flow.
+            </p>
+          </div>
+          <div className="order-status">
+            <a className="order-back-link" href="/admin/orders">
+              View orders
+            </a>
+            <label>
+              Status
+              <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="fulfilled">Fulfilled</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+          </div>
+        </header>
+
+        {loading && <p className="order-status-text">Loading customers and products...</p>}
+        {!loading && error && <p className="order-error">{error}</p>}
+
+        {!loading && !error && (
+          <div className="order-grid">
+            <section className="order-panel">
+              <div className="order-panel-header">
+                <h3>Customer</h3>
+                <span>{customers.length} profiles</span>
+              </div>
+              <label className="order-field">
+                Search customer
+                <input
+                  type="text"
+                  value={customerQuery}
+                  onChange={(event) => setCustomerQuery(event.target.value)}
+                  placeholder="Search by name, email, phone"
+                />
+              </label>
+              <label className="order-field">
+                Select customer
+                <select
+                  value={selectedCustomerId}
+                  onChange={(event) => setSelectedCustomerId(event.target.value)}
+                >
+                  <option value="">Choose a customer</option>
+                  {filteredCustomers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name} {customer.email ? `- ${customer.email}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selectedCustomer && (
+                <div className="order-customer-card">
+                  <h4>{selectedCustomer.name}</h4>
+                  <p>{selectedCustomer.email || "No email on file"}</p>
+                  <p>{selectedCustomer.phone || "No phone on file"}</p>
+                </div>
+              )}
+            </section>
+
+            <section className="order-panel order-products">
+              <div className="order-panel-header">
+                <h3>Products</h3>
+                <span>{products.length} items</span>
+              </div>
+              <label className="order-field">
+                Search products
+                <input
+                  type="text"
+                  value={productQuery}
+                  onChange={(event) => setProductQuery(event.target.value)}
+                  placeholder="Search by name or SKU"
+                />
+              </label>
+              <div className="order-product-list">
+                {filteredProducts.map((product) => {
+                  const stock = getQuantity(product);
+                  return (
+                    <div key={product.id} className="order-product-row">
+                      <div>
+                        <h4>{product.name || "Untitled"}</h4>
+                        <p>
+                          {product.sku ? `SKU ${product.sku}` : "No SKU"} · Stock {stock}
+                        </p>
+                      </div>
+                      <div className="order-product-actions">
+                        <span>{formatCurrency(getUnitPrice(product), product.currency)}</span>
+                        <button
+                          type="button"
+                          onClick={() => addToCart(product)}
+                          disabled={stock <= 0}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {!filteredProducts.length && (
+                  <p className="order-empty">No products match your search.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="order-panel order-summary">
+              <div className="order-panel-header">
+                <h3>Order summary</h3>
+                <span>{cartItems.length} items</span>
+              </div>
+              {!cartItems.length && (
+                <p className="order-empty">Add products to start the order.</p>
+              )}
+              {cartItems.map((item) => (
+                <div key={item.productId} className="order-cart-row">
+                  <div>
+                    <h4>{item.name}</h4>
+                    <p>{formatCurrency(item.unitPrice, item.currency)} each</p>
+                  </div>
+                  <div className="order-cart-actions">
+                    <input
+                      type="number"
+                      min="1"
+                      max={item.stock}
+                      value={item.quantity}
+                      onChange={(event) => updateCartQuantity(item.productId, event.target.value)}
+                    />
+                    <button type="button" onClick={() => removeFromCart(item.productId)}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="order-total">
+                <span>Total</span>
+                <strong>
+                  {orderCurrency === "MIXED"
+                    ? `${orderCurrency} ${orderTotal.toFixed(2)}`
+                    : formatCurrency(orderTotal, orderCurrency)}
+                </strong>
+              </div>
+              {submitError && <p className="order-error">{submitError}</p>}
+              {success && <p className="order-success">{success}</p>}
+              <button
+                type="button"
+                className="order-submit"
+                onClick={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? "Creating order..." : "Create order"}
+              </button>
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default OrderBuilder;

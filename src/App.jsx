@@ -23,6 +23,13 @@ import DeliveryPolicy from './pages/delivery-policy';
 import TermsOfService from './pages/terms-of-service';
 import Cart from "./pages/Cart";
 import Book from './pages/Book';
+import Admin from './pages/Admin';
+import AdminDashboard from './pages/AdminDashboard';
+import OrdersList from './pages/OrdersList';
+import OrderBuilder from './pages/OrderBuilder';
+import AdminDirectory from './pages/AdminDirectory';
+import AdminBookings from './pages/AdminBookings';
+import AdminScheduler from './pages/AdminScheduler';
 
 function AppLayout() {
   const [cartOpen, setCartOpen] = useState(false);
@@ -46,6 +53,15 @@ function AppLayout() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/Contact" element={<Contact />} />
               <Route path="/Book" element={<Book />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/inventory" element={<Admin />} />
+              <Route path="/admin/orders" element={<OrdersList />} />
+              <Route path="/admin/orders/new" element={<OrderBuilder />} />
+              <Route path="/admin/crm" element={<AdminDirectory />} />
+              <Route path="/admin/users" element={<AdminDirectory />} />
+              <Route path="/admin/employees" element={<AdminDirectory />} />
+              <Route path="/admin/bookings" element={<AdminBookings />} />
+              <Route path="/admin/schedule" element={<AdminScheduler />} />
           </Routes>
           <CartOverlay 
             open={cartOpen} 

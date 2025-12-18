@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faCaretDown, faHome, faShoppingCart, faMoon, faSun, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faCaretDown, faHome, faShoppingCart, faMoon, faSun, faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
 import './Navbar.css'; 
 import { useCart } from "./CartContext";
 
@@ -217,6 +217,14 @@ const Navbar = ({ onCartToggle }) => {
               <FontAwesomeIcon icon={faShoppingCart} />
               {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
             </span>
+          </button>
+          <button
+            type="button"
+            className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}
+            onClick= {() => navigate('/Admin')}
+            aria-label="Toggle dark mode"
+          >
+            <FontAwesomeIcon icon={faUser} />
           </button>
           <button
             type="button"

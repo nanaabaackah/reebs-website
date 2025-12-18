@@ -1,3 +1,5 @@
-customerName,phone,email,eventDate,returnDate,itemId,quantity,totalAmount,status
-Ama Boateng,0244123456,ama@example.com,2025-09-05,2025-09-06,1,1,150,pending
-Kwesi Mensah,0244987654,kwesi@example.com,2025-09-10,2025-09-11,2,2,300,confirmed
+id,customerId,eventDate,startTime,endTime,venueAddress,totalAmount,status
+1,1,2024-05-20,12:00 PM,06:00 PM,"Plot 42, North Ridge, Near Ghana Broadcasting Corporation, Accra, Greater Accra",45000,confirmed
+2,2,2024-06-15,09:00 AM,03:00 PM,"House No. B24, Spintex Road, Opposite Manet Estate Gate 1, Batsonaa, Accra",12000,pending
+3,3,2024-07-04,02:00 PM,08:00 PM,"No. 15 Boundary Road, East Legon, Behind A&C Mall, Accra, Greater Accra",85000,confirmed
+4,4,2024-08-12,11:00 AM,05:00 PM,"Villa 7, Trasacco Valley Phase 2, Adjiringanor, East Legon, Accra",115000,confirmed

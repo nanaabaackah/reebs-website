@@ -117,7 +117,40 @@ async function importTransactionalData() {
     await prisma.stockMovement.createMany({ data: stockMovementsToCreate, skipDuplicates: true });
     console.log(`✅ Imported ${stockMovementsToCreate.length} Stock Movements.`);
 
-}
+    // 7. Import Booking Data
+    const bookingsData = await readCsv('bookings.csv');
+    const bookingItemsData = await readCsv('bookingItems.csv');
+
+    console.log("Importing Bookings...");
+
+    for (const row of bookingsData) {
+    await prisma.booking.create({
+        data: {
+        id: parseInt(row.id),
+        customerId: parseInt(row.customerId),
+        eventDate: new Date(row.eventDate),
+        startTime: row.startTime,
+        endTime: row.endTime,
+        venueAddress: row.venueAddress,
+        totalAmount: parseInt(row.totalAmount),
+        status: row.status,
+        }
+    });
+    }
+
+    for (const row of bookingItemsData) {
+    await prisma.bookingItem.create({
+        data: {
+        bookingId: parseInt(row.bookingId),
+        productId: parseInt(row.productId),
+        quantity: parseInt(row.quantity),
+        price: parseInt(row.price),
+        }
+    });
+    }
+
+    console.log("✅ Bookings populated!");
+    }
 
 importTransactionalData()
     .catch((e) => {

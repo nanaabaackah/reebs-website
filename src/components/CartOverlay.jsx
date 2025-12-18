@@ -22,6 +22,11 @@ function CartOverlay({ open, onClose }) {
     (acc, item) => acc + convertPrice(item.price) * item.cartQuantity,
     0
   );
+  const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
+  const getItemImage = (item) =>
+    item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
+  const getItemCategory = (item) =>
+    item.specificCategory || item.specificcategory || item.type || null;
 
   return (
     <div className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
@@ -67,19 +72,21 @@ function CartOverlay({ open, onClose }) {
           <>
             <div className="cart-items">
               {cart.map((item) => {
-                const available = item.quantity - item.cartQuantity;
+                const available = getItemQuantity(item) - item.cartQuantity;
                 return (
                   <div key={item.id} className="cart-item">
                     <img
                       className="cart-image"
-                      src={item.image_url || "/imgs/placeholder.png"}
+                      src={getItemImage(item)}
                       alt={item.name}
                     />
                     <div className="cart-item-body">
                       <div className="cart-item-top">
                         <div>
                           <p className="cart-item-name">{item.name}</p>
-                          <span className="cart-item-type">{item.type}</span>
+                          {getItemCategory(item) && (
+                            <span className="cart-item-type">{getItemCategory(item)}</span>
+                          )}
                         </div>
                         <button
                           className="cart-remove"
@@ -105,7 +112,7 @@ function CartOverlay({ open, onClose }) {
                           <span>{item.cartQuantity}</span>
                           <button
                             onClick={() => updateQuantity(item.id, 1)}
-                            disabled={item.cartQuantity >= item.quantity}
+                            disabled={item.cartQuantity >= getItemQuantity(item)}
                             aria-label="Increase quantity"
                           >
                             <FontAwesomeIcon icon={faPlus} />

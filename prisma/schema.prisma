@@ -63,6 +63,7 @@ model Product {
   
   OrderItem            OrderItem[]
   StockMovement        StockMovement[]
+  bookingItems         BookingItem[]
   
   @@map("product")
 }
@@ -105,9 +106,38 @@ model Customer {
   phone     String?
   
   orders    Order[] 
+  bookings Booking[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   @@map("customer")
+}
+
+model Booking {
+  id           Int           @id @default(autoincrement())
+  customerId   Int
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  eventDate    DateTime
+  startTime    String?       // e.g., "10:00 AM"
+  endTime      String?       // e.g., "04:00 PM"
+  venueAddress String
+  totalAmount  Int           // In cents
+  status       String        @default("pending") // pending, confirmed, completed, cancelled
+  items        BookingItem[]
+  createdAt    DateTime      @default(now())
+
+  @@map("booking")
+}
+
+model BookingItem {
+  id        Int     @id @default(autoincrement())
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int     // Price at time of booking (in cents)
+
+  @@map("bookingItem")
 }

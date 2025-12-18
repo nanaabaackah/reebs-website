@@ -21,15 +21,22 @@ const Cart = () => {
 
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.cartQuantity, 0);
+  const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
+  const getItemImage = (item) =>
+    item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
+  const getItemCategory = (item) =>
+    item.specificCategory || item.specificcategory || item.type || null;
 
   const handleQtyChange = (item, value) => {
     const parsed = Number(value);
     if (Number.isNaN(parsed)) return;
-    const clamped = Math.min(Math.max(parsed, 1), item.quantity);
+    const maxQty = getItemQuantity(item);
+    const clamped = Math.min(Math.max(parsed, 1), maxQty);
     updateQuantity(item.id, clamped - item.cartQuantity);
   };
 
-  const stockLeft = (item) => Math.max(item.quantity - item.cartQuantity, 0);
+  const stockLeft = (item) =>
+    Math.max(getItemQuantity(item) - item.cartQuantity, 0);
 
   return (
     <main className="cart-shell" id="main">
@@ -106,8 +113,10 @@ const Cart = () => {
                 {cart.map((item) => (
                   <article className="cart-line" key={item.id}>
                     <div className="cart-line-media">
-                      <img src={item.image_url} alt={item.name} loading="lazy" />
-                      {item.type && <span className="cart-chip">{item.type}</span>}
+                      <img src={getItemImage(item)} alt={item.name} loading="lazy" />
+                      {getItemCategory(item) && (
+                        <span className="cart-chip">{getItemCategory(item)}</span>
+                      )}
                     </div>
                     <div className="cart-line-content">
                       <div className="cart-line-top">
@@ -152,7 +161,7 @@ const Cart = () => {
                             <input
                               type="number"
                               min={1}
-                              max={item.quantity}
+                              max={getItemQuantity(item)}
                               value={item.cartQuantity}
                               onChange={(e) => handleQtyChange(item, e.target.value)}
                               aria-label={`${item.name} quantity`}
@@ -160,14 +169,14 @@ const Cart = () => {
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.id, 1)}
-                              disabled={item.cartQuantity >= item.quantity}
+                              disabled={item.cartQuantity >= getItemQuantity(item)}
                               aria-label={`Increase ${item.name} quantity`}
                             >
                               +
                             </button>
                           </div>
                           <span className="muted">
-                            {item.quantity} available • {formatCurrency(convertPrice(item.price * item.cartQuantity))}
+                            {getItemQuantity(item)} available • {formatCurrency(convertPrice(item.price * item.cartQuantity))}
                           </span>
                         </div>
 
