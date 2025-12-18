@@ -3,18 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
+import { GoogleMap, InfoWindowF, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -84,6 +73,7 @@ const formatMoney = (value, currency = "GHS") => {
 };
 
 const geocodeCacheKey = "reebs_booking_geocode_v1";
+const googleMapContainerStyle = { width: "100%", height: "440px" };
 
 function AdminScheduler() {
   const [view, setView] = useState("month"); // month | agenda | map
@@ -95,8 +85,15 @@ function AdminScheduler() {
   const [locations, setLocations] = useState([]);
   const [mapStats, setMapStats] = useState({ total: 0, geocoded: 0 });
   const [mapFailures, setMapFailures] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const mapInstanceRef = useRef(null);
 
   const geocodeQueueRef = useRef(Promise.resolve());
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
+  const { isLoaded: isGoogleLoaded, loadError: googleLoadError } = useJsApiLoader({
+    id: "reebs-google-maps",
+    googleMapsApiKey: googleMapsApiKey || "",
+  });
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -173,9 +170,22 @@ function AdminScheduler() {
   }, [monthCursor]);
 
   const mapCenter = useMemo(() => {
-    if (locations.length) return [locations[0].lat, locations[0].lng];
-    return [5.6037, -0.187]; // Accra fallback
+    if (locations.length) return { lat: locations[0].lat, lng: locations[0].lng };
+    return { lat: 5.6037, lng: -0.187 }; // Accra fallback
   }, [locations]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    if (!isGoogleLoaded) return;
+    if (!locations.length) return;
+    if (typeof window === "undefined" || !window.google?.maps?.LatLngBounds) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+    for (const loc of locations) {
+      bounds.extend({ lat: loc.lat, lng: loc.lng });
+    }
+    mapInstanceRef.current.fitBounds(bounds, 48);
+  }, [isGoogleLoaded, locations]);
 
   const loadGeocodeCache = () => {
     try {
@@ -247,6 +257,7 @@ function AdminScheduler() {
 
   useEffect(() => {
     if (view !== "map") return;
+    setSelectedLocation(null);
 
     const uniqueAddresses = Array.from(
       new Set(
@@ -488,29 +499,64 @@ function AdminScheduler() {
             </div>
 
             <div className="map-frame">
-              <MapContainer center={mapCenter} zoom={11} scrollWheelZoom>
-                <TileLayer
-                  attribution='&copy; OpenStreetMap contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {locations.map((loc) => (
-                  <Marker key={loc.address} position={[loc.lat, loc.lng]}>
-                    <Popup>
-                      <strong>{loc.address}</strong>
+              {!googleMapsApiKey ? (
+                <p className="scheduler-muted">
+                  Google Maps API key missing. Add <code>VITE_GOOGLE_MAPS_KEY</code> to <code>.env</code> and restart the dev server.
+                </p>
+              ) : googleLoadError ? (
+                <p className="scheduler-muted">Unable to load Google Maps right now.</p>
+              ) : !isGoogleLoaded ? (
+                <p className="scheduler-muted">Loading map…</p>
+              ) : (
+                <GoogleMap
+                  mapContainerStyle={googleMapContainerStyle}
+                  center={mapCenter}
+                  zoom={11}
+                  options={{
+                    fullscreenControl: false,
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                    clickableIcons: false,
+                  }}
+                  onLoad={(map) => {
+                    mapInstanceRef.current = map;
+                  }}
+                  onUnmount={() => {
+                    mapInstanceRef.current = null;
+                  }}
+                >
+                  {locations.map((loc) => (
+                    <MarkerF
+                      key={loc.address}
+                      position={{ lat: loc.lat, lng: loc.lng }}
+                      onClick={() => setSelectedLocation(loc)}
+                    />
+                  ))}
+
+                  {selectedLocation && (
+                    <InfoWindowF
+                      position={{ lat: selectedLocation.lat, lng: selectedLocation.lng }}
+                      onCloseClick={() => setSelectedLocation(null)}
+                    >
                       <div className="map-popup">
-                        {(bookingsByAddress.get(loc.address) || []).slice(0, 6).map((booking) => (
-                          <div key={booking.id}>
-                            #{booking.id} · {booking.customerName} · {formatDate(booking.eventDate)}
-                          </div>
-                        ))}
-                        {(bookingsByAddress.get(loc.address) || []).length > 6 && (
-                          <div>…more bookings</div>
-                        )}
+                        <strong>{selectedLocation.address}</strong>
+                        <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                          {(bookingsByAddress.get(selectedLocation.address) || [])
+                            .slice(0, 6)
+                            .map((booking) => (
+                              <div key={booking.id}>
+                                #{booking.id} · {booking.customerName} · {formatDate(booking.eventDate)}
+                              </div>
+                            ))}
+                          {(bookingsByAddress.get(selectedLocation.address) || []).length > 6 && (
+                            <div>…more bookings</div>
+                          )}
+                        </div>
                       </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+                    </InfoWindowF>
+                  )}
+                </GoogleMap>
+              )}
             </div>
 
             {locations.length === 0 && (
