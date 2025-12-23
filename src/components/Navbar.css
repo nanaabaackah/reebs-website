@@ -110,6 +110,93 @@ html, body {
 .nav-search-results li button:focus-visible{
     background: rgba(255,255,255,0.16);
 }
+
+.auth-menu {
+    position: relative;
+}
+
+.auth-menu-dropdown {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    padding: 0.5rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 16px 30px rgba(0,0,0,0.16);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    z-index: 60;
+    display: grid;
+    gap: 0.35rem;
+    transform: translateY(6px);
+    animation: authMenuFade 120ms ease-out forwards;
+}
+
+.auth-dropdown-menu {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.5rem;
+}
+
+
+.auth-dropdown-header {
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    display: grid;
+    gap: 0.25rem;
+}
+
+.auth-dropdown-header strong {
+    font-size: 0.95rem;
+    letter-spacing: -0.02em;
+}
+
+.auth-dropdown-header small {
+    font-size: 0.8rem;
+    opacity: 0.75;
+}
+
+.auth-menu-dropdown button,
+.auth-menu-dropdown a {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    padding: 0.55rem 0.75rem;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.auth-menu-dropdown button:hover,
+.auth-menu-dropdown button:focus-visible,
+.auth-menu-dropdown a:hover,
+.auth-menu-dropdown a:focus-visible {
+    outline: none;
+    transform: translateX(2px);
+}
+
+.auth-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.logout-btn {
+    border: 1px solid rgba(255, 99, 99, 0.4);
+    color: #ffb3b3;
+}
+
+@keyframes authMenuFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(6px); }
+}
 .nav-search-title{
     font-weight: 800;
 }

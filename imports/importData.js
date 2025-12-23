@@ -2,7 +2,7 @@
 // Filename: importData.js (FINAL VERSION with 'specificCategory' column)
 
 import 'dotenv/config';
-import { prisma } from "./prismaClient.js"; 
+import { prisma } from "../prismaClient.js"; 
 import fs from 'fs';
 import path from 'path';
 // Ensure you have installed this package: npm install csv-parse

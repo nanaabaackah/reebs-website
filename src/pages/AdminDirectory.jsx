@@ -21,10 +21,20 @@ const tabs = [
   { key: "vendors", label: "Vendors" },
 ];
 
+const generateEmailFromNames = (firstName, lastName) => {
+  const clean = (value) => (value || "").trim().replace(/\s+/g, "").toLowerCase();
+  const first = clean(firstName);
+  const last = clean(lastName);
+  if (!first || !last) return "";
+  return `${first}_${last}@reebs.com`;
+};
+
 function AdminDirectory() {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -34,13 +44,19 @@ function AdminDirectory() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const [userForm, setUserForm] = useState({ email: "", password: "", name: "", role: "Staff" });
+  const [userForm, setUserForm] = useState({ firstName: "", lastName: "", password: "", role: "Staff" });
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", phone: "" });
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
   }, []);
+
+  const totalRecords = useMemo(() => {
+    if (activeTab === "customers") return customers.length;
+    if (activeTab === "users") return users.length;
+    return 0;
+  }, [activeTab, customers.length, users.length]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -54,8 +70,10 @@ function AdminDirectory() {
         throw new Error("Failed to fetch directory data.");
       }
       const [usersData, customersData] = await Promise.all([usersRes.json(), customersRes.json()]);
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setCustomers(Array.isArray(customersData) ? customersData : []);
+      const safeUsers = Array.isArray(usersData) ? usersData : [];
+      const safeCustomers = Array.isArray(customersData) ? customersData : [];
+      setUsers([...safeUsers].sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "")));
+      setCustomers([...safeCustomers].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
     } catch (err) {
       console.error("Directory fetch failed", err);
       setError("We couldn't load directory data right now.");
@@ -84,14 +102,27 @@ function AdminDirectory() {
       });
     }
 
-    return list.filter((user) => {
+    const filtered = list.filter((user) => {
+      const fullName = `${user.fullName || ""} ${user.name || ""} ${user.firstName || ""} ${user.lastName || ""}`.toLowerCase();
       return (
         user.email?.toLowerCase().includes(needle) ||
-        user.name?.toLowerCase().includes(needle) ||
+        fullName.includes(needle) ||
         user.role?.toLowerCase().includes(needle)
       );
     });
+    return filtered;
   }, [activeTab, customers, users, query]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, query, customers.length, users.length]);
+
+  const pageCount = Math.max(1, Math.ceil(currentList.length / pageSize));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const paginatedList = useMemo(() => {
+    const start = clampedPage * pageSize;
+    return currentList.slice(start, start + pageSize);
+  }, [currentList, clampedPage, pageSize]);
 
   const openCreateModal = () => {
     setEditing(null);
@@ -99,7 +130,7 @@ function AdminDirectory() {
     if (activeTab === "customers") {
       setCustomerForm({ name: "", email: "", phone: "" });
     } else {
-      setUserForm({ email: "", password: "", name: "", role: "Staff" });
+      setUserForm({ firstName: "", lastName: "", password: "", role: "Staff" });
     }
     setModalOpen(true);
   };
@@ -115,9 +146,9 @@ function AdminDirectory() {
       });
     } else {
       setUserForm({
-        email: row.email || "",
+        firstName: row.firstName || "",
+        lastName: row.lastName || "",
         password: "",
-        name: row.name || "",
         role: row.role || "Staff",
       });
     }
@@ -136,10 +167,17 @@ function AdminDirectory() {
 
     if (activeTab === "vendors") return;
 
+    const trimmedFirst = userForm.firstName.trim();
+    const trimmedLast = userForm.lastName.trim();
+    const trimmedPassword = userForm.password.trim();
+    const trimmedCustomerName = customerForm.name.trim();
+    const trimmedCustomerEmail = customerForm.email.trim();
+    const trimmedCustomerPhone = customerForm.phone.trim();
+
     setSaving(true);
     try {
       if (activeTab === "customers") {
-        if (!customerForm.name.trim()) {
+        if (!trimmedCustomerName) {
           throw new Error("Name is required.");
         }
 
@@ -149,9 +187,9 @@ function AdminDirectory() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: isEdit ? editing.id : undefined,
-            name: customerForm.name,
-            email: customerForm.email,
-            phone: customerForm.phone,
+            name: trimmedCustomerName,
+            email: trimmedCustomerEmail,
+            phone: trimmedCustomerPhone,
           }),
         });
 
@@ -163,25 +201,30 @@ function AdminDirectory() {
           return [...next].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         });
       } else {
-        if (!userForm.email.trim()) {
-          throw new Error("Email is required.");
+        if (!trimmedFirst || !trimmedLast) {
+          throw new Error("First and last name are required.");
         }
 
         const isEdit = Boolean(editing?.id);
-        if (!isEdit && !userForm.password) {
+        if (!isEdit && !trimmedPassword) {
           throw new Error("Password is required when creating a user.");
+        }
+
+        const requestBody = {
+          id: isEdit ? editing.id : undefined,
+          firstName: trimmedFirst,
+          lastName: trimmedLast,
+          role: userForm.role,
+        };
+
+        if (!isEdit || trimmedPassword) {
+          requestBody.password = trimmedPassword;
         }
 
         const response = await fetch("/.netlify/functions/users", {
           method: isEdit ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: isEdit ? editing.id : undefined,
-            email: userForm.email,
-            password: userForm.password || undefined,
-            name: userForm.name || undefined,
-            role: userForm.role,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const payload = await response.json();
@@ -239,9 +282,7 @@ function AdminDirectory() {
           <div className="customers-panel-header">
             <div>
               <h3>Directory</h3>
-              <span>
-                {activeTab === "customers" ? customers.length : activeTab === "users" ? users.length : "-"} total
-              </span>
+              <span>{query ? `${currentList.length} match${currentList.length === 1 ? "" : "es"} / ${totalRecords} total` : `${totalRecords} total`}</span>
             </div>
             <div className="directory-tabs">
               {tabs.map((tab) => (
@@ -257,12 +298,24 @@ function AdminDirectory() {
             </div>
             <label className="customers-search">
               Search
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search name, email, role"
-              />
+              <div className="customers-search-input">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search name, email, role"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    className="customers-search-clear"
+                    onClick={() => setQuery("")}
+                    aria-label="Clear search"
+                  >
+                    <FontAwesomeIcon icon={faXmark} />
+                  </button>
+                )}
+              </div>
             </label>
           </div>
 
@@ -275,6 +328,24 @@ function AdminDirectory() {
 
           {!loading && !error && activeTab !== "vendors" && (
             <div className="customers-table-wrapper">
+              <div className="table-pagination">
+                <span>
+                  Showing {currentList.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(currentList.length, (clampedPage + 1) * pageSize)} of {currentList.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
               <table className="customers-table">
                 <thead>
                   {activeTab === "customers" ? (
@@ -296,7 +367,7 @@ function AdminDirectory() {
                   )}
                 </thead>
                 <tbody>
-                  {currentList.map((row) => (
+                  {paginatedList.map((row) => (
                     <tr key={`${activeTab}-${row.id}`}>
                       {activeTab === "customers" ? (
                         <>
@@ -308,7 +379,7 @@ function AdminDirectory() {
                       ) : (
                         <>
                           <td>{row.email || "-"}</td>
-                          <td>{row.name || "-"}</td>
+                          <td>{row.fullName || row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "-"}</td>
                           <td>{row.role || "Staff"}</td>
                           <td>{formatDate(row.createdAt)}</td>
                         </>
@@ -328,7 +399,7 @@ function AdminDirectory() {
                   {!currentList.length && (
                     <tr>
                       <td colSpan={5} className="customers-empty">
-                        No records found.
+                        {query ? "No matching records." : "No records found."}
                       </td>
                     </tr>
                   )}
@@ -395,27 +466,37 @@ function AdminDirectory() {
               ) : (
                 <>
                   <label>
-                    Email
+                    First name
                     <input
-                      type="email"
-                      value={userForm.email}
+                      type="text"
+                      value={userForm.firstName}
                       onChange={(event) =>
-                        setUserForm((prev) => ({ ...prev, email: event.target.value }))
+                        setUserForm((prev) => ({ ...prev, firstName: event.target.value }))
                       }
-                      placeholder="user@example.com"
+                      placeholder="First name"
                       required
                     />
                   </label>
 
                   <label>
-                    Name (optional)
+                    Last name
                     <input
                       type="text"
-                      value={userForm.name}
+                      value={userForm.lastName}
                       onChange={(event) =>
-                        setUserForm((prev) => ({ ...prev, name: event.target.value }))
+                        setUserForm((prev) => ({ ...prev, lastName: event.target.value }))
                       }
-                      placeholder="Full name"
+                      placeholder="Last name"
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Login email (auto)
+                    <input
+                      type="text"
+                      value={generateEmailFromNames(userForm.firstName, userForm.lastName) || editing?.email || ""}
+                      readOnly
                     />
                   </label>
 

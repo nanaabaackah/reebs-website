@@ -1,26 +1,100 @@
 /* eslint-disable no-undef */
-// Filename: importProducts.js (FINAL VERSION with Custom Age Generator)
-
+// Filename: importProducts.js
 import 'dotenv/config';
 import { prisma } from "./prismaClient.js"; 
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse'; 
 
-// Helper function to read a CSV file
-function readCsv(filePath) {
+/**
+ * --- HELPERS ---
+ */
+
+// Formats "WHITE SOCKS- SCHOOL" to "White socks- school"
+const formatName = (str) => {
+    if (!str) return "";
+    const lower = str.trim().toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+};
+
+// Auto-assign clothing sub-categories based on keywords in the description
+const assignClothingCategory = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes('baby') || n.includes('6m') || n.includes('infant') || n.includes('toddler')) return "Baby Clothing";
+    if (n.includes('men') || n.includes('mens') || n.includes('male') || n.includes('boxer')) return "Men's Clothing";
+    if (n.includes('women') || n.includes('ladies') || n.includes('dress') || n.includes('heel')) {
+        if (n.includes('girl')) return "Girl's Clothing"; // Check for "Girls Dress"
+        return "Women's Clothing";
+    }
+    if (n.includes('girl')) return "Girl's Clothing";
+    if (n.includes('boy')) return "Boy's Clothing";
+    
+    return "General Clothing"; 
+};
+
+const assignShoeCategory = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes('baby') || n.includes('infant') || n.includes('toddler')) return "Baby Shoes";
+    if (n.includes('women') || n.includes('ladies') || n.includes('heel')) return "Women's Shoes";
+    if (n.includes('men') || n.includes('mens') || n.includes('male')) return "Men's Shoes";
+    if (n.includes('girl')) return "Girls' Shoes";
+    if (n.includes('boy')) return "Boys' Shoes";
+    return "General Shoes";
+};
+
+const assignToyCategory = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes('party') || n.includes('balloon') || n.includes('decor') || n.includes('banner') || n.includes('cup') || n.includes('plate')) return "Party Supplies";
+    if (n.includes('house') || n.includes('home') || n.includes('kitchen') || n.includes('mop') || n.includes('broom') || n.includes('storage')) return "Household Items";
+    if (n.includes('baby') || n.includes('infant') || n.includes('toddler')) return "Baby Toys";
+    return "Kids Toys";
+};
+
+// Converts strings like "GHC 12.00" or "£ 3.00" to integer cents/pesewas
+const toCents = (val) => {
+    if (!val || val === "" || val === "£ -" || val === "GHC -") return 0;
+    const cleaned = val.toString().replace(/[^\d.-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : Math.round(num * 100);
+};
+
+// Generates unique SKU: CAT-NAMEPREFIX-INDEX
+const generateSku = (name, category, index) => {
+    const prefix = category.substring(0, 3).toUpperCase();
+    const cleanName = name.toUpperCase().replace(/[^A-Z0-9]/g, '-').substring(0, 10);
+    return `${prefix}-${cleanName}-${String(index).padStart(3, '0')}`;
+};
+
+/**
+ * --- CSV PARSERS ---
+ */
+
+function readCsvRaw(filePath, skipLines = 0) {
+    return new Promise((resolve, reject) => {
+        const fullPath = path.resolve(filePath);
+        if (!fs.existsSync(fullPath)) return resolve([]);
+        
+        fs.readFile(fullPath, { encoding: 'utf8' }, (err, data) => {
+            if (err) return reject(err);
+            parse(data, {
+                columns: false, // Use raw arrays for messy headers
+                skip_empty_lines: true,
+                trim: true,
+                relax_column_count: true,
+            }, (err, records) => {
+                if (err) return reject(err);
+                resolve(records.slice(skipLines));
+            });
+        });
+    });
+}
+
+function readRentalsCsv(filePath) {
     return new Promise((resolve, reject) => {
         const fullPath = path.resolve(filePath);
         fs.readFile(fullPath, { encoding: 'utf8' }, (err, data) => {
             if (err) return reject(err);
-
-            parse(data, {
-                columns: true, 
-                skip_empty_lines: true,
-                trim: true,
-                relax_column_count: true, 
-                relax_quotes: true,       
-            }, (err, records) => {
+            parse(data, { columns: true, skip_empty_lines: true, trim: true }, (err, records) => {
                 if (err) return reject(err);
                 resolve(records);
             });
@@ -28,133 +102,108 @@ function readCsv(filePath) {
     });
 }
 
-// Custom function to generate age based on product name and category
-const generateAge = (name, category) => {
-    const n = String(name).toLowerCase();
-    const c = String(category).toLowerCase();
-    
-    if (c.includes("kid's toys")) {
-        if (n.includes('baby') || n.includes('toddler') || n.includes('infunbebe')) {
-            return "6m+"; 
-        }
-        if (n.includes('blocks') || n.includes('foam') || n.includes('slime')) {
-            return "1+"; 
-        }
-        if (n.includes('dress up') || n.includes('action figure') || n.includes('monster trucks') || n.includes('police car')) {
-            return "4+"; 
-        }
-        return "3+"; 
-    }
+/**
+ * --- MAIN IMPORT LOGIC ---
+ */
 
-    if (c.includes("kid's party rentals") || n.includes('trampoline') || n.includes('castle')) {
-        return "3+"; 
-    }
+async function importAllProducts() {
+    console.log("🚀 Starting Unified Import...");
 
-    return "All Ages"; 
-};
-
-
-// Function to import all products
-async function importProductData() {
-    console.log("🛠️ Starting Product Data Import...");
-    
-    // 1. Read Data
-    const inventoryData = await readCsv('inventory.csv');
-    const rentalsData = await await readCsv('rentals.csv');
-
-    console.log(`\nFound ${inventoryData.length} inventory items and ${rentalsData.length} rental items.`);
-
-    // 2. Clear Product Table (Must clear dependent tables first, then the Product table)
+    // Ensure IDs start from 1 on a fresh import
     try {
-        await prisma.stockMovement.deleteMany({});
-        await prisma.orderItem.deleteMany({});
-        await prisma.product.deleteMany({});
-        console.log("\n🧹 Cleared existing OrderItem, StockMovement, and Product data.");
-    } catch (e) {
-        console.error("Warning: Could not clear product-related tables. Proceeding with insertion.", e.message);
+        await prisma.$executeRaw`TRUNCATE TABLE "product" RESTART IDENTITY CASCADE`;
+        console.log("🔄 Product table truncated and identity reset.");
+    } catch (err) {
+        console.warn("Could not truncate product table:", err?.message || err);
     }
 
-    // 3. Map Items to Product Model and generate IDs
-    let currentId = 1;
-    const productsToCreate = [];
+    // 1. Process Inventory Files (Clothes, Toys, Shoes)
+    const inventorySources = [
+        { path: 'data/Inventory - CLOTHES25.csv', type: 'CLOTHES', skip: 2 },
+        { path: 'data/Inventory - TOYS25.csv', type: 'TOYS', skip: 1 },
+        { path: 'data/Inventory - SHOES25.csv', type: 'SHOES', skip: 1 }
+    ];
 
-    // Map Inventory Items
-    for (const row of inventoryData) {
-        const sku = `INV-${currentId.toString().padStart(3, '0')}`;
-        const specificCategory = row.type || 'General';
-        
-        // --- Custom Logic for Description and Age ---
-        let description = row.description;
-        if (!description || description.toLowerCase() === 'unavailable' || description.length < 5) {
-            description = `A high-quality party item: ${row.name}. Perfect for your next event or celebration.`;
+    for (const source of inventorySources) {
+        console.log(`\n📂 Reading ${source.type}...`);
+        const rows = await readCsvRaw(source.path, source.skip);
+        let count = 0;
+
+        for (const [idx, row] of rows.entries()) {
+            const rawName = row[1]; // DESCRIPTION column
+            if (!rawName || rawName.trim() === '' || rawName === 'DESCRIPTION') continue;
+
+            const name = formatName(rawName);
+            const stock = parseInt(row[5], 10) || 0;
+            const price = toCents(row[4]);
+            
+            // Logic: Assign sub-category per source
+            let specificCategory = null;
+            if (source.type === 'CLOTHES') specificCategory = assignClothingCategory(rawName);
+            else if (source.type === 'SHOES') specificCategory = assignShoeCategory(rawName);
+            else if (source.type === 'TOYS') specificCategory = assignToyCategory(rawName);
+
+            const productData = {
+                name: name,
+                sku: generateSku(rawName, source.type, idx),
+                stock: stock,
+                price: price,
+                purchasePriceGbp: toCents(row[2]), // CP (BP)
+                purchasePriceGhs: toCents(row[3]), // CP (GHC)
+                stockValue: stock * price,
+                saleValue: toCents(row[19]), // SALES VALUE column
+                sourceCategoryCode: source.type,
+                specificCategory: specificCategory,
+                isActive: true
+            };
+
+            await prisma.product.upsert({
+                where: { sku: productData.sku },
+                update: productData,
+                create: productData
+            });
+            count++;
         }
-        const age = generateAge(row.name, specificCategory); // <--- USING YOUR FUNCTION
-
-        productsToCreate.push({
-            id: currentId++,
-            sku: sku,
-            name: row.name,
-            description: description, 
-            sourceCategoryCode: 'INVENTORY',
-            specificCategory: specificCategory, 
-            price: Math.round(parseFloat(row.price) * 100), 
-            stock: parseInt(row.quantity, 10) || 0,
-            isActive: row.status === 'available',
-            imageUrl: row.image_url,
-            age: age, // <--- SET VIA YOUR FUNCTION
-        });
+        console.log(`✅ ${source.type}: Synced ${count} items.`);
     }
 
-    // Map Rental Items
-    for (const row of rentalsData) {
-        const sku = `RENT-${currentId.toString().padStart(3, '0')}`;
-        const specificCategory = row.category;
-        
-        let price = 0;
-        const priceStr = String(row.price).replace(/[^0-9.-]/g, '');
-        if (priceStr.includes('-')) {
-            price = parseFloat(priceStr.split('-')[0].trim());
-        } else {
-            price = parseFloat(priceStr.trim());
-        }
-        
-        // --- Custom Logic for Description and Age ---
-        const rateText = row.rate ? `Charged ${row.rate}.` : 'Available per booking.';
-        const age = generateAge(row.name, specificCategory); 
-        const rentalDescription = `Premium rental item: Suitable for kids ${age}. ${rateText}`;
-        
-        productsToCreate.push({
-            id: currentId++,
-            sku: sku,
-            name: row.name,
-            description: rentalDescription, 
-            sourceCategoryCode: 'RENTAL',
-            specificCategory: specificCategory,
+    // 2. Process Rentals
+    console.log("\n📂 Reading Rentals...");
+    const rentalRows = await readRentalsCsv('data/rentals.csv');
+    let rentalCount = 0;
+
+    for (const [idx, row] of rentalRows.entries()) {
+        const name = formatName(row.name);
+        const stock = parseInt(row.quantity, 10) || 0;
+        const price = toCents(row.price);
+
+        const rentalData = {
+            name: name,
+            sku: generateSku(row.name, 'RENTAL', idx),
+            stock: stock,
+            price: price,
             rate: row.rate,
             page: row.page,
-            price: Math.round(price * 100) || 0, 
-            stock: parseInt(row.quantity, 10) || 0,
-            isActive: row.status === 'available',
             imageUrl: row.image,
-            age: age, // <--- SET VIA YOUR FUNCTION
+            sourceCategoryCode: 'RENTAL',
+            specificCategory: row.category,
+            stockValue: stock * price,
+            isActive: row.status === 'available'
+        };
+
+        await prisma.product.upsert({
+            where: { sku: rentalData.sku },
+            update: rentalData,
+            create: rentalData
         });
+        rentalCount++;
     }
-
-    // 4. Import Products
-    await prisma.product.createMany({ data: productsToCreate, skipDuplicates: true });
-    console.log(`✅ Imported ${productsToCreate.length} Total Products from Inventory and Rentals.`);
-
+    console.log(`✅ RENTALS: Synced ${rentalCount} items.`);
 }
 
-importProductData()
-    .catch((e) => {
-        console.error("\n❌ Error during product data import:", e);
-        if (e.code === 'ENOENT') {
-            console.error("\nFile Not Found Error: Please ensure 'inventory.csv' and 'rentals.csv' are in the same directory as this script.");
-        }
-        process.exit(1);
-    })
+importAllProducts()
+    .catch(e => console.error("❌ Import Failed:", e))
     .finally(async () => {
         await prisma.$disconnect();
-        console.log("Disconnected Prisma Client.");
+        console.log("\n✨ Process finished.");
     });

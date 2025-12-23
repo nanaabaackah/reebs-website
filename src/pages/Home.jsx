@@ -25,14 +25,19 @@ function Home() {
                     const data = await productsRes.json();
                     
                     if (isMounted) {
-                        // 2. Filter data by the new sourceCategoryCode
-                        const inventoryItems = (Array.isArray(data) ? data : [])
-                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'INVENTORY');
-                        const rentalItems = (Array.isArray(data) ? data : [])
-                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'RENTAL');
-                        
-                        setSuggestedRentals(rentalItems.slice(0, 3));
-                        setSuggestedProducts(inventoryItems.slice(0, 3));
+                        const records = Array.isArray(data) ? data : [];
+                        const rentals = records.filter((item) => {
+                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
+                            return source === 'rental';
+                        });
+                        const retail = records.filter((item) => {
+                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
+                            if (!source) return true;
+                            return source !== 'rental';
+                        });
+
+                        setSuggestedRentals(rentals.slice(0, 3));
+                        setSuggestedProducts(retail.slice(0, 3));
                     }
                 } else {
                     console.error(`Error fetching products: ${productsRes.status}`);

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "fs";
 import Papa from "papaparse";
-import { prisma } from "./prismaClient.js";
+import { prisma } from "../prismaClient.js";
 
 async function generateNextInventoryId() {
   // Find the latest inventoryId

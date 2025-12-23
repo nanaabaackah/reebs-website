@@ -2,6 +2,19 @@
 // Filename: users.js
 import "dotenv/config";
 import { Client } from "pg";
+import { hashPassword } from "../../utils/passwords.js";
+
+const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
+const stripSpaces = (value) => cleanNamePart(value).replace(/\s+/g, "");
+const buildEmailFromNames = (firstName, lastName) => {
+  const first = stripSpaces(firstName).toLowerCase();
+  const last = stripSpaces(lastName).toLowerCase();
+  if (!first || !last) return null;
+  return `${first}_${last}@reebs.com`;
+};
+const buildFullName = (firstName, lastName) => {
+  return [cleanNamePart(firstName), cleanNamePart(lastName)].filter(Boolean).join(" ").trim();
+};
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -36,16 +49,27 @@ export async function handler(event) {
         };
       }
 
-      const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : "";
-      const password = typeof data.password === "string" ? data.password : "";
-      const name = typeof data.name === "string" && data.name.trim() ? data.name.trim() : null;
+      const firstName = cleanNamePart(data.firstName);
+      const lastName = cleanNamePart(data.lastName);
+      const password = typeof data.password === "string" ? data.password.trim() : "";
       const role = typeof data.role === "string" && data.role.trim() ? data.role.trim() : "Staff";
+
+      if (!firstName || !lastName) {
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "firstName and lastName are required." }),
+        };
+      }
+
+      const email = buildEmailFromNames(firstName, lastName);
+      const fullName = buildFullName(firstName, lastName);
 
       if (!email) {
         return {
           statusCode: 400,
           headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-          body: JSON.stringify({ error: "Email is required." }),
+          body: JSON.stringify({ error: "Could not generate email from name." }),
         };
       }
 
@@ -58,11 +82,12 @@ export async function handler(event) {
       }
 
       try {
+        const passwordHash = await hashPassword(password);
         const result = await client.query(
-          `INSERT INTO "user" ("email", "password", "name", "role", "createdAt", "updatedAt")
-           VALUES ($1, $2, $3, $4, NOW(), NOW())
-           RETURNING id, email, name, role, "createdAt", "updatedAt"`,
-          [email, password, name, role]
+          `INSERT INTO "user" ("email", "password", "firstName", "lastName", "fullName", "role", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+           RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
+          [email, passwordHash, firstName, lastName, fullName, role]
         );
 
         return {
@@ -103,23 +128,58 @@ export async function handler(event) {
         };
       }
 
-      const email = typeof data.email === "string" ? data.email.trim().toLowerCase() : null;
-      const name = typeof data.name === "string" ? data.name.trim() : null;
+      const firstNameRaw = data.firstName;
+      const lastNameRaw = data.lastName;
+      const firstName = firstNameRaw === undefined ? null : cleanNamePart(firstNameRaw);
+      const lastName = lastNameRaw === undefined ? null : cleanNamePart(lastNameRaw);
       const role = typeof data.role === "string" && data.role.trim() ? data.role.trim() : null;
-      const password = typeof data.password === "string" ? data.password : null;
+      const password = typeof data.password === "string" ? data.password.trim() : null;
+
+      const existingRes = await client.query(
+        `SELECT "firstName", "lastName" FROM "user" WHERE id = $1`,
+        [id]
+      );
+      if (existingRes.rowCount === 0) {
+        return {
+          statusCode: 404,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "User not found." }),
+        };
+      }
+
+      const current = existingRes.rows[0];
+      const nextFirstName = firstName === null ? current.firstName : firstName;
+      const nextLastName = lastName === null ? current.lastName : lastName;
+
+      if (!nextFirstName || !nextLastName) {
+        return {
+          statusCode: 400,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "Users must have both firstName and lastName." }),
+        };
+      }
 
       const updates = [];
       const values = [];
       let index = 1;
 
-      if (email) {
-        updates.push(`"email" = $${index++}`);
-        values.push(email);
+      if (firstName !== null) {
+        updates.push(`"firstName" = $${index++}`);
+        values.push(nextFirstName);
       }
 
-      if (name !== null) {
-        updates.push(`"name" = $${index++}`);
-        values.push(name || null);
+      if (lastName !== null) {
+        updates.push(`"lastName" = $${index++}`);
+        values.push(nextLastName);
+      }
+
+      if (firstName !== null || lastName !== null) {
+        const newEmail = buildEmailFromNames(nextFirstName, nextLastName);
+        const newFullName = buildFullName(nextFirstName, nextLastName);
+        updates.push(`"email" = $${index++}`);
+        values.push(newEmail);
+        updates.push(`"fullName" = $${index++}`);
+        values.push(newFullName);
       }
 
       if (role) {
@@ -128,8 +188,9 @@ export async function handler(event) {
       }
 
       if (password) {
+        const passwordHash = await hashPassword(password);
         updates.push(`"password" = $${index++}`);
-        values.push(password);
+        values.push(passwordHash);
       }
 
       updates.push(`"updatedAt" = NOW()`);
@@ -148,7 +209,7 @@ export async function handler(event) {
         const result = await client.query(
           `UPDATE "user" SET ${updates.join(", ")}
            WHERE id = $${index}
-           RETURNING id, email, name, role, "createdAt", "updatedAt"`,
+           RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
           values
         );
 
@@ -190,7 +251,7 @@ export async function handler(event) {
     }
 
     const result = await client.query(
-      `SELECT id, email, name, role, "createdAt", "updatedAt"
+      `SELECT id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"
        FROM "user"
        ORDER BY id DESC`
     );

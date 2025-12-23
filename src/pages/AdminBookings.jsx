@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faRotateRight, faXmark, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faRotateRight, faXmark, faPen, faFileInvoice } from "@fortawesome/free-solid-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import { useAuth } from "../components/AuthContext";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -36,18 +39,49 @@ const formatMoney = (value, currency = "GHS") => {
   }
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatUser = (name) => name || "Admin";
+
+const toNumber = (value, fallback = 0) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const buildMapUrl = (address) => {
+  if (!address) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
+};
+
 function AdminBookings() {
   const [bookings, setBookings] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [viewMode, setViewMode] = useState("table"); // table | cards
+  const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
+  const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [detailBooking, setDetailBooking] = useState(null);
 
   const [productQuery, setProductQuery] = useState("");
   const [form, setForm] = useState({
@@ -58,7 +92,11 @@ function AdminBookings() {
     venueAddress: "",
     status: "pending",
     items: [],
+    discount: "",
+    discountType: "amount",
   });
+  const [invoiceError, setInvoiceError] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -107,9 +145,8 @@ function AdminBookings() {
       setCustomers(Array.isArray(customersPayload) ? customersPayload : []);
 
       const rentalProducts = (Array.isArray(inventoryPayload) ? inventoryPayload : []).filter((item) => {
-        const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
-        if (!source) return false;
-        return source === "rental" || source === "rentals";
+        const sku = (item.sku || "").toString().toUpperCase();
+        return sku.startsWith("RENT");
       });
 
       setProducts(rentalProducts);
@@ -126,6 +163,10 @@ function AdminBookings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    setPage(0);
+  }, [statusFilter, query, viewMode, bookings.length]);
+
   const productMap = useMemo(() => {
     const map = new Map();
     for (const item of products) {
@@ -136,14 +177,77 @@ function AdminBookings() {
 
   const filteredBookings = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return bookings;
-    return bookings.filter((booking) => {
+    const list = bookings.filter((booking) => {
+      if (statusFilter !== "all" && String(booking.status || "").toLowerCase() !== statusFilter) {
+        return false;
+      }
+      if (!needle) return true;
       const idText = String(booking.id || "").toLowerCase();
       const customer = String(booking.customerName || "").toLowerCase();
       const status = String(booking.status || "").toLowerCase();
       return idText.includes(needle) || customer.includes(needle) || status.includes(needle);
     });
-  }, [bookings, query]);
+    return list;
+  }, [bookings, query, statusFilter]);
+
+  const sortValue = (booking, key) => {
+    switch (key) {
+      case "id":
+        return Number(booking.id) || 0;
+      case "customerName":
+        return (booking.customerName || "").toLowerCase();
+      case "assignedUserName":
+        return (booking.assignedUserName || "").toLowerCase();
+      case "eventDate":
+        return new Date(booking.eventDate || 0).getTime();
+      case "timeWindow":
+        return (booking.startTime || booking.endTime || "").toLowerCase();
+      case "venueAddress":
+        return (booking.venueAddress || "").toLowerCase();
+      case "items":
+        return Array.isArray(booking.items) ? booking.items.length : 0;
+      case "totalAmount":
+        return toNumber(booking.totalAmount);
+      case "status":
+        return (booking.status || "").toLowerCase();
+      default:
+        return booking[key] ?? "";
+    }
+  };
+
+  const sortedBookings = useMemo(() => {
+    const list = [...filteredBookings];
+    const { key, direction } = sortConfig;
+    list.sort((a, b) => {
+      const va = sortValue(a, key);
+      const vb = sortValue(b, key);
+      if (va < vb) return direction === "asc" ? -1 : 1;
+      if (va > vb) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [filteredBookings, sortConfig]);
+
+  const pageCount = Math.max(1, Math.ceil(sortedBookings.length / pageSize));
+  const clampedPage = Math.min(page, pageCount - 1);
+  const paginatedBookings = useMemo(() => {
+    const start = clampedPage * pageSize;
+    return sortedBookings.slice(start, start + pageSize);
+  }, [sortedBookings, clampedPage, pageSize]);
+
+  const requestSort = (key) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { key, direction: "asc" };
+    });
+  };
+
+  const sortIndicator = (key) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "↑" : "↓";
+  };
 
   const filteredProducts = useMemo(() => {
     const needle = productQuery.trim().toLowerCase();
@@ -161,14 +265,89 @@ function AdminBookings() {
     return normalizeCurrency(product?.currency || "GHS");
   }, [form.items, productMap]);
 
-  const bookingTotalCents = useMemo(() => {
-    return form.items.reduce((sum, item) => {
+  const bookingDiscountAmount = useMemo(() => {
+    const subtotal = form.items.reduce((sum, item) => {
       const product = productMap.get(Number(item.productId));
-      const priceCents = Number(product?.price ?? 0);
+      const overridePrice = Number(item.price);
+      const priceCents = Number.isFinite(overridePrice) && overridePrice >= 0
+        ? Math.round(overridePrice * 100)
+        : Number(product?.price ?? 0);
       const quantity = Number(item.quantity) || 1;
       return sum + priceCents * quantity;
     }, 0);
-  }, [form.items, productMap]);
+    const rawDiscount = Math.max(0, Number(form.discount) || 0);
+    if (form.discountType === "percent") {
+      return (subtotal / 100) * (rawDiscount / 100);
+    }
+    return rawDiscount;
+  }, [form.items, form.discount, form.discountType, productMap]);
+
+  const bookingTotalCents = useMemo(() => {
+    const subtotal = form.items.reduce((sum, item) => {
+      const product = productMap.get(Number(item.productId));
+      const overridePrice = Number(item.price);
+      const priceCents = Number.isFinite(overridePrice) && overridePrice >= 0
+        ? Math.round(overridePrice * 100)
+        : Number(product?.price ?? 0);
+      const quantity = Number(item.quantity) || 1;
+      return sum + priceCents * quantity;
+    }, 0);
+    const rawDiscount = Math.max(0, Number(form.discount) || 0);
+    const discountCents = form.discountType === "percent"
+      ? Math.round(subtotal * (rawDiscount / 100))
+      : Math.round(rawDiscount * 100);
+    return Math.max(0, subtotal - discountCents);
+  }, [form.items, form.discount, form.discountType, productMap]);
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const generateInvoice = async (booking) => {
+    setInvoiceError("");
+    try {
+      const res = await fetch(`/.netlify/functions/getInvoiceDetails?id=${booking.id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Invoice data not found");
+
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text("Reebs Rentals", 14, 18);
+      doc.setFontSize(11);
+      doc.text(`Invoice for Booking #${data.id}`, 14, 26);
+      doc.text(`Customer: ${data.customerName || "-"}`, 14, 34);
+      if (data.customerEmail) doc.text(`Email: ${data.customerEmail}`, 14, 40);
+      if (data.customerPhone) doc.text(`Phone: ${data.customerPhone}`, 14, 46);
+      doc.text(`Event: ${formatDate(data.eventDate)} ${data.startTime || ""}${data.endTime ? ` – ${data.endTime}` : ""}`, 14, 54);
+      doc.text(`Venue: ${data.venueAddress || "-"}`, 14, 60);
+
+      const rows = (data.items || []).map((item) => [
+        item.productName || `Item ${item.productId}`,
+        item.quantity,
+        formatMoney((item.price || 0) / 100, "GHS"),
+        formatMoney(((item.price || 0) * (item.quantity || 1)) / 100, "GHS"),
+      ]);
+
+      doc.autoTable({
+        head: [["Item", "Qty", "Unit price", "Line total"]],
+        body: rows,
+        startY: 70,
+        styles: { fontSize: 10 },
+      });
+
+      const totalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.text(`Total: ${formatMoney((data.totalAmount || 0) / 100, "GHS")}`, 14, totalY);
+
+      doc.save(`invoice-booking-${data.id}.pdf`);
+    } catch (err) {
+      console.error("Invoice generation failed", err);
+      setInvoiceError(err.message || "Failed to generate invoice");
+    }
+  };
 
   const addItem = (product) => {
     setForm((prev) => {
@@ -183,7 +362,17 @@ function AdminBookings() {
           ),
         };
       }
-      return { ...prev, items: [...prev.items, { productId: product.id, quantity: 1 }] };
+      return {
+        ...prev,
+        items: [
+          ...prev.items,
+          {
+            productId: product.id,
+            quantity: 1,
+            price: Number.isFinite(product?.price) ? (product.price / 100).toFixed(2) : "",
+          },
+        ],
+      };
     });
   };
 
@@ -194,6 +383,16 @@ function AdminBookings() {
         if (Number(item.productId) !== Number(productId)) return item;
         const next = Math.max(1, parseInt(nextValue, 10) || 1);
         return { ...item, quantity: next };
+      }),
+    }));
+  };
+
+  const updateItemPrice = (productId, nextValue) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (Number(item.productId) !== Number(productId)) return item;
+        return { ...item, price: nextValue };
       }),
     }));
   };
@@ -217,6 +416,8 @@ function AdminBookings() {
       venueAddress: "",
       status: "pending",
       items: [],
+      discount: "",
+      discountType: "amount",
     });
     setModalOpen(true);
   };
@@ -234,8 +435,14 @@ function AdminBookings() {
       venueAddress: booking.venueAddress || "",
       status: booking.status || "pending",
       items: Array.isArray(booking.items)
-        ? booking.items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+        ? booking.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: Number.isFinite(item.price) ? (item.price / 100).toFixed(2) : "",
+          }))
         : [],
+      discount: "",
+      discountType: "amount",
     });
 
     setModalOpen(true);
@@ -256,23 +463,31 @@ function AdminBookings() {
     if (!form.venueAddress.trim()) return setSaveError("Venue address is required.");
     if (!form.items.length) return setSaveError("Add at least one item to the booking.");
 
-    setSaving(true);
-    try {
-      const isEdit = Boolean(editing?.id);
-      const response = await fetch("/.netlify/functions/bookings", {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: isEdit ? editing.id : undefined,
-          customerId: Number(form.customerId),
-          eventDate: form.eventDate,
-          startTime: form.startTime || null,
-          endTime: form.endTime || null,
-          venueAddress: form.venueAddress,
-          status: form.status,
-          items: form.items,
-        }),
-      });
+      setSaving(true);
+      try {
+        const isEdit = Boolean(editing?.id);
+        const response = await fetch("/.netlify/functions/bookings", {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: isEdit ? editing.id : undefined,
+            customerId: Number(form.customerId),
+            eventDate: form.eventDate,
+            startTime: form.startTime || null,
+            endTime: form.endTime || null,
+            venueAddress: form.venueAddress,
+            status: form.status,
+            discount: Number(form.discount) || 0,
+            discount: bookingDiscountAmount,
+            items: form.items.map((item) => ({
+              ...item,
+              price: Number(item.price) || undefined,
+            })),
+            userId: user?.id,
+            userName: user?.fullName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || undefined,
+            userEmail: user?.email,
+          }),
+        });
 
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Save failed.");
@@ -321,70 +536,178 @@ function AdminBookings() {
               <h3>All bookings</h3>
               <span>{bookings.length} total</span>
             </div>
-            <label className="bookings-search">
-              Search
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Id, customer, status"
-              />
-            </label>
+            <div className="bookings-view">
+              <div className="bookings-seg" role="tablist" aria-label="Booking view">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "table"}
+                  className={viewMode === "table" ? "is-active" : ""}
+                  onClick={() => setViewMode("table")}
+                >
+                  Table
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "cards"}
+                  className={viewMode === "cards" ? "is-active" : ""}
+                  onClick={() => setViewMode("cards")}
+                >
+                  Cards
+                </button>
+              </div>
+              <label className="bookings-filter">
+                Status
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="all">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </label>
+              <label className="bookings-search">
+                Search
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Id, customer, status"
+                />
+              </label>
+            </div>
           </div>
 
           {loading && <p className="bookings-status">Loading bookings...</p>}
-          {!loading && error && <p className="bookings-error">{error}</p>}
+          {!loading && error && (
+            <div className="bookings-inline">
+              <p className="bookings-error">{error}</p>
+              <button type="button" className="bookings-secondary" onClick={fetchAll}>
+                <FontAwesomeIcon icon={faRotateRight} /> Retry
+              </button>
+            </div>
+          )}
 
-          {!loading && !error && (
+          {!loading && !error && viewMode === "table" && (
             <div className="bookings-table-wrapper">
+              <div className="table-pagination">
+                <span>
+                  Showing {sortedBookings.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(sortedBookings.length, (clampedPage + 1) * pageSize)} of {sortedBookings.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
               <table className="bookings-table">
                 <thead>
                   <tr>
-                    <th>Booking</th>
-                    <th>Customer</th>
-                    <th>Event</th>
-                    <th>Time</th>
-                    <th>Venue</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Status</th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("id")}>
+                        Booking <span className="sort-indicator">{sortIndicator("id")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("customerName")}>
+                        Customer <span className="sort-indicator">{sortIndicator("customerName")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("assignedUserName")}>
+                        Assigned to <span className="sort-indicator">{sortIndicator("assignedUserName")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("eventDate")}>
+                        Event <span className="sort-indicator">{sortIndicator("eventDate")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("timeWindow")}>
+                        Time <span className="sort-indicator">{sortIndicator("timeWindow")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("venueAddress")}>
+                        Venue <span className="sort-indicator">{sortIndicator("venueAddress")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("totalAmount")}>
+                        Total <span className="sort-indicator">{sortIndicator("totalAmount")}</span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("status")}>
+                        Status <span className="sort-indicator">{sortIndicator("status")}</span>
+                      </button>
+                    </th>
                     <th aria-label="Actions" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBookings.map((booking) => {
+                  {paginatedBookings.map((booking) => {
                     const timeWindow = booking.startTime || booking.endTime
                       ? `${booking.startTime || ""}${booking.endTime ? ` – ${booking.endTime}` : ""}`
                       : "-";
-                    const itemsCount = Array.isArray(booking.items) ? booking.items.length : 0;
+                    const totalValue = toNumber(booking.totalAmount, 0) / 100;
 
                     return (
-                      <tr key={booking.id}>
+                      <tr key={booking.id} className="bookings-row" onClick={() => setDetailBooking(booking)}>
                         <td>#{booking.id}</td>
                         <td>{booking.customerName || "-"}</td>
+                        <td>{formatUser(booking.assignedUserName)}</td>
                         <td>{formatDate(booking.eventDate)}</td>
                         <td>{timeWindow}</td>
                         <td className="bookings-venue">{booking.venueAddress || "-"}</td>
-                        <td>{itemsCount}</td>
-                        <td>{formatMoney((booking.totalAmount || 0) / 100, "GHS")}</td>
+                        <td>{formatMoney(totalValue, "GHS")}</td>
                         <td>
                           <span className={`bookings-pill ${booking.status || "pending"}`}>
                             {booking.status || "pending"}
                           </span>
                         </td>
-                        <td className="bookings-actions-col">
-                          <button type="button" className="bookings-edit" onClick={() => openEdit(booking)}>
-                            <FontAwesomeIcon icon={faPen} />
-                            Edit
-                          </button>
+                        <td>
+                          <div className="bookings-actions-col" onClick={(e) => e.stopPropagation()}>
+                            <div className="bookings-menu">
+                              <button
+                                type="button"
+                                className="bookings-edit"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const menu = e.currentTarget.nextSibling;
+                                  if (menu) menu.classList.toggle("open");
+                                }}
+                              >
+                                ⋮
+                              </button>
+                              <div className="bookings-menu-list">
+                                <button type="button" onClick={() => generateInvoice(booking)}>
+                                  Invoice
+                                </button>
+                                <button type="button" onClick={() => openEdit(booking)}>
+                                  Edit
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
 
-                  {!filteredBookings.length && (
+                  {!sortedBookings.length && (
                     <tr>
-                      <td colSpan={9} className="bookings-empty">
+                      <td colSpan={10} className="bookings-empty">
                         No bookings found.
                       </td>
                     </tr>
@@ -392,6 +715,91 @@ function AdminBookings() {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {!loading && !error && viewMode === "cards" && (
+            <>
+              <div className="table-pagination">
+                <span>
+                  Showing {sortedBookings.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(sortedBookings.length, (clampedPage + 1) * pageSize)} of {sortedBookings.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+              <div className="bookings-card-grid">
+                {paginatedBookings.map((booking) => {
+                  const timeWindow = booking.startTime || booking.endTime
+                    ? `${booking.startTime || ""}${booking.endTime ? ` – ${booking.endTime}` : ""}`
+                    : "-";
+                  const itemsCount = Array.isArray(booking.items) ? booking.items.length : 0;
+                  const totalValue = toNumber(booking.totalAmount, 0) / 100;
+                return (
+                  <button
+                    type="button"
+                    key={booking.id}
+                    className="bookings-card"
+                    onClick={() => setDetailBooking(booking)}
+                  >
+                    <div className="bookings-card-head">
+                      <span className="bookings-pill small">{booking.status || "pending"}</span>
+                      <span className="bookings-amount">{formatMoney(totalValue, "GHS")}</span>
+                    </div>
+                    <h4>#{booking.id} · {booking.customerName || "-"}</h4>
+                    <p className="bookings-card-meta">
+                      {formatDate(booking.eventDate)} · {timeWindow}
+                    </p>
+                    <p className="bookings-card-meta">{booking.venueAddress || "-"}</p>
+                    <p className="bookings-card-meta">{itemsCount} item{itemsCount === 1 ? "" : "s"}</p>
+                    <p className="bookings-card-meta">
+                      Assigned to: {formatUser(booking.assignedUserName)}
+                    </p>
+                    <div className="bookings-card-actions">
+                      <div className="bookings-menu">
+                        <button
+                          type="button"
+                          className="bookings-edit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const menu = e.currentTarget.nextSibling;
+                            if (menu) menu.classList.toggle("open");
+                          }}
+                        >
+                          ⋮
+                        </button>
+                        <div className="bookings-menu-list">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              generateInvoice(booking);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faFileInvoice} />
+                            Invoice
+                          </button>
+                          <button type="button" onClick={() => openEdit(booking)}>
+                            <FontAwesomeIcon icon={faPen} />
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {!sortedBookings.length && <p className="bookings-muted">No bookings found.</p>}
+              </div>
+            </>
           )}
         </section>
       </div>
@@ -514,6 +922,15 @@ function AdminBookings() {
                           <div className="booking-item-controls">
                             <input
                               type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.price ?? ""}
+                              onChange={(event) => updateItemPrice(item.productId, event.target.value)}
+                              placeholder={product?.price ? (product.price / 100).toFixed(2) : "0.00"}
+                              aria-label="Override price"
+                            />
+                            <input
+                              type="number"
                               min="1"
                               value={item.quantity}
                               onChange={(event) => updateItemQuantity(item.productId, event.target.value)}
@@ -526,8 +943,35 @@ function AdminBookings() {
                       );
                     })}
                     <div className="booking-item-total">
-                      <span>Total</span>
-                      <strong>{formatMoney(bookingTotalCents / 100, bookingCurrency)}</strong>
+                      <div className="booking-item-total-left">
+                        <span>Discount</span>
+                        <div className="booking-discount-input">
+                          <select
+                            value={form.discountType}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, discountType: event.target.value }))
+                            }
+                            aria-label="Discount type"
+                          >
+                            <option value="amount">Amount</option>
+                            <option value="percent">Percent</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            step={form.discountType === "percent" ? "1" : "0.01"}
+                            value={form.discount}
+                            onChange={(event) =>
+                              setForm((prev) => ({ ...prev, discount: event.target.value }))
+                            }
+                            placeholder={form.discountType === "percent" ? "0" : "0.00"}
+                          />
+                        </div>
+                      </div>
+                      <div className="booking-item-total-right">
+                        <span>Total</span>
+                        <strong>{formatMoney(bookingTotalCents / 100, bookingCurrency)}</strong>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -544,6 +988,108 @@ function AdminBookings() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {detailBooking && (
+        <div className="customers-modal" role="dialog" aria-modal="true">
+          <div className="customers-modal-panel bookings-detail-panel">
+            <header>
+              <div>
+                <p className="customers-eyebrow">Booking #{detailBooking.id}</p>
+                <h2>{detailBooking.customerName || "Customer"}</h2>
+                <p className="bookings-card-meta">
+                  {formatDate(detailBooking.eventDate)} · {detailBooking.startTime || ""}{detailBooking.endTime ? ` – ${detailBooking.endTime}` : ""}
+                </p>
+              </div>
+              <div className="booking-detail-actions">
+                <button
+                  type="button"
+                  className="bookings-edit"
+                  onClick={() => {
+                    openEdit(detailBooking);
+                    setDetailBooking(null);
+                  }}
+                >
+                  <FontAwesomeIcon icon={faPen} />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="customers-modal-close"
+                  onClick={() => setDetailBooking(null)}
+                  aria-label="Close"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+            </header>
+
+            <div className="booking-detail-body">
+              <div className="booking-detail-row">
+                <span>Status</span>
+                <span className={`bookings-pill ${detailBooking.status || "pending"}`}>
+                  {detailBooking.status || "pending"}
+                </span>
+              </div>
+              <div className="booking-detail-row">
+                <span>Owner</span>
+                <span>{formatUser(detailBooking.assignedUserName)}</span>
+              </div>
+              <div className="booking-detail-row">
+                <span>Last updated</span>
+                <span>
+                  {formatDateTime(detailBooking.lastModifiedAt || detailBooking.updatedAt)} · {formatUser(detailBooking.updatedByName)}
+                </span>
+              </div>
+              <div className="booking-detail-row">
+                <span>Venue</span>
+                <span>{detailBooking.venueAddress || "-"}</span>
+              </div>
+              <div className="booking-detail-row">
+                <span>Location</span>
+                <span>
+                  {detailBooking.venueAddress ? (
+                    <div className="booking-map">
+                      <iframe
+                        title="Booking location"
+                        src={buildMapUrl(detailBooking.venueAddress)}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    </div>
+                  ) : (
+                    "No address provided"
+                  )}
+                </span>
+              </div>
+              <div className="booking-detail-row">
+                <span>Total</span>
+                <span>{formatMoney((detailBooking.totalAmount || 0) / 100, "GHS")}</span>
+              </div>
+              <div className="booking-detail-items">
+                <h4>Items</h4>
+                {Array.isArray(detailBooking.items) && detailBooking.items.length > 0 ? (
+                  <ul>
+                    {detailBooking.items.map((item) => {
+                      const product = products.find((p) => Number(p.id) === Number(item.productId));
+                      return (
+                        <li key={`${detailBooking.id}-${item.productId}`}>
+                          <div>
+                            <strong>{product?.name || `Product ${item.productId}`}</strong>
+                            {product?.sku && <p className="bookings-card-meta">SKU {product.sku}</p>}
+                          </div>
+                          <span>x{item.quantity}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="bookings-muted">No items listed.</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

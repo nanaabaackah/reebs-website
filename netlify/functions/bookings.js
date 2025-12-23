@@ -4,6 +4,12 @@
 
 import "dotenv/config";
 import { Client } from "pg";
+import {
+  ensureAuditColumns,
+  resolveActor,
+  backfillAuditDefaults,
+  normalizeActor,
+} from "./auditHelpers.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -35,6 +41,11 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    await ensureAuditColumns(client);
+    const defaultActor = await resolveActor(client, normalizeActor({}));
+    if (defaultActor.userId) {
+      await backfillAuditDefaults(client, defaultActor.userId);
+    }
 
     if (event.httpMethod === "GET") {
       const result = await client.query(
@@ -51,9 +62,17 @@ export async function handler(event) {
            b."totalAmount",
            b.status,
            b."createdAt",
-           COALESCE(
-             json_agg(
-               json_build_object(
+           b."lastModifiedAt",
+           b."updatedAt",
+           b."assignedUserId",
+           b."createdByUserId",
+           b."updatedByUserId",
+           assignee."fullName" AS "assignedUserName",
+           updater."fullName" AS "updatedByName",
+           creator."fullName" AS "createdByName",
+            COALESCE(
+              json_agg(
+                json_build_object(
                  'id', bi.id,
                  'productId', bi."productId",
                  'quantity', bi.quantity,
@@ -66,9 +85,12 @@ export async function handler(event) {
            ) AS items
          FROM "booking" b
          JOIN "customer" c ON c.id = b."customerId"
+         LEFT JOIN "user" assignee ON assignee.id = b."assignedUserId"
+         LEFT JOIN "user" updater ON updater.id = b."updatedByUserId"
+         LEFT JOIN "user" creator ON creator.id = b."createdByUserId"
          LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id
          LEFT JOIN "product" p ON p.id = bi."productId"
-         GROUP BY b.id, c.id
+         GROUP BY b.id, c.id, assignee.id, updater.id, creator.id
          ORDER BY b."eventDate" DESC, b.id DESC`
       );
 
@@ -99,6 +121,7 @@ export async function handler(event) {
     const venueAddress = typeof data.venueAddress === "string" ? data.venueAddress.trim() : "";
     const status = typeof data.status === "string" && data.status.trim() ? data.status.trim() : "pending";
     const items = Array.isArray(data.items) ? data.items : [];
+    const discountValue = Number.isFinite(Number(data.discount)) ? Math.max(0, Number(data.discount)) : 0;
 
     if (!Number.isFinite(customerId)) return json(400, { error: "customerId is required." });
     if (!eventDate) return json(400, { error: "eventDate is required." });
@@ -108,12 +131,15 @@ export async function handler(event) {
       .map((item) => ({
         productId: Number(item.productId),
         quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+        price: Number.isFinite(Number(item.price)) ? Math.max(0, Number(item.price)) : null,
       }))
       .filter((item) => Number.isFinite(item.productId));
 
     if (normalizedItems.length === 0) {
       return json(400, { error: "At least one booking item is required." });
     }
+
+    const actor = await resolveActor(client, normalizeActor(data));
 
     await client.query("BEGIN");
 
@@ -129,23 +155,35 @@ export async function handler(event) {
 
       const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
       const productRes = await client.query(
-        `SELECT id, price
+        `SELECT id, price, sku
          FROM "product"
          WHERE id = ANY($1::int[])`,
         [productIds]
       );
-      const priceMap = new Map(productRes.rows.map((row) => [row.id, row.price]));
+      const productMap = new Map(productRes.rows.map((row) => [row.id, row]));
 
       for (const item of normalizedItems) {
-        if (!priceMap.has(item.productId)) {
+        const product = productMap.get(item.productId);
+        if (!product) {
           await client.query("ROLLBACK");
           return json(404, { error: `Product ${item.productId} not found.` });
         }
+        const sku = typeof product.sku === "string" ? product.sku.trim().toUpperCase() : "";
+        if (!sku.startsWith("RENT")) {
+          await client.query("ROLLBACK");
+          return json(400, { error: `Bookings can only include RENT SKUs. Item ${item.productId} is not a rental.` });
+        }
       }
 
-      const totalAmount = normalizedItems.reduce(
-        (sum, item) => sum + priceMap.get(item.productId) * item.quantity,
-        0
+      const totalAmount = Math.max(
+        0,
+        normalizedItems.reduce((sum, item) => {
+          const product = productMap.get(item.productId);
+          const priceCents = Number.isFinite(item.price)
+            ? Math.round(item.price * 100)
+            : product.price;
+          return sum + priceCents * item.quantity;
+        }, 0) - Math.round(discountValue * 100)
       );
 
       let bookingId;
@@ -160,11 +198,25 @@ export async function handler(event) {
              "venueAddress",
              "totalAmount",
              "status",
-             "createdAt"
+             "createdAt",
+             "updatedAt",
+             "lastModifiedAt",
+             "createdByUserId",
+             "updatedByUserId",
+             "assignedUserId"
            )
-           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())
+           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW(),NOW(),$8,$8,$8)
            RETURNING id`,
-          [customerId, eventDate, startTime || null, endTime || null, venueAddress, totalAmount, status]
+          [
+            customerId,
+            eventDate,
+            startTime || null,
+            endTime || null,
+            venueAddress,
+            totalAmount,
+            status,
+            actor.userId,
+          ]
         );
         bookingId = bookingRes.rows[0].id;
       } else {
@@ -188,16 +240,31 @@ export async function handler(event) {
                "endTime" = $4,
                "venueAddress" = $5,
                "totalAmount" = $6,
-               "status" = $7
+               "status" = $7,
+               "updatedAt" = NOW(),
+               "lastModifiedAt" = NOW(),
+               "updatedByUserId" = $9,
+               "assignedUserId" = COALESCE("assignedUserId", $9)
            WHERE id = $8`,
-          [customerId, eventDate, startTime || null, endTime || null, venueAddress, totalAmount, status, bookingId]
+          [
+            customerId,
+            eventDate,
+            startTime || null,
+            endTime || null,
+            venueAddress,
+            totalAmount,
+            status,
+            bookingId,
+            actor.userId,
+          ]
         );
 
         await client.query(`DELETE FROM "bookingItem" WHERE "bookingId" = $1`, [bookingId]);
       }
 
       for (const item of normalizedItems) {
-        const price = priceMap.get(item.productId);
+        const fallbackPrice = productMap.get(item.productId)?.price;
+        const price = Number.isFinite(item.price) ? Math.round(item.price * 100) : fallbackPrice;
         await client.query(
           `INSERT INTO "bookingItem" ("bookingId", "productId", quantity, price)
            VALUES ($1,$2,$3,$4)`,
@@ -219,8 +286,16 @@ export async function handler(event) {
            b."totalAmount",
            b.status,
            b."createdAt",
-           COALESCE(
-             json_agg(
+           b."lastModifiedAt",
+           b."updatedAt",
+           b."assignedUserId",
+           b."createdByUserId",
+           b."updatedByUserId",
+           assignee."fullName" AS "assignedUserName",
+           updater."fullName" AS "updatedByName",
+           creator."fullName" AS "createdByName",
+            COALESCE(
+              json_agg(
                json_build_object(
                  'id', bi.id,
                  'productId', bi."productId",
@@ -234,10 +309,13 @@ export async function handler(event) {
            ) AS items
          FROM "booking" b
          JOIN "customer" c ON c.id = b."customerId"
+         LEFT JOIN "user" assignee ON assignee.id = b."assignedUserId"
+         LEFT JOIN "user" updater ON updater.id = b."updatedByUserId"
+         LEFT JOIN "user" creator ON creator.id = b."createdByUserId"
          LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id
          LEFT JOIN "product" p ON p.id = bi."productId"
          WHERE b.id = $1
-         GROUP BY b.id, c.id`,
+         GROUP BY b.id, c.id, assignee.id, updater.id, creator.id`,
         [bookingId]
       );
 

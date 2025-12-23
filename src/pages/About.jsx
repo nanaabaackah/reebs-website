@@ -24,11 +24,13 @@ function About() {
                     const data = await productsRes.json();
                     
                     if (isMounted) {
-                        // 2. Calculate counts based on the new sourceCategoryCode
-                        const rentals = (Array.isArray(data) ? data : [])
-                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'RENTAL');
-                        const products = (Array.isArray(data) ? data : [])
-                            .filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toUpperCase() === 'INVENTORY');
+                        const records = Array.isArray(data) ? data : [];
+                        const rentals = records.filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase() === 'rental');
+                        const products = records.filter(item => {
+                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
+                            if (!source) return true;
+                            return source !== 'rental';
+                        });
 
                         setRentalsCount(rentals.length);
                         setProductsCount(products.length);

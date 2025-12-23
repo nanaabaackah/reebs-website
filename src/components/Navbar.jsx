@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarDays, faCaretDown, faHome, faShoppingCart, faMoon, faSun, faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
 import './Navbar.css'; 
 import { useCart } from "./CartContext";
+import { useAuth } from "./AuthContext";
 
 const Navbar = ({ onCartToggle }) => {
   const location = useLocation();
@@ -12,6 +13,8 @@ const Navbar = ({ onCartToggle }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [showAuthMenu, setShowAuthMenu] = useState(false);
+  const authMenuRef = useRef(null);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('reebs-theme');
@@ -23,6 +26,7 @@ const Navbar = ({ onCartToggle }) => {
     return Boolean(localStorage.getItem('reebs-theme'));
   });
   const { cart } = useCart();
+  const { user, logout, authReady } = useAuth();
 
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const searchIndex = [
@@ -74,6 +78,12 @@ const Navbar = ({ onCartToggle }) => {
     setDarkMode((prev) => !prev);
   };
 
+  const handleLogout = () => {
+    logout(); // Clear the user state/local storage
+    setShowAuthMenu(false); // Close the dropdown
+    navigate('/login', { replace: true, state: { signedOut: true } });
+  };
+
   const filteredResults = searchQuery.trim()
     ? searchIndex.filter((item) => {
         const q = searchQuery.trim().toLowerCase();
@@ -116,6 +126,22 @@ const Navbar = ({ onCartToggle }) => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [showSearchOverlay]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (authMenuRef.current && !authMenuRef.current.contains(e.target)) {
+        setShowAuthMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (authReady && !user && location.pathname.startsWith("/admin")) {
+      navigate("/login", { replace: true, state: { from: location.pathname } });
+    }
+  }, [authReady, user, location.pathname, navigate]);
 
   const renderSearch = (variant) => (
     <div className={`nav-search nav-search--${variant}`}>
@@ -162,6 +188,44 @@ const Navbar = ({ onCartToggle }) => {
   const isActive = (path) => location.pathname === path;
   const desktopClassName = ['navbar', 'navbar-desktop', scrolled ? 'navbar-scrolled' : 'navbar-default'].join(' ').trim();
   const mobileClassName = ['navbar', 'navbar-mobile', scrolled ? 'navbar-scrolled-mob' : 'navbar-default'].join(' ').trim();
+
+  const renderAuthMenu = () => {
+    if (!showAuthMenu || !authReady) return null;
+    return (
+      <div className="auth-menu-dropdown auth-dropdown-menu">
+        {user ? (
+          <>
+            <div className="auth-dropdown-header">
+              <strong>{user.name || user.firstName || "User"}</strong>
+              <small>{user.email}</small>
+            </div>
+            <Link 
+              to="/admin" 
+              className="auth-dropdown-item" 
+              onClick={() => setShowAuthMenu(false)}
+            >Dashboard
+            </Link>
+            
+            <button 
+              type="button" 
+              className="auth-dropdown-item logout-btn" 
+              onClick={handleLogout}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <Link 
+            to="/login" 
+            className="auth-dropdown-item" 
+            onClick={() => setShowAuthMenu(false)}
+          >
+            Sign In
+          </Link>
+        )}
+      </div>
+    );
+  };
 
   const renderLinks = (isMobile = false, includeLogo = true) => (
     <ul className="menu">
@@ -218,14 +282,19 @@ const Navbar = ({ onCartToggle }) => {
               {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
             </span>
           </button>
-          <button
-            type="button"
-            className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}
-            onClick= {() => navigate('/Admin')}
-            aria-label="Toggle dark mode"
-          >
-            <FontAwesomeIcon icon={faUser} />
-          </button>
+          <div className="auth-menu" ref={authMenuRef}>
+            <button
+              type="button"
+              className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}
+              onClick={() => setShowAuthMenu((prev) => !prev)}
+              aria-haspopup="true"
+              aria-expanded={showAuthMenu}
+              aria-label="User menu"
+            >
+              <FontAwesomeIcon icon={faUser} />
+            </button>
+            {renderAuthMenu()}
+          </div>
           <button
             type="button"
             className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}
@@ -263,12 +332,25 @@ const Navbar = ({ onCartToggle }) => {
             >
               <FontAwesomeIcon icon={faCalendarDays} />
             </button>
-            <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
-              <span className="cart-icon-wrapper">
-                <FontAwesomeIcon icon={faShoppingCart} />
-                {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-              </span>
+          <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
+            <span className="cart-icon-wrapper">
+              <FontAwesomeIcon icon={faShoppingCart} />
+              {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
+            </span>
+          </button>
+          <div className="auth-menu" ref={authMenuRef}>
+            <button
+              type="button"
+              className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}
+              onClick={() => setShowAuthMenu((prev) => !prev)}
+              aria-haspopup="true"
+              aria-expanded={showAuthMenu}
+              aria-label="User menu"
+            >
+              <FontAwesomeIcon icon={faUser} />
             </button>
+            {renderAuthMenu()}
+          </div>
             <button
               type="button"
               className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}

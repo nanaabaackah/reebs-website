@@ -4,6 +4,8 @@ import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
 import { GoogleMap, InfoWindowF, MarkerF, useJsApiLoader } from "@react-google-maps/api";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -75,6 +77,18 @@ const formatMoney = (value, currency = "GHS") => {
 const geocodeCacheKey = "reebs_booking_geocode_v1";
 const googleMapContainerStyle = { width: "100%", height: "440px" };
 
+const findNextBookingDate = (list) => {
+  const now = Date.now();
+  const dates = list
+    .map((b) => {
+      const d = new Date(b.eventDate);
+      return Number.isNaN(d.getTime()) ? null : d;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+  return dates.find((d) => d.getTime() >= now) || dates[0] || null;
+};
+
 function AdminScheduler() {
   const [view, setView] = useState("month"); // month | agenda | map
   const [bookings, setBookings] = useState([]);
@@ -82,11 +96,28 @@ function AdminScheduler() {
   const [error, setError] = useState("");
   const [activeDay, setActiveDay] = useState(() => new Date());
   const [monthCursor, setMonthCursor] = useState(() => new Date());
+  const [userSelectedDay, setUserSelectedDay] = useState(false);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [locations, setLocations] = useState([]);
   const [mapStats, setMapStats] = useState({ total: 0, geocoded: 0 });
   const [mapFailures, setMapFailures] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [bookingForm, setBookingForm] = useState({
+    customerId: "",
+    venueAddress: "",
+    startTime: "",
+    endTime: "",
+    status: "pending",
+    items: [],
+  });
   const mapInstanceRef = useRef(null);
+  const monthPickerRef = useRef(null);
 
   const geocodeQueueRef = useRef(Promise.resolve());
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
@@ -118,7 +149,16 @@ function AdminScheduler() {
         throw new Error(payload?.error || `Failed to fetch bookings (${response.status}).`);
       }
 
-      setBookings(Array.isArray(payload) ? payload : []);
+      const sanitized = (Array.isArray(payload) ? payload : [])
+        .filter((booking) => booking && booking.eventDate)
+        .map((booking) => ({
+          ...booking,
+          eventDate: booking.eventDate,
+          status: booking.status || "pending",
+        }))
+        .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate) || (Number(a.id) || 0) - (Number(b.id) || 0));
+
+      setBookings(sanitized);
     } catch (err) {
       console.error("Failed to fetch bookings", err);
       setError(err.message || "We couldn't load bookings.");
@@ -129,8 +169,253 @@ function AdminScheduler() {
 
   useEffect(() => {
     fetchBookings();
-     
   }, []);
+
+  useEffect(() => {
+    if (userSelectedDay) return;
+    if (!bookings.length) return;
+    const nextDate = findNextBookingDate(bookings);
+    if (!nextDate) return;
+    const nextKey = dayKey(nextDate);
+    if (dayKey(activeDay) === nextKey) return;
+    setActiveDay(nextDate);
+    setMonthCursor(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+  }, [activeDay, bookings, userSelectedDay]);
+
+  useEffect(() => {
+    if (!monthPickerOpen) return;
+    const handleClickAway = (event) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target)) {
+        setMonthPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
+  }, [monthPickerOpen]);
+
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const baseYear = monthCursor.getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    for (let year = baseYear - 1; year <= baseYear + 1; year += 1) {
+      for (let m = 0; m < 12; m += 1) {
+        options.push({ year, month: m, label: `${monthNames[m]} ${year}` });
+      }
+    }
+    return options;
+  }, [monthCursor]);
+
+  const handleSelectMonth = (year, month) => {
+    const next = new Date(year, month, 1);
+    setMonthCursor(next);
+    setActiveDay(next);
+    setUserSelectedDay(true);
+    setMonthPickerOpen(false);
+  };
+
+  const fetchSupportData = async () => {
+    const [customersRes, inventoryRes] = await Promise.all([
+      fetch("/.netlify/functions/customers"),
+      fetch("/.netlify/functions/inventory"),
+    ]);
+
+    const customersText = await customersRes.text();
+    const inventoryText = await inventoryRes.text();
+
+    const parseJson = (text) => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    };
+
+    const customersPayload = parseJson(customersText);
+    const inventoryPayload = parseJson(inventoryText);
+
+    if (!customersRes.ok) {
+      throw new Error(customersPayload?.error || `Failed to fetch customers (${customersRes.status}).`);
+    }
+    if (!inventoryRes.ok) {
+      throw new Error(inventoryPayload?.error || `Failed to fetch inventory (${inventoryRes.status}).`);
+    }
+
+    setCustomers(Array.isArray(customersPayload) ? customersPayload : []);
+
+    const rentals = (Array.isArray(inventoryPayload) ? inventoryPayload : []).filter((item) => {
+      const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+      if (source) return source === "rental";
+      const sku = (item.sku || "").toString().toUpperCase();
+      return sku.startsWith("REN");
+    });
+
+    setProducts(rentals);
+  };
+
+  const productMap = useMemo(() => {
+    const map = new Map();
+    for (const product of products) {
+      map.set(Number(product.id), product);
+    }
+    return map;
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const needle = productQuery.trim().toLowerCase();
+    const list = [...products].sort((a, b) => (a?.name || "").localeCompare(b?.name || ""));
+    if (!needle) return list;
+    return list.filter((product) => {
+      return (
+        product.name?.toLowerCase().includes(needle) ||
+        product.sku?.toLowerCase().includes(needle)
+      );
+    });
+  }, [productQuery, products]);
+
+  const bookingTotalCents = useMemo(() => {
+    return bookingForm.items.reduce((sum, item) => {
+      const product = productMap.get(Number(item.productId));
+      const priceValue = Number(product?.price ?? product?.priceCents ?? 0);
+      const priceCents = Number.isFinite(priceValue) ? priceValue : 0;
+      const quantity = Number(item.quantity) || 1;
+      return sum + priceCents * quantity;
+    }, 0);
+  }, [bookingForm.items, productMap]);
+
+  const focusBookingDate = (booking) => {
+    if (!booking?.eventDate) return;
+    const target = new Date(booking.eventDate);
+    if (Number.isNaN(target.getTime())) return;
+    setActiveDay(target);
+    setMonthCursor(new Date(target.getFullYear(), target.getMonth(), 1));
+    setUserSelectedDay(true);
+    setView("month");
+    const agenda = document.querySelector(".calendar-detail");
+    if (agenda?.scrollIntoView) {
+      agenda.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const openBookingModal = async () => {
+    setBookingError("");
+    setProductQuery("");
+    try {
+      if (customers.length === 0 || products.length === 0) {
+        await fetchSupportData();
+      }
+      setBookingForm({
+        customerId: customers[0]?.id ? String(customers[0].id) : "",
+        venueAddress: "",
+        startTime: "",
+        endTime: "",
+        status: "pending",
+        items: [],
+      });
+      setBookingModalOpen(true);
+    } catch (err) {
+      console.error("Failed to open booking modal", err);
+      setBookingError(err.message || "Failed to load customers/products.");
+    }
+  };
+
+  const closeBookingModal = () => {
+    setBookingModalOpen(false);
+    setBookingSaving(false);
+    setBookingError("");
+  };
+
+  const addItem = (product) => {
+    setBookingForm((prev) => {
+      const existing = prev.items.find((item) => Number(item.productId) === Number(product.id));
+      if (existing) {
+        return {
+          ...prev,
+          items: prev.items.map((item) =>
+            Number(item.productId) === Number(product.id)
+              ? { ...item, quantity: (Number(item.quantity) || 1) + 1 }
+              : item
+          ),
+        };
+      }
+      return { ...prev, items: [...prev.items, { productId: product.id, quantity: 1 }] };
+    });
+  };
+
+  const updateItemQuantity = (productId, nextValue) => {
+    setBookingForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (Number(item.productId) !== Number(productId)) return item;
+        const next = Math.max(1, parseInt(nextValue, 10) || 1);
+        return { ...item, quantity: next };
+      }),
+    }));
+  };
+
+  const removeItem = (productId) => {
+    setBookingForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((item) => Number(item.productId) !== Number(productId)),
+    }));
+  };
+
+  const submitBooking = async (event) => {
+    event.preventDefault();
+    setBookingError("");
+
+    const trimmedAddress = bookingForm.venueAddress.trim();
+    const trimmedStart = bookingForm.startTime.trim();
+    const trimmedEnd = bookingForm.endTime.trim();
+    const normalizedItems = bookingForm.items
+      .map((item) => ({
+        productId: Number(item.productId),
+        quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+      }))
+      .filter((item) => Number.isFinite(item.productId));
+
+    if (!bookingForm.customerId) return setBookingError("Select a customer.");
+    if (!trimmedAddress) return setBookingError("Venue address is required.");
+    if (normalizedItems.length === 0) return setBookingError("Add at least one rental item.");
+
+    setBookingSaving(true);
+    try {
+      const response = await fetch("/.netlify/functions/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: Number(bookingForm.customerId),
+          eventDate: dayKey(activeDay),
+          startTime: trimmedStart || null,
+          endTime: trimmedEnd || null,
+          venueAddress: trimmedAddress,
+          status: bookingForm.status,
+          items: normalizedItems,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || "Failed to create booking.");
+
+      setBookings((prev) => {
+        const next = [payload, ...prev];
+        return next.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate) || (Number(a.id) || 0) - (Number(b.id) || 0));
+      });
+      if (payload?.eventDate) {
+        const target = new Date(payload.eventDate);
+        if (!Number.isNaN(target.getTime())) {
+          setActiveDay(target);
+          setMonthCursor(new Date(target.getFullYear(), target.getMonth(), 1));
+          setUserSelectedDay(false);
+        }
+      }
+      setBookingModalOpen(false);
+    } catch (err) {
+      console.error("Booking creation failed", err);
+      setBookingError(err.message || "Failed to create booking.");
+    } finally {
+      setBookingSaving(false);
+    }
+  };
 
   const bookingsByDay = useMemo(() => {
     const map = new Map();
@@ -372,24 +657,66 @@ function AdminScheduler() {
           <div className="scheduler-grid">
             <section className="calendar-panel">
               <div className="calendar-header">
+                <div className="calendar-nav-group" ref={monthPickerRef}>
+                  <button
+                    type="button"
+                    className="calendar-nav"
+                    onClick={() =>
+                      setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+                    }
+                  >
+                    <FontAwesomeIcon icon={faArrowLeft} />
+                  </button>
+                  <button
+                    type="button"
+                    className="calendar-month-toggle"
+                    onClick={() => setMonthPickerOpen((open) => !open)}
+                    aria-expanded={monthPickerOpen}
+                    aria-haspopup="listbox"
+                  >
+                    <span>{monthLabel}</span>
+                    <span className="calendar-caret" aria-hidden="true">▾</span>
+                  </button>
+                  {monthPickerOpen && (
+                    <div className="calendar-month-menu" role="listbox">
+                      {monthOptions.map((opt) => {
+                        const isActive =
+                          monthCursor.getFullYear() === opt.year && monthCursor.getMonth() === opt.month;
+                        return (
+                          <button
+                            key={`${opt.year}-${opt.month}`}
+                            type="button"
+                            role="option"
+                            className={isActive ? "is-active" : ""}
+                            onClick={() => handleSelectMonth(opt.year, opt.month)}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="calendar-nav"
+                    onClick={() =>
+                      setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+                    }
+                  >
+                    <FontAwesomeIcon icon={faArrowRight} />
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className="calendar-nav"
-                  onClick={() =>
-                    setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-                  }
+                  className="calendar-nav calendar-nav-ghost"
+                  onClick={() => {
+                    const today = new Date();
+                    setActiveDay(today);
+                    setMonthCursor(new Date(today.getFullYear(), today.getMonth(), 1));
+                    setUserSelectedDay(true);
+                  }}
                 >
-                  Prev
-                </button>
-                <h2>{monthLabel}</h2>
-                <button
-                  type="button"
-                  className="calendar-nav"
-                  onClick={() =>
-                    setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-                  }
-                >
-                  Next
+                  Today
                 </button>
               </div>
               <div className="calendar-weekdays">
@@ -413,7 +740,10 @@ function AdminScheduler() {
                         (isCurrentMonth ? "" : " is-out") +
                         (isSelected ? " is-selected" : "")
                       }
-                      onClick={() => setActiveDay(date)}
+                      onClick={() => {
+                        setActiveDay(date);
+                        setUserSelectedDay(true);
+                      }}
                     >
                       <span className="calendar-number">{date.getDate()}</span>
                       {count > 0 && <span className="calendar-badge">{count}</span>}
@@ -422,9 +752,18 @@ function AdminScheduler() {
                 })}
               </div>
             </section>
-
+            
             <aside className="calendar-detail">
-              <h3>{formatDate(activeDay)}</h3>
+                
+              <div className="calendar-detail-head">
+                <div>
+                  <h3>{formatDate(activeDay)}</h3>
+                  <p className="scheduler-muted">Select a date to review bookings.</p>
+                </div>
+                <button type="button" className="scheduler-primary" onClick={openBookingModal}>
+                  Book rental
+                </button>
+              </div>
               {activeDayBookings.length === 0 ? (
                 <p className="scheduler-muted">No bookings scheduled.</p>
               ) : (
@@ -585,6 +924,170 @@ function AdminScheduler() {
           </section>
         )}
       </div>
+
+      {bookingModalOpen && (
+        <div className="customers-modal" role="dialog" aria-modal="true">
+          <div className="customers-modal-panel">
+            <header>
+              <div>
+                <p className="customers-eyebrow">New booking</p>
+                <h2>Book rentals for {formatDate(activeDay)}</h2>
+              </div>
+              <button
+                type="button"
+                className="customers-modal-close"
+                onClick={closeBookingModal}
+                aria-label="Close"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
+
+            <form className="customers-form" onSubmit={submitBooking}>
+              <label>
+                Customer
+                <select
+                  value={bookingForm.customerId}
+                  onChange={(event) =>
+                    setBookingForm((prev) => ({ ...prev, customerId: event.target.value }))
+                  }
+                  required
+                >
+                  <option value="">Select a customer</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name} {customer.email ? `- ${customer.email}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Venue address
+                <input
+                  type="text"
+                  value={bookingForm.venueAddress}
+                  onChange={(event) =>
+                    setBookingForm((prev) => ({ ...prev, venueAddress: event.target.value }))
+                  }
+                  placeholder="Venue / delivery address"
+                  required
+                />
+              </label>
+
+              <label>
+                Start time (optional)
+                <input
+                  type="text"
+                  value={bookingForm.startTime}
+                  onChange={(event) =>
+                    setBookingForm((prev) => ({ ...prev, startTime: event.target.value }))
+                  }
+                  placeholder="10:00 AM"
+                />
+              </label>
+
+              <label>
+                End time (optional)
+                <input
+                  type="text"
+                  value={bookingForm.endTime}
+                  onChange={(event) =>
+                    setBookingForm((prev) => ({ ...prev, endTime: event.target.value }))
+                  }
+                  placeholder="04:00 PM"
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  value={bookingForm.status}
+                  onChange={(event) =>
+                    setBookingForm((prev) => ({ ...prev, status: event.target.value }))
+                  }
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </label>
+
+              <label>
+                Add items
+                <input
+                  type="text"
+                  value={productQuery}
+                  onChange={(event) => setProductQuery(event.target.value)}
+                  placeholder="Search rentals"
+                />
+              </label>
+
+              <div className="booking-items-picker">
+                <div className="booking-items-list">
+                  {filteredProducts.slice(0, 10).map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      className="booking-item-add"
+                      onClick={() => addItem(product)}
+                    >
+                      {product.name}
+                    </button>
+                  ))}
+                </div>
+
+                {bookingForm.items.length > 0 && (
+                  <div className="booking-items-selected">
+                    {bookingForm.items.map((item) => {
+                      const product = productMap.get(Number(item.productId));
+                      return (
+                        <div key={item.productId} className="booking-item-row">
+                          <span>{product?.name || `Product ${item.productId}`}</span>
+                          <div className="booking-item-controls">
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(event) =>
+                                updateItemQuantity(item.productId, event.target.value)
+                              }
+                            />
+                            <button type="button" onClick={() => removeItem(item.productId)}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="booking-item-total">
+                      <span>Total</span>
+                      <strong>{formatMoney(bookingTotalCents / 100, "GHS")}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {bookingError && <p className="customers-error">{bookingError}</p>}
+
+              <div className="customers-form-actions">
+                <button
+                  type="button"
+                  className="customers-secondary"
+                  onClick={closeBookingModal}
+                  disabled={bookingSaving}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="customers-primary" disabled={bookingSaving}>
+                  {bookingSaving ? "Saving..." : "Create booking"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

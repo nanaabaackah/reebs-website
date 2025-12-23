@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "fs";
 import Papa from "papaparse";
-import { prisma } from "./prismaClient.js";
+import { prisma } from "../prismaClient.js";
 
 /**
  * Generate the next rental ID in sequence (e.g., REN-1001, REN-1002, etc.)

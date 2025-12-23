@@ -155,7 +155,7 @@ function RentalItem() {
       .then((data) => {
         const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
           const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
-          const isRental = source ? source === "rental" : true;
+          const isRental = source ? source === "rental" : (item.sku || "").toString().toUpperCase().startsWith("REN");
           const active = (item.status ?? item.isActive) !== false;
           return isRental && active;
         });

@@ -6,6 +6,7 @@ import { prisma } from "./prismaClient.js";
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse'; 
+import { hashPassword } from "./utils/passwords.js";
 
 // Helper function to read a CSV file
 function readCsv(filePath) {
@@ -28,37 +29,92 @@ function readCsv(filePath) {
     });
 }
 
+const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
+
+const buildEmailFromNames = (firstName, lastName) => {
+    const first = cleanNamePart(firstName).replace(/\s+/g, "").toLowerCase();
+    const last = cleanNamePart(lastName).replace(/\s+/g, "").toLowerCase();
+    if (!first || !last) return null;
+    return `${first}_${last}@reebs.com`;
+};
+
+const buildFullName = (firstName, lastName) => {
+    const parts = [cleanNamePart(firstName), cleanNamePart(lastName)].filter(Boolean);
+    return parts.join(" ").trim();
+};
+
+const toInt = (value, fallback = 0) => {
+    const num = parseInt(value, 10);
+    return Number.isFinite(num) ? num : fallback;
+};
+
+const toDate = (value) => {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+
 // Function to perform the full import
 async function importTransactionalData() {
     console.log("🚀 Starting Transactional and User Data Import...");
     
     // 1. Read Data
-    const usersData = await readCsv('users.csv');
-    const customersData = await readCsv('customers.csv'); 
-    const ordersData = await readCsv('orders.csv');
-    const orderItemsData = await readCsv('orderItems.csv');
-    const stockMovementsData = await readCsv('stockMovements.csv');
+    const usersData = await readCsv('data/users.csv');
+    const customersData = await readCsv('data/customers.csv'); 
+    const ordersData = await readCsv('data/orders.csv');
+    const orderItemsData = await readCsv('data/orderItems.csv');
+    const stockMovementsData = await readCsv('data/stockMovements.csv');
 
     console.log(`\nFound ${usersData.length} users, ${customersData.length} customers, ${ordersData.length} orders, ${orderItemsData.length} order items, and ${stockMovementsData.length} stock movements.`);
 
     // 2. Clear Tables (Must be done in reverse dependency order)
     try {
+        console.log("🧹 Clearing existing data...");
+        await prisma.bookingItem.deleteMany({});
+        await prisma.booking.deleteMany({});
         await prisma.stockMovement.deleteMany({});
         await prisma.orderItem.deleteMany({});
         await prisma.order.deleteMany({});
         await prisma.customer.deleteMany({}); 
         await prisma.user.deleteMany({}); 
-        console.log("\n🧹 Cleared existing transactional and user data.");
+        console.log("✅ Tables cleared.");
     } catch (e) {
-        console.error("Warning: Could not clear tables. Proceeding with insertion.", e.message);
+        console.error("Critical error clearing tables:", e.message);
+        process.exit(1); 
     }
 
     // 3. Import Users
-    const usersToCreate = usersData.map(row => ({
-        email: row.email,
-        password: row.password, 
-        name: row.name,
-        role: row.role,
+    const usersToCreate = await Promise.all(usersData.map(async row => {
+        const id = row.id ? parseInt(row.id, 10) : undefined;
+        const firstName = cleanNamePart(row.firstName);
+        const lastName = cleanNamePart(row.lastName);
+        const fullName = buildFullName(firstName, lastName);
+        const email = buildEmailFromNames(firstName, lastName);
+        const rawPassword = typeof row.password === "string" ? row.password.trim() : "";
+
+        if (!firstName || !lastName) {
+            throw new Error("User rows must include firstName and lastName.");
+        }
+        if (!email) {
+            throw new Error(`Could not generate email for ${firstName} ${lastName}`);
+        }
+        if (!rawPassword) {
+            throw new Error(`User ${firstName} ${lastName} is missing a password.`);
+        }
+
+        const user = {
+            email,
+            password: await hashPassword(rawPassword),
+            firstName,
+            lastName,
+            fullName,
+            role: row.role || "Staff",
+        };
+
+        if (Number.isFinite(id)) {
+            user.id = id;
+        }
+
+        return user;
     }));
     await prisma.user.createMany({ data: usersToCreate, skipDuplicates: true });
     console.log(`✅ Imported ${usersToCreate.length} Users (Admin Profiles).`);
@@ -76,64 +132,71 @@ async function importTransactionalData() {
 
     // 5. Import Orders (Uses total_amount)
     const ordersToCreate = ordersData.map(row => ({
-        id: parseInt(row.id, 10), 
+        id: toInt(row.id, undefined), 
         orderNumber: row.orderNumber,
-        customerId: parseInt(row.customerId, 10), 
+        customerId: toInt(row.customerId, null), 
         customerName: row.customerName,
         status: row.status,
-        total_amount: parseInt(row.totalCents, 10), // Mapped to new 'total_amount'
-        orderDate: new Date(row.orderDate),
-        deliveryDate: row.deliveryDate ? new Date(row.deliveryDate) : null,
+        deliveryMethod: (row.deliveryMethod || row.fulfillment || row.fulfillmentMethod || "delivery").toLowerCase(),
+        total_amount: toInt(row.totalCents, 0), // ensure integer cents
+        orderDate: toDate(row.orderDate),
+        deliveryDate: row.deliveryDate ? toDate(row.deliveryDate) : null,
+        assignedUserId: toInt(row.assignedUserId, null),
     }));
-    await prisma.order.createMany({ data: ordersToCreate, skipDuplicates: true });
+    // Filter out rows missing required foreign keys or date
+    const validOrders = ordersToCreate.filter((o) => o.customerId && o.orderDate);
+    await prisma.order.createMany({ data: validOrders, skipDuplicates: true });
     console.log(`✅ Imported ${ordersToCreate.length} Orders.`);
 
     // 6. Import Order Items (Uses unit_price and calculates total_amount)
     const orderItemsToCreate = orderItemsData.map(row => {
-        const quantity = parseInt(row.quantity, 10);
+        const quantity = toInt(row.quantity, 0);
         // NOTE: Mapped to new 'unit_price' column name
-        const unitPrice = parseInt(row.unit_price, 10); 
+        const unitPrice = toInt(row.unit_price || row.unitPrice || row.priceCents, 0); 
         
         return {
-            orderId: parseInt(row.orderId, 10),
-            productId: parseInt(row.productId, 10),
+            orderId: toInt(row.orderId, null),
+            productId: toInt(row.productId, null),
             quantity: quantity,
             unit_price: unitPrice, // Mapped to new 'unit_price'
             total_amount: quantity * unitPrice // Mapped to new 'total_amount'
         }
     });
-    await prisma.orderItem.createMany({ data: orderItemsToCreate, skipDuplicates: true });
+    const validOrderItems = orderItemsToCreate.filter((oi) => oi.orderId && oi.productId);
+    await prisma.orderItem.createMany({ data: validOrderItems, skipDuplicates: true });
     console.log(`✅ Imported ${orderItemsToCreate.length} Order Items.`);
 
     // 7. Import Stock Movements
     const stockMovementsToCreate = stockMovementsData.map(row => ({
-        productId: parseInt(row.productId, 10),
+        productId: toInt(row.productId, null),
         type: row.type, 
-        quantity: parseInt(row.quantity, 10),
-        date: new Date(row.date),
+        quantity: toInt(row.quantity, 0),
+        date: toDate(row.date),
         reference: row.reference || null,
         notes: row.notes || null,
     }));
-    await prisma.stockMovement.createMany({ data: stockMovementsToCreate, skipDuplicates: true });
+    const validStock = stockMovementsToCreate.filter((s) => s.productId);
+    await prisma.stockMovement.createMany({ data: validStock, skipDuplicates: true });
     console.log(`✅ Imported ${stockMovementsToCreate.length} Stock Movements.`);
 
     // 7. Import Booking Data
-    const bookingsData = await readCsv('bookings.csv');
-    const bookingItemsData = await readCsv('bookingItems.csv');
+    const bookingsData = await readCsv('data/bookings.csv');
+    const bookingItemsData = await readCsv('data/bookingItems.csv');
 
     console.log("Importing Bookings...");
 
     for (const row of bookingsData) {
     await prisma.booking.create({
         data: {
-        id: parseInt(row.id),
-        customerId: parseInt(row.customerId),
-        eventDate: new Date(row.eventDate),
+        id: toInt(row.id),
+        customerId: toInt(row.customerId),
+        eventDate: toDate(row.eventDate),
         startTime: row.startTime,
         endTime: row.endTime,
         venueAddress: row.venueAddress,
-        totalAmount: parseInt(row.totalAmount),
+        totalAmount: toInt(row.totalAmount),
         status: row.status,
+        assignedUserId: toInt(row.assignedUserId, null),
         }
     });
     }
@@ -141,10 +204,10 @@ async function importTransactionalData() {
     for (const row of bookingItemsData) {
     await prisma.bookingItem.create({
         data: {
-        bookingId: parseInt(row.bookingId),
-        productId: parseInt(row.productId),
-        quantity: parseInt(row.quantity),
-        price: parseInt(row.price),
+        bookingId: toInt(row.bookingId),
+        productId: toInt(row.productId),
+        quantity: toInt(row.quantity, 0),
+        price: toInt(row.price, 0),
         }
     });
     }

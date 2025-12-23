@@ -57,13 +57,13 @@ function Gallery() {
                 const records = Array.isArray(data) ? data : [];
                 const rentalsOnly = records.filter((item) => {
                     const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
-                    const isRental = source ? source === 'rental' : true;
+                    const isRental = source ? source === 'rental' : (item.sku || '').toString().toUpperCase().startsWith('REN');
                     const active = (item.status ?? item.isActive) !== false;
                     return isRental && active;
                 });
                 const inventoryOnly = records.filter((item) => {
                     const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
-                    const isInventory = source ? source === 'inventory' : true;
+                    const isInventory = source ? source !== 'rental' : true;
                     const active = (item.status ?? item.isActive) !== false;
                     return isInventory && active;
                 });

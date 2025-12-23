@@ -20,6 +20,9 @@ function Shop() {
   const [expandedProduct, setExpandedProduct] = useState(null);
   const [popularIndex, setPopularIndex] = useState(0);
   const [announce, setAnnounce] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 12;
+  const gridRef = React.useRef(null);
 
   const [aiSearching, setAiSearching] = useState(false);
   const [aiEnabled] = useState(true);
@@ -60,9 +63,9 @@ function Shop() {
       .then((res) => res.json())
       .then((data) => {
         const productsOnly = (Array.isArray(data) ? data : []).filter((item) => {
-          const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
-          const isInventory = source ? source === "inventory" : true;
-          return isInventory;
+          const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+          if (!source) return true;
+          return source !== "rental";
         });
         setInventory(productsOnly);
         setLoading(false);
@@ -98,6 +101,27 @@ function Shop() {
     if (!popularItems.length) return;
     setPopularIndex(0);
   }, [popularItems]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedQuery, categoryFilter, inStockOnly, inventory.length]);
+
+  const pageCount = React.useMemo(
+    () => Math.max(1, Math.ceil(filteredProducts.length / pageSize)),
+    [filteredProducts.length, pageSize]
+  );
+  const clampedPage = Math.min(page, pageCount - 1);
+  const paginatedProducts = React.useMemo(() => {
+    const start = clampedPage * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, clampedPage, pageSize]);
+
+  useEffect(() => {
+    const gridEl = gridRef.current;
+    if (gridEl && typeof gridEl.scrollIntoView === "function") {
+      gridEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [clampedPage]);
 
   useEffect(() => {
     if (!popularItems.length) return;
@@ -316,13 +340,18 @@ function Shop() {
                   )}
                 </nav>
                 <span className="shop-results">
-                  Showing {filteredProducts.length} of {inventory.length} items
+                  {filteredProducts.length === 0
+                    ? "No items to show"
+                    : `Showing ${clampedPage * pageSize + 1}-${Math.min(
+                        filteredProducts.length,
+                        (clampedPage + 1) * pageSize
+                      )} of ${filteredProducts.length} items`}
                 </span>
               </div>
             </div>
 
-            <div className="shop-grid">
-              {filteredProducts.map((item) => {
+            <div className="shop-grid" ref={gridRef}>
+              {paginatedProducts.map((item) => {
                 const fallbackDescription =
                   item.description ||
                   "Playful, durable, and party-ready.";
@@ -392,6 +421,30 @@ function Shop() {
                 </p>
               )}
             </div>
+
+            {filteredProducts.length > pageSize && (
+              <div className="table-pagination shop-pagination">
+                <span>
+                  Page {clampedPage + 1} of {pageCount}
+                </span>
+                <div className="table-pagination-controls">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={clampedPage === 0}
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
 
             <hr className="shop-separator" />
 

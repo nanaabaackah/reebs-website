@@ -1,0 +1,7 @@
+id,orderNumber,customerId,customerName,status,deliveryMethod,totalCents,orderDate,deliveryDate,assignedUserId
+1,ORD-20251210-001,1,Nana Mensah,Completed,delivery,38000,2025-12-10T15:00:00Z,2025-12-11T15:00:00.000Z,2
+2,ORD-20251212-002,2,Ama Boateng,Pending,pickup,120000,2025-12-12T10:00:00Z,2025-12-15T14:00:00.000Z,3
+3,ORD-20251214-003,3,Kwesi Appiah,Completed,delivery,21000,2025-12-14T11:00:00Z,2025-12-15T21:00:00.000Z,4
+4,ORD-20251215-004,4,Bridget Osei,Canceled,delivery,10000,2025-12-15T09:00:00Z,2025-12-02T19:00:00.000Z,2
+5,ORD-20251216-005,5,Kofi Manu,Completed,pickup,88000,2025-12-17T11:00:00Z,2025-03-01T15:00:00.000Z,3
+6,ORD-20251216-006,6,Jane Doe,Pending,pickup,50000,2025-12-20T09:00:00Z,2025-04-01T13:00:00.000Z,4

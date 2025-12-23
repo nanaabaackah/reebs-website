@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ClickSpark from './components/ClickSpark';
 
 import { CartProvider } from "./components/CartContext";
@@ -30,16 +30,42 @@ import OrderBuilder from './pages/OrderBuilder';
 import AdminDirectory from './pages/AdminDirectory';
 import AdminBookings from './pages/AdminBookings';
 import AdminScheduler from './pages/AdminScheduler';
+import AdminAccounting from './pages/AdminAccounting';
+import AdminRoles from './pages/AdminRoles';
+import Login from './pages/Login';
+import AuthProvider, { useAuth } from './components/AuthContext';
+
+function RequireAuth({ children }) {
+  const { user, authReady } = useAuth();
+  const location = useLocation();
+
+  if (!authReady) return null;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  return children;
+}
+
 
 function AppLayout() {
   const [cartOpen, setCartOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
   return (
     <>
+     <AuthProvider>
      <CartProvider>
         <Navbar onCartToggle={() => setCartOpen(true)} />
        
           <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/refund-policy" element={<RefundPolicy />} />
               <Route path="/delivery-policy" element={<DeliveryPolicy />} />
@@ -53,15 +79,17 @@ function AppLayout() {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/Contact" element={<Contact />} />
               <Route path="/Book" element={<Book />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/inventory" element={<Admin />} />
-              <Route path="/admin/orders" element={<OrdersList />} />
-              <Route path="/admin/orders/new" element={<OrderBuilder />} />
-              <Route path="/admin/crm" element={<AdminDirectory />} />
-              <Route path="/admin/users" element={<AdminDirectory />} />
-              <Route path="/admin/employees" element={<AdminDirectory />} />
-              <Route path="/admin/bookings" element={<AdminBookings />} />
-              <Route path="/admin/schedule" element={<AdminScheduler />} />
+              <Route path="/admin" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
+              <Route path="/admin/inventory" element={<RequireAuth><Admin /></RequireAuth>} />
+              <Route path="/admin/orders" element={<RequireAuth><OrdersList /></RequireAuth>} />
+              <Route path="/admin/orders/new" element={<RequireAuth><OrderBuilder /></RequireAuth>} />
+              <Route path="/admin/crm" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+              <Route path="/admin/users" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+              <Route path="/admin/employees" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+              <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
+              <Route path="/admin/schedule" element={<RequireAuth><AdminScheduler /></RequireAuth>} />
+              <Route path="/admin/accounting" element={<RequireAuth><AdminAccounting /></RequireAuth>} />
+              <Route path="/admin/roles" element={<RequireAuth><AdminRoles /></RequireAuth>} />
           </Routes>
           <CartOverlay 
             open={cartOpen} 
@@ -72,6 +100,7 @@ function AppLayout() {
           <BackToTop />
         <Footer />
       </CartProvider>
+      </AuthProvider>
       
     </>
   );

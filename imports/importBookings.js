@@ -1,6 +1,6 @@
 import fs from "fs";
 import Papa from "papaparse";
-import { prisma } from "./prismaClient.js";
+import { prisma } from "../prismaClient.js";
 
 // Function to generate sequential bookingId
 async function generateSequentialBookingId() {

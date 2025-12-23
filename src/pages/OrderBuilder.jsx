@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import { useAuth } from "../components/AuthContext";
 
 const getUnitPrice = (item) => {
   if (typeof item?.price === "number") return item.price;
@@ -60,6 +61,9 @@ function OrderBuilder() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState("");
+  const [orderDiscount, setOrderDiscount] = useState("");
+  const [discountType, setDiscountType] = useState("amount");
+  const { user } = useAuth();
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -87,8 +91,9 @@ function OrderBuilder() {
 
         const inventoryOnly = (Array.isArray(inventoryData) ? inventoryData : []).filter(
           (item) => {
-            const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
-            return source ? source === "inventory" : true;
+            const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+            if (!source) return true;
+            return source !== "rental";
           }
         );
 
@@ -138,9 +143,23 @@ function OrderBuilder() {
     return customers.find((customer) => String(customer.id) === String(selectedCustomerId)) || null;
   }, [customers, selectedCustomerId]);
 
-  const orderTotal = useMemo(() => {
-    return cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  }, [cartItems]);
+  const orderSubtotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    [cartItems]
+  );
+
+  const discountAmount = useMemo(() => {
+    const raw = Number(orderDiscount) || 0;
+    if (discountType === "percent") {
+      return Math.max(0, orderSubtotal * (raw / 100));
+    }
+    return Math.max(0, raw);
+  }, [discountType, orderDiscount, orderSubtotal]);
+
+  const orderTotal = useMemo(
+    () => Math.max(0, orderSubtotal - discountAmount),
+    [orderSubtotal, discountAmount]
+  );
 
   const orderCurrency = useMemo(() => {
     if (!cartItems.length) return "GBP";
@@ -190,6 +209,16 @@ function OrderBuilder() {
     });
   };
 
+  const updateCartPrice = (productId, nextValue) => {
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item.productId !== productId) return item;
+        const value = Number(nextValue);
+        return { ...item, unitPrice: Number.isFinite(value) && value >= 0 ? value : item.unitPrice };
+      })
+    );
+  };
+
   const removeFromCart = (productId) => {
     setCartItems((prev) => prev.filter((item) => item.productId !== productId));
   };
@@ -221,6 +250,10 @@ function OrderBuilder() {
             quantity: item.quantity,
             price: item.unitPrice,
           })),
+          discount: discountAmount,
+          userId: user?.id,
+          userName: user?.fullName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || undefined,
+          userEmail: user?.email,
         }),
       });
 
@@ -376,6 +409,7 @@ function OrderBuilder() {
                     <p>{formatCurrency(item.unitPrice, item.currency)} each</p>
                   </div>
                   <div className="order-cart-actions">
+                    <p>{item.unitPrice}</p>
                     <input
                       type="number"
                       min="1"
@@ -390,12 +424,35 @@ function OrderBuilder() {
                 </div>
               ))}
               <div className="order-total">
-                <span>Total</span>
-                <strong>
-                  {orderCurrency === "MIXED"
-                    ? `${orderCurrency} ${orderTotal.toFixed(2)}`
-                    : formatCurrency(orderTotal, orderCurrency)}
-                </strong>
+                <div className="order-total-left">
+                  <span>Discount</span>
+                  <div className="order-discount-input">
+                    <select
+                      value={discountType}
+                      onChange={(event) => setDiscountType(event.target.value)}
+                      aria-label="Discount type"
+                    >
+                      <option value="amount">Amount</option>
+                      <option value="percent">Percent</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="0"
+                      step={discountType === "percent" ? "1" : "0.01"}
+                      value={orderDiscount}
+                      onChange={(event) => setOrderDiscount(event.target.value)}
+                      placeholder={discountType === "percent" ? "0" : "0.00"}
+                    />
+                  </div>
+                </div>
+                <div className="order-total-right">
+                  <span>Total</span>
+                  <strong>
+                    {orderCurrency === "MIXED"
+                      ? `${orderCurrency} ${orderTotal.toFixed(2)}`
+                      : formatCurrency(orderTotal, orderCurrency)}
+                  </strong>
+                </div>
               </div>
               {submitError && <p className="order-error">{submitError}</p>}
               {success && <p className="order-success">{success}</p>}

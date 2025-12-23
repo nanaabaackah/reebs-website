@@ -5,6 +5,12 @@
 
 import "dotenv/config";
 import { Client } from "pg";
+import {
+  ensureAuditColumns,
+  resolveActor,
+  backfillAuditDefaults,
+  normalizeActor,
+} from "./auditHelpers.js";
 
 export async function handler(event) {
   // 1. Only allow POST requests
@@ -27,7 +33,7 @@ export async function handler(event) {
   }
 
   // 3. Validate required fields
-  const { productId, type, quantity, notes, reference } = data;
+  const { productId, type, quantity, notes, reference, userId, userName, userEmail } = data;
   if (!productId || !type || !quantity) {
     return {
       statusCode: 400,
@@ -55,6 +61,14 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    await ensureAuditColumns(client);
+    const actor = await resolveActor(
+      client,
+      normalizeActor({ userId, userName, userEmail })
+    );
+    if (actor.userId) {
+      await backfillAuditDefaults(client, actor.userId);
+    }
     
     // Start a transaction
     await client.query('BEGIN');
@@ -63,11 +77,14 @@ export async function handler(event) {
     // Added quotes around "stock" and "id" for absolute safety with Prisma
     const updateProductQuery = `
       UPDATE "product"
-      SET "stock" = "stock" + $1
+      SET "stock" = "stock" + $1,
+          "lastUpdatedByUserId" = COALESCE($3, "lastUpdatedByUserId"),
+          "lastUpdatedAt" = NOW(),
+          "updatedAt" = NOW()
       WHERE "id" = $2
-      RETURNING "id", "stock";
+      RETURNING "id", "stock", "lastUpdatedAt", "lastUpdatedByUserId";
     `;
-    const updateResult = await client.query(updateProductQuery, [stockDelta, productId]);
+    const updateResult = await client.query(updateProductQuery, [stockDelta, productId, actor.userId]);
 
     if (updateResult.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -87,9 +104,13 @@ export async function handler(event) {
         "quantity", 
         "notes", 
         "reference",
-        "date" 
+        "date",
+        "performedByUserId",
+        "performedByName",
+        "performedByEmail",
+        "createdAt"
       )
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8, NOW())
     `;
     
     await client.query(insertMovementQuery, [
@@ -97,7 +118,10 @@ export async function handler(event) {
         type, 
         productQuantity, 
         notes || null, 
-        reference || null 
+        reference || null,
+        actor.userId,
+        actor.userName,
+        actor.userEmail,
     ]);
 
     // 6. Commit the transaction
@@ -113,6 +137,9 @@ export async function handler(event) {
         message: `${type} successful.`,
         productId: productId,
         newStock: updateResult.rows[0].stock,
+        lastUpdatedAt: updateResult.rows[0].lastUpdatedAt,
+        lastUpdatedByUserId: updateResult.rows[0].lastUpdatedByUserId,
+        lastUpdatedByName: actor.userName,
       }),
     };
 

@@ -1,0 +1,5 @@
+id,firstName,lastName,fullName,email,password,role
+1,System,Admin,System Admin,system_admin@reebs.com,123456,Admin
+2,Maame Ebe,Ackah,Maame Ebe Ackah,maameebe_ackah@reebs.com,staffpass,Staff
+3,Mamaa Enyimah,Ackah,Mamaa Enyimah Ackah,mamaaenyimah_ackah@reebs.com,viewonly,Viewer
+4,Sabina,Ackah,Sabina Ackah,sabina_ackah@reebs.com,654321,Manager

@@ -12,9 +12,12 @@ model Order {
   customerId      Int
   customerName    String
   status          String
+  deliveryMethod  String   @default("delivery")
   total_amount    Int           
   orderDate       DateTime
   deliveryDate    DateTime?
+  assignedUserId  Int?
+  assignedUser    User?         @relation(fields: [assignedUserId], references: [id])
   
   customer        Customer      @relation(fields: [customerId], references: [id]) 
   orderItems      OrderItem[]
@@ -51,6 +54,11 @@ model Product {
   rate                 String?
   page                 String?
   age                  String?  
+
+  purchasePriceGhs  Int?            // CP (GHC) in pesewas
+  purchasePriceGbp  Int?            // CP (BP) in pence
+  stockValue        Int?            // CALCULATED: stock * price
+  saleValue         Int?            // HISTORICAL: Imported from Excel 'SALES VALUE'
   
   price                Int      
   currency             String   @default("GHS")
@@ -76,6 +84,8 @@ model StockMovement {
   date      DateTime
   notes     String?
   reference String?  // <--- Ensure this line exists
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
 
   Product   Product  @relation(fields: [productId], references: [id])
   @@index([productId])
@@ -91,10 +101,15 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String   
-  name      String?
+  firstName String
+  lastName  String
+  fullName  String
   role      String   @default("Staff") 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orders    Order[]
+  stockMovements StockMovement[]
+  bookings  Booking[]
   
   @@map("user")
 }
@@ -126,6 +141,8 @@ model Booking {
   status       String        @default("pending") // pending, confirmed, completed, cancelled
   items        BookingItem[]
   createdAt    DateTime      @default(now())
+  assignedUserId Int?
+  assignedUser User?         @relation(fields: [assignedUserId], references: [id])
 
   @@map("booking")
 }
