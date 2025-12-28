@@ -12,6 +12,7 @@ import {
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../components/CartContext";
+import bouncyCastleTypes from "/src/data/bouncyCastleTypes.json";
 
 const slugify = (value = "") =>
   value
@@ -25,6 +26,13 @@ const rentalSlug = (item) => {
   const pageSlug = item?.page?.split("/").filter(Boolean).pop();
   const nameSlug = slugify(item?.name);
   return pageSlug || nameSlug || item?.id || "";
+};
+
+const isBouncyRental = (item) => {
+  if (!item) return false;
+  const name = item.name?.toLowerCase() || "";
+  const page = item.page?.toLowerCase() || "";
+  return name.includes("bouncy") || page.includes("bouncy");
 };
 
 const getItemPrice = (item) => {
@@ -97,27 +105,60 @@ function Book() {
     return () => document.body.classList.remove("rentals-theme");
   }, []);
 
+  const bookingRentals = useMemo(() => {
+    if (!rentals.length) return [];
+    const baseBouncy = rentals.find((item) => isBouncyRental(item));
+    if (!baseBouncy) return rentals;
+
+    const bouncyOptions = bouncyCastleTypes.map((type) => ({
+      id: `bouncy-${slugify(type.name)}`,
+      name: type.name,
+      image: type.image,
+      imageUrl: type.image,
+      rate: baseBouncy.rate,
+      status: baseBouncy.status,
+      isActive: baseBouncy.isActive,
+      displayPrice: type.priceRange,
+      specificCategory: baseBouncy.specificCategory || baseBouncy.specificcategory || baseBouncy.category || "Bouncy Castle",
+      detailSlug: rentalSlug(baseBouncy),
+      type: "bouncy",
+    }));
+
+    const filtered = rentals.filter((item) => !isBouncyRental(item));
+    return [...bouncyOptions, ...filtered];
+  }, [rentals]);
+
   useEffect(() => {
-    if (!rentals.length) return;
+    if (!bookingRentals.length) return;
     const rentalSlugParam = searchParams.get("rental");
     if (!rentalSlugParam) return;
 
     const normalized = rentalSlugParam.toLowerCase();
-    const match = rentals.find((item) => {
-      const slug = rentalSlug(item).toLowerCase();
-      return slug === normalized;
-    });
-    if (match) {
-      setSelectedIds((prev) =>
-        prev.includes(match.id) ? prev : [...prev, match.id]
-      );
+    const bouncyParam = searchParams.get("bouncy");
+    let match = null;
+
+    if (bouncyParam) {
+      const bouncyId = `bouncy-${bouncyParam.toLowerCase()}`;
+      match = bookingRentals.find((item) => item.id === bouncyId);
+    } else {
+      match = bookingRentals.find((item) => {
+        const slug = (item.detailSlug || rentalSlug(item)).toLowerCase();
+        return slug === normalized;
+      });
+      if (match?.type === "bouncy") {
+        match = null;
+      }
     }
-  }, [rentals, searchParams]);
+
+    if (match) {
+      setSelectedIds((prev) => (prev.includes(match.id) ? prev : [...prev, match.id]));
+    }
+  }, [bookingRentals, searchParams]);
 
   const filteredRentals = useMemo(() => {
-    if (!searchQuery) return rentals;
+    if (!searchQuery) return bookingRentals;
     const q = searchQuery.toLowerCase();
-    return rentals.filter((item) => {
+    return bookingRentals.filter((item) => {
       return (
         item.name.toLowerCase().includes(q) ||
         item.specificCategory?.toLowerCase().includes(q) ||
@@ -125,11 +166,11 @@ function Book() {
         item.category?.toLowerCase().includes(q)
       );
     });
-  }, [rentals, searchQuery]);
+  }, [bookingRentals, searchQuery]);
 
   const selectedRentals = useMemo(
-    () => rentals.filter((item) => selectedIds.includes(item.id)),
-    [rentals, selectedIds]
+    () => bookingRentals.filter((item) => selectedIds.includes(item.id)),
+    [bookingRentals, selectedIds]
   );
 
   useEffect(() => {
@@ -425,6 +466,7 @@ function Book() {
               <div className="booking-rental-list">
                 {filteredRentals.map((item) => {
                   const selected = selectedIds.includes(item.id);
+                  const detailSlug = item.detailSlug || rentalSlug(item);
                   return (
                     <div
                       key={item.id}
@@ -438,7 +480,7 @@ function Book() {
                         <div className="booking-rental-head">
                           <h4>{item.name}</h4>
                         <p className="price">
-                          {formatRentalPrice(item, convertPrice, formatCurrency)}
+                          {item.displayPrice || formatRentalPrice(item, convertPrice, formatCurrency)}
                         </p>
                       </div>
                       <p className="rent-meta">
@@ -453,7 +495,7 @@ function Book() {
                           >
                             {selected ? "Remove" : "Add to booking"}
                           </button>
-                          <Link className="hero-btn hero-btn-ghost" to={`/Rentals/${rentalSlug(item)}`}>
+                          <Link className="hero-btn hero-btn-ghost" to={`/Rentals/${detailSlug}`}>
                             View details
                           </Link>
                         </div>

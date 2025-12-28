@@ -546,6 +546,11 @@ h3{
   transition: transform 200ms var(--ease-snap), box-shadow 200ms var(--ease-snap), background-color 180ms ease, color 180ms ease;
   border: 2px solid transparent;
 }
+.hero-btn.is-disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 .hero-btn-primary{
   background: linear-gradient(135deg, #ff996a9c 0%, var(--back3) 100%);
@@ -1911,6 +1916,23 @@ h3{
     radial-gradient(circle at 60% 78%, rgba(249, 245, 70, 0.1), transparent 46%);
   filter: blur(6px);
   opacity: 0.9;
+}
+
+.construction-banner{
+  max-width: 1100px;
+  margin: clamp(1.5rem, 3vw, 2.5rem) auto 0;
+  padding: clamp(1.4rem, 3vw, 2rem);
+  text-align: center;
+}
+
+.construction-banner h2{
+  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  margin: 0.4rem 0 0.6rem;
+}
+
+.construction-banner p{
+  margin: 0;
+  color: rgba(30, 42, 68, 0.8);
 }
 
 body.shop-theme{
@@ -4447,6 +4469,10 @@ body.shop-theme{
   background: linear-gradient(135deg, rgba(255, 248, 244, 0.86), rgba(237, 251, 247, 0.9));
   box-shadow: 0 12px 24px rgba(0,0,0,0.06);
 }
+.bouncy-card.is-selected{
+  border-color: rgba(14,134,96,0.6);
+  box-shadow: 0 16px 28px rgba(14,134,96,0.18);
+}
 .bouncy-card-media{
   position: relative;
   border-radius: 12px;
@@ -4543,6 +4569,15 @@ body.shop-theme{
   margin: 0;
   color: #4a5368;
   font-weight: 600;
+}
+.bouncy-select{
+  margin-top: 0.85rem;
+  width: 100%;
+}
+.bouncy-select.selected{
+  color: #0e8660;
+  border-color: rgba(14,134,96,0.4);
+  background: rgba(14,134,96,0.08);
 }
 .rental-similar-grid{
   display: grid;
@@ -7344,10 +7379,9 @@ label{
 .cookie-banner {
   position: fixed;
   bottom: 24px;
-  left: 0;
-  right: 0;
-  transform: none;
-  width: 100vw;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100% - 2rem, 980px);
   background: radial-gradient(110% 120% at 10% 20%, rgba(255, 223, 190, 0.9), rgba(255, 255, 255, 0.85)),
     linear-gradient(135deg, rgba(255, 209, 131, 0.8), rgba(99, 231, 198, 0.6));
   color: var(--text-main);
@@ -7378,7 +7412,7 @@ label{
   display: grid;
   grid-template-columns: 1.1fr 1fr;
   gap: 1.25rem;
-  width: 100vw;
+  width: 100%;
 }
 
 .cookie-copy {
@@ -7388,7 +7422,7 @@ label{
   padding: 1.15rem 1.25rem;
   position: relative;
   overflow: hidden;
-  width: 100vw;
+  width: 100%;
 }
 
 .cookie-copy::before {
@@ -7653,7 +7687,7 @@ label{
 
   .cookie-banner {
     bottom: 16px;
-    width: 100%;
+    width: min(100% - 1.5rem, 720px);
   }
 }
 
@@ -10619,6 +10653,30 @@ body.admin-theme {
   align-items: center;
 }
 
+.booking-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.booking-detail-item-image,
+.booking-detail-item-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.booking-detail-item-fallback {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
 .bookings-muted {
   opacity: 0.7;
 }
@@ -10627,6 +10685,35 @@ body.admin-theme {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.detail-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-nav-button {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-main);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.detail-nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.detail-nav-button:hover:not(:disabled) {
+  border-color: var(--accent);
 }
 
 .bookings-actions-col {

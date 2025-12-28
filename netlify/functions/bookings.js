@@ -77,7 +77,8 @@ export async function handler(event) {
                  'productId', bi."productId",
                  'quantity', bi.quantity,
                  'price', bi.price,
-                 'productName', p.name
+                 'productName', p.name,
+                 'productImage', p."imageUrl"
                )
                ORDER BY bi.id
              ) FILTER (WHERE bi.id IS NOT NULL),
@@ -155,7 +156,7 @@ export async function handler(event) {
 
       const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
       const productRes = await client.query(
-        `SELECT id, price, sku
+        `SELECT id, price, sku, "sourceCategoryCode"
          FROM "product"
          WHERE id = ANY($1::int[])`,
         [productIds]
@@ -169,9 +170,12 @@ export async function handler(event) {
           return json(404, { error: `Product ${item.productId} not found.` });
         }
         const sku = typeof product.sku === "string" ? product.sku.trim().toUpperCase() : "";
-        if (!sku.startsWith("RENT")) {
+        const source = typeof product.sourceCategoryCode === "string"
+          ? product.sourceCategoryCode.trim().toUpperCase()
+          : "";
+        if (source !== "RENTAL" && !sku.startsWith("RENT")) {
           await client.query("ROLLBACK");
-          return json(400, { error: `Bookings can only include RENT SKUs. Item ${item.productId} is not a rental.` });
+          return json(400, { error: `Bookings can only include rental items. Item ${item.productId} is not a rental.` });
         }
       }
 
@@ -301,7 +305,8 @@ export async function handler(event) {
                  'productId', bi."productId",
                  'quantity', bi.quantity,
                  'price', bi.price,
-                 'productName', p.name
+                 'productName', p.name,
+                 'productImage', p."imageUrl"
                )
                ORDER BY bi.id
              ) FILTER (WHERE bi.id IS NOT NULL),

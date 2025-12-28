@@ -142,6 +142,24 @@ function OrdersList() {
     return list;
   }, [filteredOrders, sortConfig]);
 
+  const detailIndex = useMemo(() => {
+    if (!detailOrder) return -1;
+    return sortedOrders.findIndex((order) => order.id === detailOrder.id);
+  }, [detailOrder, sortedOrders]);
+
+  const canGoPrevDetail = detailIndex > 0;
+  const canGoNextDetail = detailIndex >= 0 && detailIndex < sortedOrders.length - 1;
+
+  const goPrevDetail = () => {
+    if (!canGoPrevDetail) return;
+    setDetailOrder(sortedOrders[detailIndex - 1]);
+  };
+
+  const goNextDetail = () => {
+    if (!canGoNextDetail) return;
+    setDetailOrder(sortedOrders[detailIndex + 1]);
+  };
+
   const pageCount = Math.max(1, Math.ceil(sortedOrders.length / pageSize));
   const clampedPage = Math.min(page, pageCount - 1);
   const paginatedOrders = useMemo(() => {
@@ -456,9 +474,31 @@ function OrdersList() {
                   <h2>{detailOrder.orderNumber || `#${detailOrder.id}`}</h2>
                   <p className="orders-card-meta">{detailOrder.customerName || "-"}</p>
                 </div>
-                <button className="admin-close" onClick={() => setDetailOrder(null)} aria-label="Close detail">
-                  Close
-                </button>
+                <div className="orders-detail-actions">
+                  <div className="detail-nav">
+                    <button
+                      type="button"
+                      className="detail-nav-button"
+                      onClick={goPrevDetail}
+                      disabled={!canGoPrevDetail}
+                      aria-label="Previous order"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      className="detail-nav-button"
+                      onClick={goNextDetail}
+                      disabled={!canGoNextDetail}
+                      aria-label="Next order"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                  <button className="admin-close" onClick={() => setDetailOrder(null)} aria-label="Close detail">
+                    Close
+                  </button>
+                </div>
               </header>
               <div className="orders-detail-body">
                 <p>

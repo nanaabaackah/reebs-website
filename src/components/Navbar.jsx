@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarDays, faCaretDown, faHome, faShoppingCart, faMoon, faSun, faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -14,7 +14,6 @@ const Navbar = ({ onCartToggle }) => {
   const [showResults, setShowResults] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [showAuthMenu, setShowAuthMenu] = useState(false);
-  const authMenuRef = useRef(null);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem('reebs-theme');
@@ -129,7 +128,7 @@ const Navbar = ({ onCartToggle }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (authMenuRef.current && !authMenuRef.current.contains(e.target)) {
+      if (!e.target.closest('.auth-menu')) {
         setShowAuthMenu(false);
       }
     };
@@ -282,7 +281,7 @@ const Navbar = ({ onCartToggle }) => {
               {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
             </span>
           </button>
-          <div className="auth-menu" ref={authMenuRef}>
+          <div className="auth-menu">
             <button
               type="button"
               className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}
@@ -338,7 +337,7 @@ const Navbar = ({ onCartToggle }) => {
               {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
             </span>
           </button>
-          <div className="auth-menu" ref={authMenuRef}>
+          <div className="auth-menu">
             <button
               type="button"
               className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}

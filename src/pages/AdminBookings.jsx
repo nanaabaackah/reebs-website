@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faRotateRight, faXmark, faPen, faFileInvoice } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faRotateRight,
+  faXmark,
+  faPen,
+  faFileInvoice,
+  faChevronLeft,
+  faChevronRight,
+} from "@fortawesome/free-solid-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -146,7 +154,8 @@ function AdminBookings() {
 
       const rentalProducts = (Array.isArray(inventoryPayload) ? inventoryPayload : []).filter((item) => {
         const sku = (item.sku || "").toString().toUpperCase();
-        return sku.startsWith("RENT");
+        const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toUpperCase();
+        return source === "RENTAL" || sku.startsWith("RENT");
       });
 
       setProducts(rentalProducts);
@@ -227,6 +236,24 @@ function AdminBookings() {
     });
     return list;
   }, [filteredBookings, sortConfig]);
+
+  const detailIndex = useMemo(() => {
+    if (!detailBooking) return -1;
+    return sortedBookings.findIndex((booking) => booking.id === detailBooking.id);
+  }, [detailBooking, sortedBookings]);
+
+  const canGoPrevDetail = detailIndex > 0;
+  const canGoNextDetail = detailIndex >= 0 && detailIndex < sortedBookings.length - 1;
+
+  const goPrevDetail = () => {
+    if (!canGoPrevDetail) return;
+    setDetailBooking(sortedBookings[detailIndex - 1]);
+  };
+
+  const goNextDetail = () => {
+    if (!canGoNextDetail) return;
+    setDetailBooking(sortedBookings[detailIndex + 1]);
+  };
 
   const pageCount = Math.max(1, Math.ceil(sortedBookings.length / pageSize));
   const clampedPage = Math.min(page, pageCount - 1);
@@ -1004,6 +1031,26 @@ function AdminBookings() {
                 </p>
               </div>
               <div className="booking-detail-actions">
+                <div className="detail-nav">
+                  <button
+                    type="button"
+                    className="detail-nav-button"
+                    onClick={goPrevDetail}
+                    disabled={!canGoPrevDetail}
+                    aria-label="Previous booking"
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  <button
+                    type="button"
+                    className="detail-nav-button"
+                    onClick={goNextDetail}
+                    disabled={!canGoNextDetail}
+                    aria-label="Next booking"
+                  >
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="bookings-edit"
@@ -1034,7 +1081,7 @@ function AdminBookings() {
                 </span>
               </div>
               <div className="booking-detail-row">
-                <span>Owner</span>
+                <span>Assigned To</span>
                 <span>{formatUser(detailBooking.assignedUserName)}</span>
               </div>
               <div className="booking-detail-row">
@@ -1073,12 +1120,28 @@ function AdminBookings() {
                 {Array.isArray(detailBooking.items) && detailBooking.items.length > 0 ? (
                   <ul>
                     {detailBooking.items.map((item) => {
-                      const product = products.find((p) => Number(p.id) === Number(item.productId));
+                      const product = productMap.get(Number(item.productId));
+                      const productName = item.productName || product?.name || `Product ${item.productId}`;
+                      const imageSrc = item.productImage || product?.imageUrl || product?.image || "";
+                      const fallbackLabel = productName.slice(0, 1).toUpperCase();
                       return (
                         <li key={`${detailBooking.id}-${item.productId}`}>
-                          <div>
-                            <strong>{product?.name || `Product ${item.productId}`}</strong>
-                            {product?.sku && <p className="bookings-card-meta">SKU {product.sku}</p>}
+                          <div className="booking-detail-item">
+                            {imageSrc ? (
+                              <img
+                                className="booking-detail-item-image"
+                                src={imageSrc}
+                                alt={productName}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="booking-detail-item-fallback" aria-hidden="true">
+                                {fallbackLabel}
+                              </div>
+                            )}
+                            <div>
+                              <strong>{productName}</strong>
+                            </div>
                           </div>
                           <span>x{item.quantity}</span>
                         </li>

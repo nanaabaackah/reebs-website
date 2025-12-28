@@ -7,6 +7,7 @@ import AddToCartButton from "/src/components/AddToCartButton";
 import CartOverlay from "/src/components/CartOverlay";
 import CookieBanner from '/src/components/CookieBanner';
 import { useCart } from "/src/components/CartContext";
+import { useAuth } from "/src/components/AuthContext";
 
 function Shop() {
   const [inventory, setInventory] = useState([]);
@@ -26,6 +27,7 @@ function Shop() {
 
   const [aiSearching, setAiSearching] = useState(false);
   const [aiEnabled] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   const { currency, setCurrency, convertPrice, formatCurrency, rates } = useCart();
   const getPrice = (item) =>
@@ -212,12 +214,18 @@ function Shop() {
               </span>
             </div>*/}
             <div className="shop-hero-actions">
-              <button
-                className="shop-cart-btn hero-btn hero-btn-primary"
-                onClick={() => setCartOpen(true)}
-              >
-                View cart
-              </button>
+              {isAuthenticated ? (
+                <button
+                  className="shop-cart-btn hero-btn hero-btn-primary"
+                  onClick={() => setCartOpen(true)}
+                >
+                  View cart
+                </button>
+              ) : (
+                <Link className="hero-btn hero-btn-primary" to="/login">
+                  Staff login
+                </Link>
+              )}
               <Link className="hero-btn hero-btn-ghost" to="/rentals">
                 Browse rentals
               </Link>
@@ -248,299 +256,311 @@ function Shop() {
           </div>
         </section>
 
-        <section id="r3-shop-grid" className="relative overflow-visible">
-          <div className="shop-container">
-            <div className="shop-panel">
-              <div className="shop-controls">
-                <div className="search-wrapper">
-                  <input
-                    type="text"
-                    placeholder="Search bubbles, balloons, pinatas..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="search-bar ai-enabled"
-                    aria-label="Search products"
-                  />
-                  <span
-                    className={`ai-icon ${aiSearching ? "ai-loading" : ""}`}
-                    title="Powered by AI"
-                  >
-                    {aiSearching ? "🤖..." : "✨AI"}
-                  </span>
-                </div>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="category-filter"
-                  aria-label="Filter by category"
-                >
-                  <option value="All">All categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+        {!isAuthenticated && (
+          <section className="construction-banner glass-card" aria-live="polite">
+            <p className="kicker-small">Under construction</p>
+            <h2>Shop is getting a refresh</h2>
+            <p>Catalog browsing is available to logged-in staff only right now.</p>
+          </section>
+        )}
 
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="currency-selector"
-                  aria-label="Select currency"
-                >
-                  {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
-                    <option key={cur} value={cur}>
-                      {cur}
-                    </option>
-                  ))}
-                </select>
-                <label className="availability-filter">
-                  <input
-                    type="checkbox"
-                    checked={inStockOnly}
-                    onChange={(e) => setInStockOnly(e.target.checked)}
-                  />
-                  In stock only
-                </label>
-              </div>
-
-              <div className="filter-chips">
-                <button
-                  className={`filter-chip ${categoryFilter === "All" ? "active" : ""}`}
-                  onClick={() => setCategoryFilter("All")}
-                >
-                  All
-                </button>
-                {categories.slice(0, 5).map((cat) => (
-                  <button
-                    key={cat}
-                    className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
-                    onClick={() => setCategoryFilter(cat)}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <div className="shop-meta-row">
-                <nav className="breadcrumb">
-                  <Link to="/">Home</Link>{" "}
-                  <FontAwesomeIcon icon={faArrowRightLong} />{"  "}
-                  <span
-                    onClick={() => setCategoryFilter("All")}
-                    className="breadcrumb-link"
-                  >
-                    Shop
-                  </span>
-                  {categoryFilter !== "All" && (
-                    <>
-                      {" "}
-                      &gt; <span>{categoryFilter}</span>
-                    </>
-                  )}
-                </nav>
-                <span className="shop-results">
-                  {filteredProducts.length === 0
-                    ? "No items to show"
-                    : `Showing ${clampedPage * pageSize + 1}-${Math.min(
-                        filteredProducts.length,
-                        (clampedPage + 1) * pageSize
-                      )} of ${filteredProducts.length} items`}
-                </span>
-              </div>
-            </div>
-
-            <div className="shop-grid" ref={gridRef}>
-              {paginatedProducts.map((item) => {
-                const fallbackDescription =
-                  item.description ||
-                  "Playful, durable, and party-ready.";
-                const isExpanded = expandedProduct === item.id;
-                const isUnavailable = getStatusValue(item) === "unavailable";
-                const isSoldOut = isSoldOutItem(item);
-                const cardClassName = [
-                  "shop-card",
-                  isExpanded ? "expanded" : "",
-                  isSoldOut ? "sold-out" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-                return (
-                  <div
-                    key={item.id}
-                    className={cardClassName}
-                  >
-                    <div
-                      className="shop-image"
-                      onClick={() => setLightboxImage(item.image || item.imageUrl || null)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setLightboxImage(item.image || item.imageUrl || null);
-                        }
-                      }}
-                    >
-                      <img
-                        src={item.image || item.imageUrl || "/imgs/placeholder.png"}
-                        alt={item.name}
+        {isAuthenticated && (
+          <>
+            <section id="r3-shop-grid" className="relative overflow-visible">
+              <div className="shop-container">
+                <div className="shop-panel">
+                  <div className="shop-controls">
+                    <div className="search-wrapper">
+                      <input
+                        type="text"
+                        placeholder="Search bubbles, balloons, pinatas..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="search-bar ai-enabled"
+                        aria-label="Search products"
                       />
-                      {isSoldOut && (
-                        <span className="shop-out-banner">Out of stock</span>
-                      )}
-                      <span className="shop-zoom" aria-hidden="true">
-                        <FontAwesomeIcon icon={faMagnifyingGlass} />
+                      <span
+                        className={`ai-icon ${aiSearching ? "ai-loading" : ""}`}
+                        title="Powered by AI"
+                      >
+                        {aiSearching ? "🤖..." : "✨AI"}
                       </span>
                     </div>
-                    <div className="shop-details">
-                      <div className="shop-price-row">
-                        <p className="price">
-                          {formatCurrency(convertPrice(getPrice(item) || 0))}
-                        </p>
-                      </div>
-                      <div className="shop-pill">{item.specificCategory || item.specificcategory}</div>
-                      <h3>{item.name}</h3>
-                      <p className="stock">
-                        {isSoldOut ? "Unavailable" : `${getQuantity(item)} left in stock`}
-                      </p>
-                      <AddToCartButton
-                        item={{ ...item, quantity: getQuantity(item) }}
-                        onAdded={() => {
-                          setAnnounce(`${item.name} added to cart`);
-                        }}
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="category-filter"
+                      aria-label="Filter by category"
+                    >
+                      <option value="All">All categories</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="currency-selector"
+                      aria-label="Select currency"
+                    >
+                      {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
+                        <option key={cur} value={cur}>
+                          {cur}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="availability-filter">
+                      <input
+                        type="checkbox"
+                        checked={inStockOnly}
+                        onChange={(e) => setInStockOnly(e.target.checked)}
                       />
+                      In stock only
+                    </label>
+                  </div>
+
+                  <div className="filter-chips">
+                    <button
+                      className={`filter-chip ${categoryFilter === "All" ? "active" : ""}`}
+                      onClick={() => setCategoryFilter("All")}
+                    >
+                      All
+                    </button>
+                    {categories.slice(0, 5).map((cat) => (
+                      <button
+                        key={cat}
+                        className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
+                        onClick={() => setCategoryFilter(cat)}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="shop-meta-row">
+                    <nav className="breadcrumb">
+                      <Link to="/">Home</Link>{" "}
+                      <FontAwesomeIcon icon={faArrowRightLong} />{"  "}
+                      <span
+                        onClick={() => setCategoryFilter("All")}
+                        className="breadcrumb-link"
+                      >
+                        Shop
+                      </span>
+                      {categoryFilter !== "All" && (
+                        <>
+                          {" "}
+                          &gt; <span>{categoryFilter}</span>
+                        </>
+                      )}
+                    </nav>
+                    <span className="shop-results">
+                      {filteredProducts.length === 0
+                        ? "No items to show"
+                        : `Showing ${clampedPage * pageSize + 1}-${Math.min(
+                            filteredProducts.length,
+                            (clampedPage + 1) * pageSize
+                          )} of ${filteredProducts.length} items`}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shop-grid" ref={gridRef}>
+                  {paginatedProducts.map((item) => {
+                    const fallbackDescription =
+                      item.description ||
+                      "Playful, durable, and party-ready.";
+                    const isExpanded = expandedProduct === item.id;
+                    const isUnavailable = getStatusValue(item) === "unavailable";
+                    const isSoldOut = isSoldOutItem(item);
+                    const cardClassName = [
+                      "shop-card",
+                      isExpanded ? "expanded" : "",
+                      isSoldOut ? "sold-out" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+                    return (
+                      <div
+                        key={item.id}
+                        className={cardClassName}
+                      >
+                        <div
+                          className="shop-image"
+                          onClick={() => setLightboxImage(item.image || item.imageUrl || null)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setLightboxImage(item.image || item.imageUrl || null);
+                            }
+                          }}
+                        >
+                          <img
+                            src={item.image || item.imageUrl || "/imgs/placeholder.png"}
+                            alt={item.name}
+                          />
+                          {isSoldOut && (
+                            <span className="shop-out-banner">Out of stock</span>
+                          )}
+                          <span className="shop-zoom" aria-hidden="true">
+                            <FontAwesomeIcon icon={faMagnifyingGlass} />
+                          </span>
+                        </div>
+                        <div className="shop-details">
+                          <div className="shop-price-row">
+                            <p className="price">
+                              {formatCurrency(convertPrice(getPrice(item) || 0))}
+                            </p>
+                          </div>
+                          <div className="shop-pill">{item.specificCategory || item.specificcategory}</div>
+                          <h3>{item.name}</h3>
+                          <p className="stock">
+                            {isSoldOut ? "Unavailable" : `${getQuantity(item)} left in stock`}
+                          </p>
+                          <AddToCartButton
+                            item={{ ...item, quantity: getQuantity(item) }}
+                            onAdded={() => {
+                              setAnnounce(`${item.name} added to cart`);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredProducts.length === 0 && (
+                    <p className="no-results">
+                      No items match your search — try a different term or reset the
+                      filters.
+                    </p>
+                  )}
+                </div>
+
+                {filteredProducts.length > pageSize && (
+                  <div className="table-pagination shop-pagination">
+                    <span>
+                      Page {clampedPage + 1} of {pageCount}
+                    </span>
+                    <div className="table-pagination-controls">
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.max(0, p - 1))}
+                        disabled={clampedPage === 0}
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                        disabled={clampedPage >= pageCount - 1}
+                      >
+                        Next
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-              {filteredProducts.length === 0 && (
-                <p className="no-results">
-                  No items match your search — try a different term or reset the
-                  filters.
-                </p>
-              )}
-            </div>
+                )}
 
-            {filteredProducts.length > pageSize && (
-              <div className="table-pagination shop-pagination">
-                <span>
-                  Page {clampedPage + 1} of {pageCount}
-                </span>
-                <div className="table-pagination-controls">
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={clampedPage === 0}
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={clampedPage >= pageCount - 1}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
+                <hr className="shop-separator" />
 
-            <hr className="shop-separator" />
-
-            <section className="shop-popular">
-              <div className="shop-popular-header">
-                <div>
-                  <p className="kicker-small">Most popular</p>
-                  <h3>Fan-favorite picks</h3>
-                  <p className="shop-popular-sub">
-                    A quick rotation of items guests keep coming back for.
-                  </p>
-                </div>
-                <div className="shop-popular-controls">
-                  <button
-                    onClick={() =>
-                      setPopularIndex(
-                        (popularIndex - 1 + popularItems.length) %
-                          popularItems.length
-                      )
-                    }
-                    aria-label="Previous popular item"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={() =>
-                      setPopularIndex((popularIndex + 1) % popularItems.length)
-                    }
-                    aria-label="Next popular item"
-                  >
-                    ›
-                  </button>
-                </div>
-              </div>
-
-              {popularItems.length > 0 && (
-                <div
-                  className="shop-popular-card"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowRight") {
-                      setPopularIndex((popularIndex + 1) % popularItems.length);
-                    } else if (e.key === "ArrowLeft") {
-                      setPopularIndex(
-                        (popularIndex - 1 + popularItems.length) %
-                          popularItems.length
-                      );
-                    }
-                  }}
-                  aria-label={`Popular item: ${popularItems[popularIndex].name}`}
-                >
-                  <div className="popular-img">
-                    <img
-                      src={
-                        popularItems[popularIndex].image ||
-                        popularItems[popularIndex].imageUrl ||
-                        "/imgs/placeholder.png"
-                      }
-                      alt={popularItems[popularIndex].name}
-                    />
-                    {getQuantity(popularItems[popularIndex]) === 0 && (
-                      <span className="shop-ribbon">Sold out</span>
-                    )}
+                <section className="shop-popular">
+                  <div className="shop-popular-header">
+                    <div>
+                      <p className="kicker-small">Most popular</p>
+                      <h3>Fan-favorite picks</h3>
+                      <p className="shop-popular-sub">
+                        A quick rotation of items guests keep coming back for.
+                      </p>
+                    </div>
+                    <div className="shop-popular-controls">
+                      <button
+                        onClick={() =>
+                          setPopularIndex(
+                            (popularIndex - 1 + popularItems.length) %
+                              popularItems.length
+                          )
+                        }
+                        aria-label="Previous popular item"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={() =>
+                          setPopularIndex((popularIndex + 1) % popularItems.length)
+                        }
+                        aria-label="Next popular item"
+                      >
+                        ›
+                      </button>
+                    </div>
                   </div>
-                  <div className="popular-details">
-                    <span className="shop-pill">
-                      {popularItems[popularIndex].specificCategory || popularItems[popularIndex].specificcategory}
-                    </span>
-                    <h4>{popularItems[popularIndex].name}</h4>
-                    <p className="price">
-                      {formatCurrency(
-                        convertPrice(getPrice(popularItems[popularIndex]) || 0)
-                      )}
-                    </p>
-                    <p className="popular-stock">
-                      {getQuantity(popularItems[popularIndex])} in stock
-                    </p>
-                    <AddToCartButton
-                      item={{ ...popularItems[popularIndex], quantity: getQuantity(popularItems[popularIndex]) }}
-                      onAdded={() => {
-                        setAnnounce(`${popularItems[popularIndex].name} added to cart`);
+
+                  {popularItems.length > 0 && (
+                    <div
+                      className="shop-popular-card"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowRight") {
+                          setPopularIndex((popularIndex + 1) % popularItems.length);
+                        } else if (e.key === "ArrowLeft") {
+                          setPopularIndex(
+                            (popularIndex - 1 + popularItems.length) %
+                              popularItems.length
+                          );
+                        }
                       }}
-                    />
-                  </div>
-                </div>
-              )}
+                      aria-label={`Popular item: ${popularItems[popularIndex].name}`}
+                    >
+                      <div className="popular-img">
+                        <img
+                          src={
+                            popularItems[popularIndex].image ||
+                            popularItems[popularIndex].imageUrl ||
+                            "/imgs/placeholder.png"
+                          }
+                          alt={popularItems[popularIndex].name}
+                        />
+                        {getQuantity(popularItems[popularIndex]) === 0 && (
+                          <span className="shop-ribbon">Sold out</span>
+                        )}
+                      </div>
+                      <div className="popular-details">
+                        <span className="shop-pill">
+                          {popularItems[popularIndex].specificCategory || popularItems[popularIndex].specificcategory}
+                        </span>
+                        <h4>{popularItems[popularIndex].name}</h4>
+                        <p className="price">
+                          {formatCurrency(
+                            convertPrice(getPrice(popularItems[popularIndex]) || 0)
+                          )}
+                        </p>
+                        <p className="popular-stock">
+                          {getQuantity(popularItems[popularIndex])} in stock
+                        </p>
+                        <AddToCartButton
+                          item={{ ...popularItems[popularIndex], quantity: getQuantity(popularItems[popularIndex]) }}
+                          onAdded={() => {
+                            setAnnounce(`${popularItems[popularIndex].name} added to cart`);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
             </section>
-          </div>
-        </section>
 
-        <div className="sr-only" aria-live="polite">
-          {announce}
-        </div>
+            <div className="sr-only" aria-live="polite">
+              {announce}
+            </div>
+          </>
+        )}
       </main>
 
-      {lightboxImage && (
+      {isAuthenticated && lightboxImage && (
         <div className="lightbox" onClick={() => setLightboxImage(null)}>
           <span className="lightbox-close">
             <FontAwesomeIcon icon={faTimes} />
@@ -553,7 +573,9 @@ function Shop() {
         </div>
       )}
 
-      <CartOverlay open={cartOpen} onClose={() => setCartOpen(false)} />
+      {isAuthenticated && (
+        <CartOverlay open={cartOpen} onClose={() => setCartOpen(false)} />
+      )}
     </>
   );
 }

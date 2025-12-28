@@ -77,7 +77,7 @@ const isBouncyCastleRental = (item) => {
   return nameSlug.includes("bouncy") || pageSlug.includes("bouncy");
 };
 
-const BouncyVariantCard = ({ type }) => {
+const BouncyVariantCard = ({ type, selected, onSelect }) => {
   const images = type.images?.length ? type.images : type.image ? [type.image] : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const hasMultiple = images.length > 1;
@@ -94,7 +94,7 @@ const BouncyVariantCard = ({ type }) => {
   };
 
   return (
-    <article className="bouncy-card glass-card">
+    <article className={`bouncy-card glass-card ${selected ? "is-selected" : ""}`}>
       {currentImage && (
         <div className="bouncy-card-media">
           <img src={currentImage} alt={`${type.name} angle ${activeIndex + 1}`} loading="lazy" />
@@ -138,6 +138,14 @@ const BouncyVariantCard = ({ type }) => {
       </dl>
       <p className="bouncy-best">{type.bestFor}</p>
       <p className="bouncy-features">{type.features}</p>
+      <button
+        type="button"
+        className={`hero-btn hero-btn-link bouncy-select ${selected ? "selected" : ""}`}
+        onClick={() => onSelect(type)}
+        aria-pressed={selected}
+      >
+        {selected ? "Selected for booking" : "Select this castle"}
+      </button>
     </article>
   );
 };
@@ -148,6 +156,7 @@ function RentalItem() {
   const { convertPrice, formatCurrency, currency, setCurrency } = useCart();
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBouncyType, setSelectedBouncyType] = useState(null);
 
   useEffect(() => {
     fetch("/.netlify/functions/inventory")
@@ -209,6 +218,19 @@ const rental = useMemo(() => {
   const isAvailable = statusValue === "available";
   const showBouncyTable = isBouncyCastleRental(rental);
   const bookingSlug = rentalPath(rental).split("/").filter(Boolean).pop();
+  const selectedBouncySlug = selectedBouncyType ? slugify(selectedBouncyType.name) : "";
+  const bookingLink = showBouncyTable
+    ? `/Book?rental=${bookingSlug}${selectedBouncySlug ? `&bouncy=${selectedBouncySlug}` : ""}`
+    : `/Book?rental=${bookingSlug}`;
+
+  const handleBookingClick = (event) => {
+    if (!showBouncyTable || selectedBouncyType) return;
+    event.preventDefault();
+    const target = document.getElementById("bouncy-table-heading");
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   if (loading) {
     return (
@@ -330,7 +352,12 @@ const rental = useMemo(() => {
               </div>
 
               <div className="rental-actions">
-                <Link className="hero-btn hero-btn-primary" to={`/Book?rental=${bookingSlug}`}>
+                <Link
+                  className={`hero-btn hero-btn-primary ${showBouncyTable && !selectedBouncyType ? "is-disabled" : ""}`}
+                  to={bookingLink}
+                  onClick={handleBookingClick}
+                  aria-disabled={showBouncyTable && !selectedBouncyType}
+                >
                   Book this rental
                 </Link>
                 <Link className="hero-btn hero-btn-ghost" to="/Rentals">
@@ -351,7 +378,12 @@ const rental = useMemo(() => {
               </div>
               <div className="bouncy-card-grid">
                 {bouncyCastleTypes.map((type) => (
-                  <BouncyVariantCard key={type.name} type={type} />
+                  <BouncyVariantCard
+                    key={type.name}
+                    type={type}
+                    selected={selectedBouncyType?.name === type.name}
+                    onSelect={setSelectedBouncyType}
+                  />
                 ))}
               </div>
             </section>

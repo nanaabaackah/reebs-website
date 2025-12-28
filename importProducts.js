@@ -65,6 +65,35 @@ const generateSku = (name, category, index) => {
     return `${prefix}-${cleanName}-${String(index).padStart(3, '0')}`;
 };
 
+const normalizeImages = (entry) => {
+    const raw = entry?.images;
+    if (Array.isArray(raw)) {
+        const cleaned = raw.map((img) => String(img).trim()).filter(Boolean);
+        if (cleaned.length) return cleaned;
+    }
+    if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (trimmed) {
+            if (trimmed.startsWith("[")) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) {
+                        const cleaned = parsed.map((img) => String(img).trim()).filter(Boolean);
+                        if (cleaned.length) return cleaned;
+                    }
+                } catch {
+                    // fall through to single-image handling
+                }
+            }
+            return [trimmed];
+        }
+    }
+    if (entry?.image) {
+        return [String(entry.image).trim()];
+    }
+    return [];
+};
+
 /**
  * --- CSV PARSERS ---
  */
@@ -199,6 +228,54 @@ async function importAllProducts() {
         rentalCount++;
     }
     console.log(`✅ RENTALS: Synced ${rentalCount} items.`);
+
+    // 3. Process Bouncy Castle Types
+    console.log("\n📂 Reading Bouncy Castles...");
+    const bouncyRows = await readRentalsCsv('data/bounty_castle.csv');
+    let bouncyCount = 0;
+
+    for (const [idx, row] of bouncyRows.entries()) {
+        const name = row.name?.trim();
+        if (!name) continue;
+
+        const images = normalizeImages(row);
+        const price = toCents(row.price);
+        const imageUrl = row.image?.trim() || images[0] || null;
+        const recommendedAge = row.recommendedAge?.trim() || row.recommendedage?.trim() || null;
+        const capacity = row.capacity?.trim();
+        const bestFor = row.bestFor?.trim();
+        const features = row.features?.trim();
+        const descriptionParts = [
+            capacity ? `Capacity: ${capacity}.` : "",
+            bestFor ? `Best for: ${bestFor}.` : "",
+            features ? `Features: ${features}.` : "",
+        ].filter(Boolean);
+        const description = descriptionParts.length ? `Bouncy Castle. ${descriptionParts.join(" ")}` : "Bouncy Castle.";
+
+        const bouncyData = {
+            name: name,
+            sku: generateSku(name, 'BOUNCY', idx),
+            stock: 1,
+            price: price,
+            rate: row.rate,
+            page: "/Rentals/BouncyCastle",
+            imageUrl: imageUrl,
+            sourceCategoryCode: 'RENTAL',
+            specificCategory: 'Bouncy Castle',
+            description: description,
+            age: recommendedAge,
+            stockValue: price,
+            isActive: true
+        };
+
+        await prisma.product.upsert({
+            where: { sku: bouncyData.sku },
+            update: bouncyData,
+            create: bouncyData
+        });
+        bouncyCount++;
+    }
+    console.log(`✅ BOUNCY CASTLES: Synced ${bouncyCount} items.`);
 }
 
 importAllProducts()

@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import './master.css';
 import SideNav from '/src/components/SideNav';
 import { useCart } from "/src/components/CartContext";
+import { useAuth } from "/src/components/AuthContext";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass, faShieldHeart, faTruckFast, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
 
@@ -41,6 +42,7 @@ function Rentals() {
     const [loading, setLoading] = useState(true);
     const [showSideNav, setShowSideNav] = useState(false);
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
 
     useEffect(() => {
         let isMounted = true;
@@ -165,7 +167,11 @@ function Rentals() {
                                 </span>
                             </div>
                             <div className="hero-ctas">
-                                <a className="hero-btn hero-btn-primary" href="#rentals-grid">Browse rentals</a>
+                                {isAuthenticated ? (
+                                    <a className="hero-btn hero-btn-primary" href="#rentals-grid">Browse rentals</a>
+                                ) : (
+                                    <Link className="hero-btn hero-btn-primary" to="/login">Staff login</Link>
+                                )}
                                 <Link className="hero-btn hero-btn-ghost" to="/contact">Book a setup</Link>
                             </div>
                             <div className="hero-stats rentals-stats" aria-label="Rental stats">
@@ -179,151 +185,161 @@ function Rentals() {
                 </div>
             </section>
 
-            <section id='rentals-grid' className="rentals-section">
-                <div className="rentals-main">
-                    <SideNav
-                        items={allCategories.map((category) => ({
-                            id: category,
-                            label: category,
-                        }))}
-                        activeId={activeCategory}
-                        label="Rental categories"
-                        className={`rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
-                    />
+            {!isAuthenticated && (
+                <section className="construction-banner glass-card" aria-live="polite">
+                    <p className="kicker-small">Under construction</p>
+                    <h2>Rentals are being updated</h2>
+                    <p>Full browsing is available to logged-in staff only right now.</p>
+                </section>
+            )}
 
-                    <div className="rentals-main-content">
-                        <div className="rentals-toolbar glass-card">
-                            <div className="rentals-toolbar-head">
-                                <div>
-                                    <p className="rentals-meta">
-                                        {filteredRentals.length} items shown · {allCategories.length} categories
-                                    </p>
-                                </div>
-                                <div className="rentals-toolbar-actions">
-                                    <label htmlFor="currencySelector" className="sr-only">Select currency</label>
-                                    <select
-                                        value={currency}
-                                        onChange={(e) => setCurrency(e.target.value)}
-                                        className="currency-selector"
-                                        id="currencySelector"
-                                    >
-                                        {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
-                                            <option key={cur} value={cur}>
-                                                {cur}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+            {isAuthenticated && (
+                <section id='rentals-grid' className="rentals-section">
+                    <div className="rentals-main">
+                        <SideNav
+                            items={allCategories.map((category) => ({
+                                id: category,
+                                label: category,
+                            }))}
+                            activeId={activeCategory}
+                            label="Rental categories"
+                            className={`rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
+                        />
 
-                            <div className="rentals-controls">
-                                <div className="search-wrapper rentals-search">
-                                    <FontAwesomeIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search bounce houses, decor, concessions..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="search-bar"
-                                        aria-label="Search rental items"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="filter-chips" role="list" aria-label="Quick category filters">
-                                {categoryOptions.map((cat) => (
-                                    <button
-                                        key={cat}
-                                        type="button"
-                                        className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
-                                        onClick={() => setCategoryFilter(cat)}
-                                        aria-pressed={categoryFilter === cat}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {groupedRentals.length === 0 && (
-                            <div className="rentals-empty glass-card">
-                                <p>No rentals match that search. Try a different keyword or reset filters.</p>
-                                <button className="hero-btn hero-btn-link" type="button" onClick={() => {
-                                    setSearchQuery("");
-                                    setCategoryFilter("All");
-                                }}>
-                                    Reset filters
-                                </button>
-                            </div>
-                        )}
-
-                        {groupedRentals.map(({ category, items }) => (
-                            <div id={category} key={category} className="rent-category-section">
-                                <div className="section-header rent-section-header">
-                                    <p className="kicker">Category</p>
-                                    <h2>{category}</h2>
-                                </div>
-                                <div className='rent-grid'>
-                                    {items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="rent-card glass-card"
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={() => navigate(rentalPath(item))}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter" || e.key === " ") {
-                                                    e.preventDefault();
-                                                    navigate(rentalPath(item));
-                                                }
-                                            }}
+                        <div className="rentals-main-content">
+                            <div className="rentals-toolbar glass-card">
+                                <div className="rentals-toolbar-head">
+                                    <div>
+                                        <p className="rentals-meta">
+                                            {filteredRentals.length} items shown · {allCategories.length} categories
+                                        </p>
+                                    </div>
+                                    <div className="rentals-toolbar-actions">
+                                        <label htmlFor="currencySelector" className="sr-only">Select currency</label>
+                                        <select
+                                            value={currency}
+                                            onChange={(e) => setCurrency(e.target.value)}
+                                            className="currency-selector"
+                                            id="currencySelector"
                                         >
-                                            <div className="rent-image">
-                                                <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name}/>
-                                                <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
-                                            </div>
-                                            <div className="rent-details">
-                                                <div className="rent-title-row">
-                                                    <h3>{item.name}</h3>
-                                                </div>
-                                                <p className="price">
-                                                    {(() => {
-                                                        const priceValue = item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
-                                                        // Bouncy castles and package deals are quoted per request
-                                                        if (isContactPricing(item)) return "Contact us for pricing";
-                                                        // Handle special “contact for info” item
-                                                        if (item.id === 8) return "Contact for more info.";
+                                            {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
+                                                <option key={cur} value={cur}>
+                                                    {cur}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
-                                                        // Handle missing price
-                                                        if (!priceValue || priceValue === "0" || priceValue === 0) {
-                                                        return "Contact for price";
-                                                        }
+                                <div className="rentals-controls">
+                                    <div className="search-wrapper rentals-search">
+                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search bounce houses, decor, concessions..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="search-bar"
+                                            aria-label="Search rental items"
+                                        />
+                                    </div>
+                                </div>
 
-                                                        // Handle price ranges (e.g., "20-40")
-                                                        if (typeof priceValue === "string" && priceValue.includes("-")) {
-                                                        const [min, max] = priceValue.split("-").map(Number);
-                                                        return `${formatCurrency(convertPrice(min))} - ${formatCurrency(convertPrice(max))} ${item.rate}`;
-                                                        }
-
-                                                        // Default fixed price
-                                                        return `${formatCurrency(convertPrice(Number(priceValue)))} ${item.rate}`;
-                                                    })()}
-                                                </p>
-
-                                                <div className="rent-actions">
-                                                    <Link className="hero-btn hero-btn-link" to={rentalPath(item)} aria-label={`Explore more about ${item.name}`}>
-                                                        Explore More
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <div className="filter-chips" role="list" aria-label="Quick category filters">
+                                    {categoryOptions.map((cat) => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
+                                            onClick={() => setCategoryFilter(cat)}
+                                            aria-pressed={categoryFilter === cat}
+                                        >
+                                            {cat}
+                                        </button>
                                     ))}
                                 </div>
                             </div>
-                        ))}
+
+                            {groupedRentals.length === 0 && (
+                                <div className="rentals-empty glass-card">
+                                    <p>No rentals match that search. Try a different keyword or reset filters.</p>
+                                    <button className="hero-btn hero-btn-link" type="button" onClick={() => {
+                                        setSearchQuery("");
+                                        setCategoryFilter("All");
+                                    }}>
+                                        Reset filters
+                                    </button>
+                                </div>
+                            )}
+
+                            {groupedRentals.map(({ category, items }) => (
+                                <div id={category} key={category} className="rent-category-section">
+                                    <div className="section-header rent-section-header">
+                                        <p className="kicker">Category</p>
+                                        <h2>{category}</h2>
+                                    </div>
+                                    <div className='rent-grid'>
+                                        {items.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="rent-card glass-card"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => navigate(rentalPath(item))}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault();
+                                                        navigate(rentalPath(item));
+                                                    }
+                                                }}
+                                            >
+                                                <div className="rent-image">
+                                                    <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name}/>
+                                                    <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
+                                                </div>
+                                                <div className="rent-details">
+                                                    <div className="rent-title-row">
+                                                        <h3>{item.name}</h3>
+                                                    </div>
+                                                    <p className="price">
+                                                        {(() => {
+                                                            const priceValue = item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
+                                                            // Bouncy castles and package deals are quoted per request
+                                                            if (isContactPricing(item)) return "Contact us for pricing";
+                                                            // Handle special “contact for info” item
+                                                            if (item.id === 8) return "Contact for more info.";
+
+                                                            // Handle missing price
+                                                            if (!priceValue || priceValue === "0" || priceValue === 0) {
+                                                            return "Contact for price";
+                                                            }
+
+                                                            // Handle price ranges (e.g., "20-40")
+                                                            if (typeof priceValue === "string" && priceValue.includes("-")) {
+                                                            const [min, max] = priceValue.split("-").map(Number);
+                                                            return `${formatCurrency(convertPrice(min))} - ${formatCurrency(convertPrice(max))} ${item.rate}`;
+                                                            }
+
+                                                            // Default fixed price
+                                                            return `${formatCurrency(convertPrice(Number(priceValue)))} ${item.rate}`;
+                                                        })()}
+                                                    </p>
+
+                                                    <div className="rent-actions">
+                                                        <Link className="hero-btn hero-btn-link" to={rentalPath(item)} aria-label={`Explore more about ${item.name}`}>
+                                                            Explore More
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
         </main>
     </div>
         </>
