@@ -24,3 +24,13 @@ To enable the Google fallback:
 - In Google Cloud Console, enable **Geocoding API** for the same project/key (billing is typically required).
 
 No additional npm package is required for geocoding; it’s just an HTTPS call from the Netlify function.
+
+## WhatsApp order/booking notifications
+
+New orders and bookings can send a WhatsApp message to the manager via the Meta WhatsApp Cloud API.
+
+Set these environment variables (Netlify or local `.env` for `netlify dev`):
+
+- `WHATSAPP_ACCESS_TOKEN` (Cloud API token)
+- `WHATSAPP_PHONE_NUMBER_ID` (Cloud API phone number ID)
+- `WHATSAPP_MANAGER_PHONE` (manager phone number, any format)

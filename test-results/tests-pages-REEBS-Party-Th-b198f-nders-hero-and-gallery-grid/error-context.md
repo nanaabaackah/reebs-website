@@ -30,175 +30,169 @@
           - img [ref=e27] [cursor=pointer]
         - button [ref=e29] [cursor=pointer]:
           - img [ref=e31] [cursor=pointer]
-        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
-          - img [ref=e34] [cursor=pointer]
-  - main [ref=e37]:
-    - generic [ref=e40]:
-      - generic [ref=e41]:
-        - paragraph [ref=e42]: Recent installs · Party boxes · Rentals
-        - heading "Gallery" [level=1] [ref=e43]
-        - paragraph [ref=e44]: A peek into the beautiful moments we’ve styled, delivered, and set up across Ghana. Tap to zoom in and see the details up close.
-        - generic "Gallery highlights" [ref=e45]:
-          - generic [ref=e46]: Balloon magic
-          - generic [ref=e47]: Bouncy castles
-          - generic [ref=e48]: Tablescapes
-          - generic [ref=e49]: Picnic vibes
-        - generic "Gallery highlights" [ref=e50]:
-          - generic [ref=e51]:
-            - strong [ref=e52]: 2k+
-            - generic [ref=e53]: Parties styled
-          - generic [ref=e54]:
-            - strong [ref=e55]: Same-day
-            - generic [ref=e56]: Delivery options
-          - generic [ref=e57]:
-            - strong [ref=e58]: Across GH
-            - generic [ref=e59]: Accra · Kumasi · Cape Coast
-      - generic [ref=e60]:
-        - img [ref=e62]
-        - img [ref=e64]
+        - button "User menu" [ref=e34] [cursor=pointer]:
+          - img [ref=e35] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e37] [cursor=pointer]:
+          - img [ref=e38] [cursor=pointer]
+  - main [ref=e41]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - paragraph [ref=e46]: Recent installs · Party boxes · Rentals
+        - heading "Gallery" [level=1] [ref=e47]
+        - paragraph [ref=e48]: A peek into the beautiful moments we’ve styled, delivered, and set up across Ghana. Tap to zoom in and see the details up close.
+        - generic "Gallery highlights" [ref=e49]:
+          - generic [ref=e50]: Balloon magic
+          - generic [ref=e51]: Bouncy castles
+          - generic [ref=e52]: Tablescapes
+          - generic [ref=e53]: Picnic vibes
+        - generic "Gallery highlights" [ref=e54]:
+          - generic [ref=e55]:
+            - strong [ref=e56]: 2k+
+            - generic [ref=e57]: Parties styled
+          - generic [ref=e58]:
+            - strong [ref=e59]: Same-day
+            - generic [ref=e60]: Delivery options
+          - generic [ref=e61]:
+            - strong [ref=e62]: Across GH
+            - generic [ref=e63]: Accra · Kumasi · Cape Coast
+      - generic [ref=e64]:
         - img [ref=e66]
         - img [ref=e68]
-    - generic [ref=e69]:
-      - generic [ref=e70]:
-        - generic [ref=e71]:
-          - paragraph [ref=e72]: Real parties, real smiles
-          - heading "Styled moments worth saving" [level=2] [ref=e73]
-          - paragraph [ref=e74]: From balloon installs to full venue makeovers, here’s a snapshot of the magic. We keep the layouts bright, playful, and practical—just like the new home page vibe.
-        - generic [ref=e75]: Tap any photo to view in full
-      - generic [ref=e76]:
-        - article [ref=e77]:
-          - button "Open Giant Jungle Bounce in the lightbox" [ref=e78] [cursor=pointer]:
-            - img "Giant Jungle Bounce" [ref=e79] [cursor=pointer]
-            - generic [ref=e80] [cursor=pointer]:
-              - generic [ref=e81] [cursor=pointer]:
-                - paragraph [ref=e82] [cursor=pointer]: Tema Sports Park · Inflatable obstacle bounce with shade canopy — perfect for high-energy party crews.
-                - heading "Giant Jungle Bounce" [level=3] [ref=e83] [cursor=pointer]
-              - generic [ref=e84] [cursor=pointer]: View detail
-        - article [ref=e85]:
-          - button "Open Princess Castle Bounce in the lightbox" [ref=e86] [cursor=pointer]:
-            - img "Princess Castle Bounce" [ref=e87] [cursor=pointer]
-            - generic [ref=e88] [cursor=pointer]:
-              - generic [ref=e89] [cursor=pointer]:
-                - paragraph [ref=e90] [cursor=pointer]: Accra · Pink-and-blue palace jumper with mesh windows and Disney princess artwork for birthday magic.
-                - heading "Princess Castle Bounce" [level=3] [ref=e91] [cursor=pointer]
-              - generic [ref=e92] [cursor=pointer]: View detail
-        - article [ref=e93]:
-          - button "Open Spider Hero Bounce in the lightbox" [ref=e94] [cursor=pointer]:
-            - img "Spider Hero Bounce" [ref=e95] [cursor=pointer]
-            - generic [ref=e96] [cursor=pointer]:
-              - generic [ref=e97] [cursor=pointer]:
-                - paragraph [ref=e98] [cursor=pointer]: School courtyard · Covered Spider-Man themed bounce house ready for superhero jumping adventures.
-                - heading "Spider Hero Bounce" [level=3] [ref=e99] [cursor=pointer]
-              - generic [ref=e100] [cursor=pointer]: View detail
-        - article [ref=e101]:
-          - button "Open Party Gift Bags in the lightbox" [ref=e102] [cursor=pointer]:
-            - img "Party Gift Bags" [ref=e103] [cursor=pointer]
-            - generic [ref=e104] [cursor=pointer]:
-              - generic [ref=e105] [cursor=pointer]:
-                - paragraph [ref=e106] [cursor=pointer]: Assorted backpacks in bright colors and patterns, prepped for filling with party goodies and favors.
-                - heading "Party Gift Bags" [level=3] [ref=e107] [cursor=pointer]
-              - generic [ref=e108] [cursor=pointer]: View detail
-        - article [ref=e109]:
-          - button "Open Creative Station in the lightbox" [ref=e110] [cursor=pointer]:
-            - img "Creative Station" [ref=e111] [cursor=pointer]
-            - generic [ref=e112] [cursor=pointer]:
-              - generic [ref=e113] [cursor=pointer]:
-                - paragraph [ref=e114] [cursor=pointer]: Crayons, pencils, paints, and craft kits laid out for a kids’ art corner to keep little guests busy.
-                - heading "Creative Station" [level=3] [ref=e115] [cursor=pointer]
-              - generic [ref=e116] [cursor=pointer]: View detail
-        - article [ref=e117]:
-          - button "Open Fresh Popcorn Cups in the lightbox" [ref=e118] [cursor=pointer]:
-            - img "Fresh Popcorn Cups" [ref=e119] [cursor=pointer]
-            - generic [ref=e120] [cursor=pointer]:
-              - generic [ref=e121] [cursor=pointer]:
-                - paragraph [ref=e122] [cursor=pointer]: Butter popcorn served in branded cups — a party snack favorite alongside games and kids’ toys.
-                - heading "Fresh Popcorn Cups" [level=3] [ref=e123] [cursor=pointer]
-              - generic [ref=e124] [cursor=pointer]: View detail
-        - article [ref=e125]:
-          - button "Open Princess Birthday Party in the lightbox" [ref=e126] [cursor=pointer]:
-            - img "Princess Birthday Party" [ref=e127] [cursor=pointer]
-            - generic [ref=e128] [cursor=pointer]:
-              - generic [ref=e129] [cursor=pointer]:
-                - paragraph [ref=e130] [cursor=pointer]: Accra · March 2024 · Bouncy Castle, Decor, Cake Table
-                - heading "Princess Birthday Party" [level=3] [ref=e131] [cursor=pointer]
-              - generic [ref=e132] [cursor=pointer]: View detail
-        - article [ref=e133]:
-          - button "Open Princess Birthday Party in the lightbox" [ref=e134] [cursor=pointer]:
-            - img "Princess Birthday Party" [ref=e135] [cursor=pointer]
-            - generic [ref=e136] [cursor=pointer]:
-              - generic [ref=e137] [cursor=pointer]:
-                - paragraph [ref=e138] [cursor=pointer]: Accra · March 2024 · Bouncy Castle, Decor, Cake Table
-                - heading "Princess Birthday Party" [level=3] [ref=e139] [cursor=pointer]
-              - generic [ref=e140] [cursor=pointer]: View detail
-    - generic [ref=e141]:
-      - generic [ref=e142]:
+        - img [ref=e70]
+        - img [ref=e72]
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - paragraph [ref=e76]: Real parties, real smiles
+          - heading "Styled moments worth saving" [level=2] [ref=e77]
+          - paragraph [ref=e78]: From balloon installs to full venue makeovers, here’s a snapshot of the magic. We keep the layouts bright, playful, and practical—just like the new home page vibe.
+        - generic [ref=e79]: Tap any photo to view in full
+      - generic [ref=e80]:
+        - article [ref=e81]:
+          - button "Open Giant Jungle Bounce in the lightbox" [ref=e82] [cursor=pointer]:
+            - img "Giant Jungle Bounce" [ref=e83] [cursor=pointer]
+            - generic [ref=e84] [cursor=pointer]:
+              - generic [ref=e85] [cursor=pointer]:
+                - paragraph [ref=e86] [cursor=pointer]: Tema Sports Park · Inflatable obstacle bounce with shade canopy — perfect for high-energy party crews.
+                - heading "Giant Jungle Bounce" [level=3] [ref=e87] [cursor=pointer]
+              - generic [ref=e88] [cursor=pointer]: View detail
+        - article [ref=e89]:
+          - button "Open Princess Castle Bounce in the lightbox" [ref=e90] [cursor=pointer]:
+            - img "Princess Castle Bounce" [ref=e91] [cursor=pointer]
+            - generic [ref=e92] [cursor=pointer]:
+              - generic [ref=e93] [cursor=pointer]:
+                - paragraph [ref=e94] [cursor=pointer]: Accra · Pink-and-blue palace jumper with mesh windows and Disney princess artwork for birthday magic.
+                - heading "Princess Castle Bounce" [level=3] [ref=e95] [cursor=pointer]
+              - generic [ref=e96] [cursor=pointer]: View detail
+        - article [ref=e97]:
+          - button "Open Spider Hero Bounce in the lightbox" [ref=e98] [cursor=pointer]:
+            - img "Spider Hero Bounce" [ref=e99] [cursor=pointer]
+            - generic [ref=e100] [cursor=pointer]:
+              - generic [ref=e101] [cursor=pointer]:
+                - paragraph [ref=e102] [cursor=pointer]: School courtyard · Covered Spider-Man themed bounce house ready for superhero jumping adventures.
+                - heading "Spider Hero Bounce" [level=3] [ref=e103] [cursor=pointer]
+              - generic [ref=e104] [cursor=pointer]: View detail
+        - article [ref=e105]:
+          - button "Open School Bags in the lightbox" [ref=e106] [cursor=pointer]:
+            - img "School Bags" [ref=e107] [cursor=pointer]
+            - generic [ref=e108] [cursor=pointer]:
+              - generic [ref=e109] [cursor=pointer]:
+                - paragraph [ref=e110] [cursor=pointer]: Assorted backpacks in bright colors and patterns, prepped for filling with party goodies and favors.
+                - heading "School Bags" [level=3] [ref=e111] [cursor=pointer]
+              - generic [ref=e112] [cursor=pointer]: View detail
+        - article [ref=e113]:
+          - button "Open Creative Station in the lightbox" [ref=e114] [cursor=pointer]:
+            - img "Creative Station" [ref=e115] [cursor=pointer]
+            - generic [ref=e116] [cursor=pointer]:
+              - generic [ref=e117] [cursor=pointer]:
+                - paragraph [ref=e118] [cursor=pointer]: Crayons, pencils, paints, and craft kits laid out for a kids’ art corner to keep little guests busy.
+                - heading "Creative Station" [level=3] [ref=e119] [cursor=pointer]
+              - generic [ref=e120] [cursor=pointer]: View detail
+        - article [ref=e121]:
+          - button "Open Fresh Popcorn Cups in the lightbox" [ref=e122] [cursor=pointer]:
+            - img "Fresh Popcorn Cups" [ref=e123] [cursor=pointer]
+            - generic [ref=e124] [cursor=pointer]:
+              - generic [ref=e125] [cursor=pointer]:
+                - paragraph [ref=e126] [cursor=pointer]: Butter popcorn served in branded cups — a party snack favorite alongside games and kids’ toys.
+                - heading "Fresh Popcorn Cups" [level=3] [ref=e127] [cursor=pointer]
+              - generic [ref=e128] [cursor=pointer]: View detail
+        - article [ref=e129]:
+          - button "Open Snow Cone in the lightbox" [ref=e130] [cursor=pointer]:
+            - img "Snow Cone" [ref=e131] [cursor=pointer]
+            - generic [ref=e132] [cursor=pointer]:
+              - generic [ref=e133] [cursor=pointer]:
+                - paragraph [ref=e134] [cursor=pointer]: Accra · March 2024 · Renatal, Kid's Party, Concession
+                - heading "Snow Cone" [level=3] [ref=e135] [cursor=pointer]
+              - generic [ref=e136] [cursor=pointer]: View detail
+    - generic [ref=e137]:
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - paragraph [ref=e140]: Ready to rent or shop
+          - heading "Items featured in this gallery" [level=2] [ref=e141]
+          - paragraph [ref=e142]: Book the bouncy castles, popcorn, décor, and supplies you see here. We deliver, set up, and pack up when you’re done.
         - generic [ref=e143]:
-          - paragraph [ref=e144]: Ready to rent or shop
-          - heading "Items featured in this gallery" [level=2] [ref=e145]
-          - paragraph [ref=e146]: Book the bouncy castles, popcorn, décor, and supplies you see here. We deliver, set up, and pack up when you’re done.
-        - generic [ref=e147]:
-          - button "Scroll left" [ref=e148] [cursor=pointer]: ‹
-          - button "Scroll right" [ref=e149] [cursor=pointer]: ›
-      - generic [ref=e150]:
-        - article [ref=e151]:
-          - generic [ref=e152]:
-            - img "Mini Bouncy Castle" [ref=e153]
-            - generic [ref=e154]: Rental
-          - generic [ref=e155]:
-            - paragraph [ref=e156]: Mini Bouncy Castle
-            - paragraph [ref=e157]: Kid Bouncers
-            - paragraph [ref=e158]: GH₵per day / day
-          - link "Book this rental" [ref=e159] [cursor=pointer]:
+          - button "Scroll left" [ref=e144] [cursor=pointer]: ‹
+          - button "Scroll right" [ref=e145] [cursor=pointer]: ›
+      - generic [ref=e146]:
+        - article [ref=e147]:
+          - generic [ref=e148]:
+            - img "Mini Bouncy Castle" [ref=e149]
+            - generic [ref=e150]: Rental
+          - generic [ref=e151]:
+            - paragraph [ref=e152]: Mini Bouncy Castle
+            - paragraph [ref=e153]: Kid Bouncers
+            - paragraph [ref=e154]: GH₵700-900 / day
+          - link "Book this rental" [ref=e155] [cursor=pointer]:
             - /url: /Rentals#Kid%20Bouncers
-        - article [ref=e160]:
-          - generic [ref=e161]:
-            - img "Cotton Candy Machine" [ref=e162]
-            - generic [ref=e163]: Rental
-          - generic [ref=e164]:
-            - paragraph [ref=e165]: Cotton Candy Machine
-            - paragraph [ref=e166]: Party Machines
-            - paragraph [ref=e167]: GH₵per day / day
-          - link "Book this rental" [ref=e168] [cursor=pointer]:
+        - article [ref=e156]:
+          - generic [ref=e157]:
+            - img "Cotton Candy Machine" [ref=e158]
+            - generic [ref=e159]: Rental
+          - generic [ref=e160]:
+            - paragraph [ref=e161]: Cotton Candy Machine
+            - paragraph [ref=e162]: Party Machines
+            - paragraph [ref=e163]: GH₵250 / day
+          - link "Book this rental" [ref=e164] [cursor=pointer]:
             - /url: /Rentals#Party%20Machines
-        - article [ref=e169]:
-          - generic [ref=e170]:
-            - img "Trampoline" [ref=e171]
-            - generic [ref=e172]: Rental
-          - generic [ref=e173]:
-            - paragraph [ref=e174]: Trampoline
-            - paragraph [ref=e175]: Kid Bouncers
-            - paragraph [ref=e176]: GH₵per hour / day
-          - link "Book this rental" [ref=e177] [cursor=pointer]:
+        - article [ref=e165]:
+          - generic [ref=e166]:
+            - img "Trampoline" [ref=e167]
+            - generic [ref=e168]: Rental
+          - generic [ref=e169]:
+            - paragraph [ref=e170]: Trampoline
+            - paragraph [ref=e171]: Kid Bouncers
+            - paragraph [ref=e172]: GH₵600 / day
+          - link "Book this rental" [ref=e173] [cursor=pointer]:
             - /url: /Rentals#Kid%20Bouncers
-        - article [ref=e178]:
-          - generic [ref=e179]:
-            - img "Rainbow Balloon Set" [ref=e180]
-            - generic [ref=e181]: Shop
-          - generic [ref=e182]:
-            - paragraph [ref=e183]: Rainbow Balloon Set
-            - paragraph [ref=e184]: Party Supplies
-            - paragraph [ref=e185]: GH₵50
-          - link "Shop this item" [ref=e186] [cursor=pointer]:
+        - article [ref=e174]:
+          - generic [ref=e175]:
+            - img "Rainbow Balloon Set" [ref=e176]
+            - generic [ref=e177]: Shop
+          - generic [ref=e178]:
+            - paragraph [ref=e179]: Rainbow Balloon Set
+            - paragraph [ref=e180]: Party Supplies
+            - paragraph [ref=e181]: GH₵50
+          - link "Shop this item" [ref=e182] [cursor=pointer]:
             - /url: /Shop
-        - article [ref=e187]:
-          - generic [ref=e188]:
-            - img "Cotton Candy Kit" [ref=e189]
-            - generic [ref=e190]: Shop
-          - generic [ref=e191]:
-            - paragraph [ref=e192]: Cotton Candy Kit
-            - paragraph [ref=e193]: Party Supplies
-            - paragraph [ref=e194]: GH₵120
-          - link "Shop this item" [ref=e195] [cursor=pointer]:
+        - article [ref=e183]:
+          - generic [ref=e184]:
+            - img "Cotton Candy Kit" [ref=e185]
+            - generic [ref=e186]: Shop
+          - generic [ref=e187]:
+            - paragraph [ref=e188]: Cotton Candy Kit
+            - paragraph [ref=e189]: Party Supplies
+            - paragraph [ref=e190]: GH₵120
+          - link "Shop this item" [ref=e191] [cursor=pointer]:
             - /url: /Shop
-        - article [ref=e196]:
-          - generic [ref=e197]:
-            - img "Kids Headphones" [ref=e198]
-            - generic [ref=e199]: Shop
-          - generic [ref=e200]:
-            - paragraph [ref=e201]: Kids Headphones
-            - paragraph [ref=e202]: Kid's Toys
-            - paragraph [ref=e203]: GH₵220
-          - link "Shop this item" [ref=e204] [cursor=pointer]:
+        - article [ref=e192]:
+          - generic [ref=e193]:
+            - img "Kids Headphones" [ref=e194]
+            - generic [ref=e195]: Shop
+          - generic [ref=e196]:
+            - paragraph [ref=e197]: Kids Headphones
+            - paragraph [ref=e198]: Kid's Toys
+            - paragraph [ref=e199]: GH₵220
+          - link "Shop this item" [ref=e200] [cursor=pointer]:
             - /url: /Shop
   - generic:
     - dialog:
@@ -215,71 +209,71 @@
         - link:
           - /url: /shop
           - text: Browse the shop
-  - contentinfo [ref=e205]:
-    - link "REEBS Logo" [ref=e206] [cursor=pointer]:
+  - contentinfo [ref=e201]:
+    - link "REEBS Logo" [ref=e202] [cursor=pointer]:
       - /url: /
-      - img "REEBS Logo" [ref=e207] [cursor=pointer]
-    - search [ref=e208]:
-      - img [ref=e209]
-      - searchbox "Search site" [ref=e211]
-    - generic [ref=e212]:
-      - generic [ref=e213]:
-        - link "Contact & Shop Info" [ref=e214] [cursor=pointer]:
+      - img "REEBS Logo" [ref=e203] [cursor=pointer]
+    - search [ref=e204]:
+      - img [ref=e205]
+      - searchbox "Search site" [ref=e207]
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - link "Contact & Shop Info" [ref=e210] [cursor=pointer]:
           - /url: /Contact
-        - link "Refund Policy" [ref=e215] [cursor=pointer]:
+        - link "Refund Policy" [ref=e211] [cursor=pointer]:
           - /url: /refund-policy
-        - link "Delivery Policy" [ref=e216] [cursor=pointer]:
+        - link "Delivery Policy" [ref=e212] [cursor=pointer]:
           - /url: /delivery-policy
-        - link "Privacy Policy" [ref=e217] [cursor=pointer]:
+        - link "Privacy Policy" [ref=e213] [cursor=pointer]:
           - /url: /privacy-policy
-        - link "FAQ" [ref=e218] [cursor=pointer]:
+        - link "FAQ" [ref=e214] [cursor=pointer]:
           - /url: /faq
-        - link "Terms of Service" [ref=e219] [cursor=pointer]:
+        - link "Terms of Service" [ref=e215] [cursor=pointer]:
           - /url: /terms-of-service
-      - generic [ref=e220]:
-        - link "Sakumono Broadway, Tema, Ghana" [ref=e221] [cursor=pointer]:
+      - generic [ref=e216]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e217] [cursor=pointer]:
           - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-          - img [ref=e222] [cursor=pointer]
+          - img [ref=e218] [cursor=pointer]
           - text: Sakumono Broadway, Tema, Ghana
-        - link "+233 24 423 8419" [ref=e224] [cursor=pointer]:
+        - link "+233 24 423 8419" [ref=e220] [cursor=pointer]:
           - /url: tel:+233244238419
-          - img [ref=e225] [cursor=pointer]
+          - img [ref=e221] [cursor=pointer]
           - text: +233 24 423 8419
-        - paragraph [ref=e227]:
+        - paragraph [ref=e223]:
           - text: Open Monday to Saturday | 8:30am - 7pm
-          - emphasis [ref=e228]: Holiday Hours may vary
-      - generic [ref=e229]:
-        - link [ref=e230] [cursor=pointer]:
+          - emphasis [ref=e224]: Holiday Hours may vary
+      - generic [ref=e225]:
+        - link [ref=e226] [cursor=pointer]:
           - /url: https://www.facebook.com/reebspartythemes
-          - img [ref=e231] [cursor=pointer]
-        - link [ref=e233] [cursor=pointer]:
+          - img [ref=e227] [cursor=pointer]
+        - link [ref=e229] [cursor=pointer]:
           - /url: https://www.instagram.com/reebspartythemes_/
-          - img [ref=e234] [cursor=pointer]
-        - link [ref=e236] [cursor=pointer]:
+          - img [ref=e230] [cursor=pointer]
+        - link [ref=e232] [cursor=pointer]:
           - /url: https://www.tiktok.com/@reebspartythemes_
-          - img [ref=e237] [cursor=pointer]
-        - link [ref=e239] [cursor=pointer]:
+          - img [ref=e233] [cursor=pointer]
+        - link [ref=e235] [cursor=pointer]:
           - /url: https://wa.me/233244238419
-          - img [ref=e240] [cursor=pointer]
-        - link [ref=e242] [cursor=pointer]:
+          - img [ref=e236] [cursor=pointer]
+        - link [ref=e238] [cursor=pointer]:
           - /url: mailto:info@reebspartythemes.com
-          - img [ref=e243] [cursor=pointer]
-    - navigation [ref=e246]:
-      - list [ref=e248]:
-        - listitem [ref=e249]:
-          - link "About" [ref=e250] [cursor=pointer]:
+          - img [ref=e239] [cursor=pointer]
+    - navigation [ref=e242]:
+      - list [ref=e244]:
+        - listitem [ref=e245]:
+          - link "About" [ref=e246] [cursor=pointer]:
             - /url: /about
-        - listitem [ref=e251]:
-          - link "Shop" [ref=e252] [cursor=pointer]:
+        - listitem [ref=e247]:
+          - link "Shop" [ref=e248] [cursor=pointer]:
             - /url: /shop
-        - listitem [ref=e253]:
-          - link "Rentals" [ref=e254] [cursor=pointer]:
+        - listitem [ref=e249]:
+          - link "Rentals" [ref=e250] [cursor=pointer]:
             - /url: /rentals
-        - listitem [ref=e255]:
-          - link "Gallery" [ref=e256] [cursor=pointer]:
+        - listitem [ref=e251]:
+          - link "Gallery" [ref=e252] [cursor=pointer]:
             - /url: /gallery
-        - listitem [ref=e257]:
-          - link "Contact" [ref=e258] [cursor=pointer]:
+        - listitem [ref=e253]:
+          - link "Contact" [ref=e254] [cursor=pointer]:
             - /url: /contact
-    - generic [ref=e259]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+    - generic [ref=e255]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
 ```

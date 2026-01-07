@@ -244,9 +244,11 @@ function AdminScheduler() {
 
     const rentals = (Array.isArray(inventoryPayload) ? inventoryPayload : []).filter((item) => {
       const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
-      if (source) return source === "rental";
       const sku = (item.sku || "").toString().toUpperCase();
-      return sku.startsWith("REN");
+      const name = (item.name || "").toString().toLowerCase();
+      const isPump = sku.startsWith("PUM") || name.includes("motor pump");
+      if (source) return source === "rental" && !isPump;
+      return sku.startsWith("REN") && !isPump;
     });
 
     setProducts(rentals);

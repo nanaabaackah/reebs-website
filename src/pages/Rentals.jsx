@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 //import rentalItems from "/src/data/rentalItems.json"
 import { Link, useNavigate } from 'react-router-dom';
 import './master.css';
@@ -16,22 +16,127 @@ const slugify = (value = "") =>
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 
+const CATEGORY_ORDER = ["Kid's Party Rentals", "Indoor Games", "Machines", "Bouncy Castles"];
+const RENTALS_CACHE_KEY = "reebs_rentals_cache_v1";
+const RENTALS_CACHE_TTL = 5 * 60 * 1000;
+
+const readRentalsCache = () => {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = window.sessionStorage.getItem(RENTALS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.items || !parsed?.ts) return null;
+        if (Date.now() - parsed.ts > RENTALS_CACHE_TTL) return null;
+        return parsed.items;
+    } catch {
+        return null;
+    }
+};
+
+const writeRentalsCache = (items) => {
+    if (typeof window === "undefined") return;
+    try {
+        window.sessionStorage.setItem(
+            RENTALS_CACHE_KEY,
+            JSON.stringify({ ts: Date.now(), items })
+        );
+    } catch {
+        // ignore cache write failures
+    }
+};
+
+const sortCategories = (a, b) => {
+    const aIndex = CATEGORY_ORDER.indexOf(a);
+    const bIndex = CATEGORY_ORDER.indexOf(b);
+    const aRank = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
+    const bRank = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.localeCompare(b);
+};
+
 const rentalPath = (item) => {
     const pageSlug = item?.page?.split("/").filter(Boolean).pop();
     const nameSlug = slugify(item?.name);
     return `/Rentals/${pageSlug || nameSlug || item?.id || ""}`;
 };
 
-const getCategory = (item = {}) => item.specificCategory || item.specificcategory || item.category || "Other";
+const normalizeCategory = (value) => {
+    const raw = (value || "").toString().trim();
+    const lowered = raw.toLowerCase();
+    if (!raw) return "Other";
+    if (lowered.includes("bouncy")) return "Bouncy Castles";
+    if (lowered.includes("machine") || lowered.includes("popcorn") || lowered.includes("snow cone") || lowered.includes("snowcone") || lowered.includes("cotton candy")) {
+        return "Machines";
+    }
+    if (lowered.includes("indoor") || lowered.includes("board game") || lowered.includes("jenga")) {
+        return "Indoor Games";
+    }
+    return raw;
+};
+
+const isKidsPartyMachine = (item = {}) => {
+    const name = `${item?.name || ""}`.toLowerCase();
+    return (
+        name.includes("popcorn") ||
+        name.includes("snow cone") ||
+        name.includes("snowcone") ||
+        name.includes("cotton candy")
+    );
+};
+
+const getCategory = (item = {}) => {
+    if (isKidsPartyMachine(item)) return "Kid's Party Rentals";
+    return normalizeCategory(item.specificCategory || item.specificcategory || item.category || "Other");
+};
+const isKnownRentalCategory = (item = {}) => {
+    const category = getCategory(item);
+    if (!category) return false;
+    if (["Machines", "Indoor Games", "Bouncy Castles"].includes(category)) return true;
+    return category.toLowerCase().includes("rental");
+};
+const isCategoryStub = (item = {}) => {
+    const nameSlug = slugify(item?.name);
+    return [
+        "bouncy-castle",
+        "bouncy-castles",
+        "indoor-games",
+        "indoor-game",
+        "indoor-board-games"
+    ].includes(nameSlug);
+};
+const shouldExcludeFromRentals = (item = {}) => {
+    const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+    if (source === "water") return true;
+    const category = getCategory(item);
+    if (category.toLowerCase() === "party supplies") return true;
+    if (category !== "Machines") return false;
+    const name = `${item?.name || ""}`.toLowerCase();
+    return (
+        name.includes("air blower") ||
+        name.includes("air-blower") ||
+        name.includes("airblower") ||
+        name.includes("blower pump")
+    );
+};
 const isContactPricing = (item = {}) => {
     const text = `${item.specificCategory || item.specificcategory || ""} ${item.category || ""} ${item.name || ""}`.toLowerCase(); 
     return (
-        text.includes("bouncy") ||
-        text.includes("castle") ||
         text.includes("package") ||
         text.includes("bundle") ||
         text.includes("deal")
     );
+};
+
+const uniqueByKey = (items = []) => {
+    const unique = new Map();
+    for (const item of items) {
+        const key = item.productId || item.id || `${slugify(item.name)}-${getCategory(item)}`;
+        if (!unique.has(key)) {
+            unique.set(key, item);
+        }
+    }
+    return Array.from(unique.values());
 };
 
 function Rentals() {
@@ -42,33 +147,130 @@ function Rentals() {
     const [loading, setLoading] = useState(true);
     const [showSideNav, setShowSideNav] = useState(false);
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, authReady } = useAuth();
 
     useEffect(() => {
         let isMounted = true;
-        setLoading(true);
+        if (!authReady) return () => {
+            isMounted = false;
+        };
+        if (!isAuthenticated) {
+            if (isMounted) {
+                setRentals([]);
+                setLoading(false);
+            }
+            return () => {
+                isMounted = false;
+            };
+        }
 
+        const controller = new AbortController();
         const loadRentals = async () => {
+            const cached = readRentalsCache();
+            if (cached?.length) {
+                setRentals(cached);
+            }
+            setLoading(!cached);
             try {
-                const res = await fetch("/.netlify/functions/inventory");
-                if (res.ok) {
-                    const data = await res.json();
-                    const rentalItems = (Array.isArray(data) ? data : [])
-                        .filter((item) => {
-                            const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
-                            const isRental = source ? source === "rental" : (item.sku || "").toString().toUpperCase().startsWith("REN");
-                            const isActive = (item.status ?? item.isActive) !== false;
-                            return isRental && isActive;
-                        });
-                        
-                    if (isMounted) {
-                        setRentals(rentalItems);
+                const inventoryPromise = fetch("/.netlify/functions/inventory", { signal: controller.signal });
+                const indoorPromise = fetch("/.netlify/functions/indoor_games", { signal: controller.signal });
+                const bouncyPromise = fetch("/.netlify/functions/bouncy_castles", { signal: controller.signal });
+                const machinesPromise = fetch("/.netlify/functions/machines", { signal: controller.signal });
+
+                const inventoryRes = await inventoryPromise;
+
+                if (!inventoryRes.ok) {
+                    console.error("Failed to fetch rentals:", inventoryRes.status);
+                }
+
+                const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+
+                const rentalItems = (Array.isArray(inventoryData) ? inventoryData : [])
+                    .filter((item) => {
+                        const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
+                        const isRental = source
+                            ? source === "rental"
+                            : (item.sku || "").toString().toUpperCase().startsWith("REN") || isKnownRentalCategory(item);
+                        const isActive = (item.status ?? item.isActive) !== false;
+                        return isRental && isActive;
+                    });
+
+                const baseCombined = rentalItems.filter(
+                    (item) => !isCategoryStub(item) && !shouldExcludeFromRentals(item)
+                );
+                if (isMounted) {
+                    setRentals(uniqueByKey(baseCombined));
+                    setLoading(false);
+                }
+
+                const safeJson = async (result, label) => {
+                    if (!result || result.status !== "fulfilled") return [];
+                    const response = result.value;
+                    if (!response.ok) {
+                        console.error(`Failed to fetch ${label}:`, response.status);
+                        return [];
                     }
-                } else {
-                    console.error("Failed to fetch rentals:", res.status);
+                    try {
+                        return await response.json();
+                    } catch (err) {
+                        console.error(`Failed to parse ${label} response`, err);
+                        return [];
+                    }
+                };
+
+                const [indoorResult, bouncyResult, machinesResult] = await Promise.allSettled([
+                    indoorPromise,
+                    bouncyPromise,
+                    machinesPromise,
+                ]);
+
+                const [indoorData, bouncyData, machinesData] = await Promise.all([
+                    safeJson(indoorResult, "indoor games"),
+                    safeJson(bouncyResult, "bouncy castles"),
+                    safeJson(machinesResult, "machines"),
+                ]);
+
+                const indoorItems = (Array.isArray(indoorData) ? indoorData : []).map((item) => ({
+                    ...item,
+                    sourceCategoryCode: "RENTAL",
+                    specificCategory: "Indoor Games",
+                    imageUrl: item.image,
+                    rate: item.rate || "per day",
+                    price: typeof item.price === "number" ? item.price / 100 : item.price,
+                }));
+
+                const bouncyItems = (Array.isArray(bouncyData) ? bouncyData : []).map((item) => ({
+                    ...item,
+                    sourceCategoryCode: "RENTAL",
+                    specificCategory: "Bouncy Castles",
+                    imageUrl: item.image,
+                    page: `/Rentals/${slugify(item.name)}`,
+                    price: item.priceRange || item.price,
+                    rate: item.rate || "per day",
+                }));
+
+                const machineItems = (Array.isArray(machinesData) ? machinesData : []).map((item) => ({
+                    ...item,
+                    id: item.productId || item.id,
+                    sourceCategoryCode: "RENTAL",
+                    specificCategory: "Machines",
+                    imageUrl: item.image,
+                    rate: item.rate || "per day",
+                    price: typeof item.price === "number" ? item.price / 100 : item.price,
+                }));
+
+                const combined = [...rentalItems, ...machineItems, ...indoorItems, ...bouncyItems]
+                    .filter((item) => !isCategoryStub(item) && !shouldExcludeFromRentals(item));
+                const merged = uniqueByKey(combined);
+
+                if (isMounted) {
+                    setRentals(merged);
+                    writeRentalsCache(merged);
                 }
             } catch (err) {
-                console.error("Error loading rentals:", err);
+                if (err?.name !== "AbortError") {
+                    console.error("Error loading rentals:", err);
+                }
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -77,59 +279,91 @@ function Rentals() {
         loadRentals();
         return () => {
             isMounted = false;
+            controller.abort();
         };
-    }, []);
+    }, [authReady, isAuthenticated]);
 
     useEffect(() => {
         document.body.classList.add("rentals-theme");
         return () => document.body.classList.remove("rentals-theme");
     }, []);
 
-    const filteredRentals = rentals.filter((item) => {
-        const category = getCategory(item);
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = categoryFilter === "All" || category === categoryFilter;
-        return matchesSearch && matchesCategory;
-    });
+    const filteredRentals = useMemo(() => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+        return rentals.filter((item) => {
+            const category = getCategory(item);
+            const name = (item?.name || "").toString().toLowerCase();
+            const matchesSearch = !normalizedQuery || name.includes(normalizedQuery);
+            const matchesCategory = categoryFilter === "All" || category === categoryFilter;
+            return matchesSearch && matchesCategory;
+        });
+    }, [rentals, searchQuery, categoryFilter]);
 
-    const filteredCategories = Array.from(new Set(filteredRentals.map((item) => getCategory(item))));
-    const groupedRentals = filteredCategories.map((category) => ({
-        category,
-        items: filteredRentals.filter((item) => getCategory(item) === category)
-    }));
+    const groupedRentals = useMemo(() => {
+        const grouped = new Map();
+        for (const item of filteredRentals) {
+            const category = getCategory(item);
+            if (!grouped.has(category)) {
+                grouped.set(category, []);
+            }
+            grouped.get(category).push(item);
+        }
+        const categories = Array.from(grouped.keys()).sort(sortCategories);
+        return categories.map((category) => ({
+            category,
+            id: slugify(category),
+            items: grouped.get(category),
+        }));
+    }, [filteredRentals]);
 
     // Track active section
     const [activeCategory, setActiveCategory] = useState(null);
-    const allCategories = Array.from(new Set(rentals.map((item) => getCategory(item))));
-    const categoryOptions = ["All", ...allCategories];
-    const heroStats = [
-        { label: "Rental items ready", value: rentals.length || "—" },
-        { label: "Same-day in Accra", value: "Available" }
-    ];
+    const allCategories = useMemo(() => {
+        const categories = new Set();
+        for (const item of rentals) {
+            categories.add(getCategory(item));
+        }
+        return Array.from(categories).sort(sortCategories);
+    }, [rentals]);
+    const categoryOptions = useMemo(() => ["All", ...allCategories], [allCategories]);
+    const heroStats = useMemo(
+        () => [
+            { label: "Rental items ready", value: rentals.length || "—" },
+            { label: "Same-day in Accra", value: "Available" },
+        ],
+        [rentals.length]
+    );
 
     useEffect(() => {
+        const sections = Array.from(document.querySelectorAll(".rent-category-section"));
+        let ticking = false;
         const handleScroll = () => {
-            const sections = document.querySelectorAll(".rent-category-section");
-            let current = "";
-            sections.forEach((section) => {
-                const sectionTop = section.offsetTop - 150;
-                if (window.scrollY >= sectionTop) {
-                    current = section.getAttribute("id");
-                }
-            });
-            setActiveCategory(current);
+            if (ticking) return;
+            ticking = true;
+            window.requestAnimationFrame(() => {
+                let current = "";
+                sections.forEach((section) => {
+                    const sectionTop = section.offsetTop - 150;
+                    if (window.scrollY >= sectionTop) {
+                        current = section.getAttribute("id") || "";
+                    }
+                });
+                setActiveCategory((prev) => (prev === current ? prev : current));
 
-            const grid = document.getElementById("rentals-grid");
-            if (grid) {
-                const showThreshold = grid.offsetTop - 140;
-                setShowSideNav(window.scrollY >= showThreshold);
-            }
+                const grid = document.getElementById("rentals-grid");
+                if (grid) {
+                    const showThreshold = grid.offsetTop - 140;
+                    const shouldShow = window.scrollY >= showThreshold;
+                    setShowSideNav((prev) => (prev === shouldShow ? prev : shouldShow));
+                }
+                ticking = false;
+            });
         };
 
         handleScroll();
-        window.addEventListener("scroll", handleScroll);
+        window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [groupedRentals]);
 
     if (loading) return (
         <div className="loader">
@@ -198,7 +432,7 @@ function Rentals() {
                     <div className="rentals-main">
                         <SideNav
                             items={allCategories.map((category) => ({
-                                id: category,
+                                id: slugify(category),
                                 label: category,
                             }))}
                             activeId={activeCategory}
@@ -272,8 +506,8 @@ function Rentals() {
                                 </div>
                             )}
 
-                            {groupedRentals.map(({ category, items }) => (
-                                <div id={category} key={category} className="rent-category-section">
+                            {groupedRentals.map(({ category, id, items }) => (
+                                <div id={id} key={id} className="rent-category-section">
                                     <div className="section-header rent-section-header">
                                         <p className="kicker">Category</p>
                                         <h2>{category}</h2>
@@ -282,7 +516,7 @@ function Rentals() {
                                         {items.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="rent-card glass-card"
+                                                className={`rent-card glass-card ${getCategory(item) === "Indoor Games" ? "rent-card-indoor" : ""}`}
                                                 role="button"
                                                 tabIndex={0}
                                                 onClick={() => navigate(rentalPath(item))}
@@ -293,8 +527,13 @@ function Rentals() {
                                                     }
                                                 }}
                                             >
-                                                <div className="rent-image">
-                                                    <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name}/>
+                                                <div className={`rent-image ${getCategory(item) === "Indoor Games" ? "rent-image-indoor" : ""}`}>
+                                                    <img
+                                                        src={item.image || item.imageUrl || "/imgs/placeholder.png"}
+                                                        alt={item.name}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                    />
                                                     <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
                                                 </div>
                                                 <div className="rent-details">
@@ -326,8 +565,8 @@ function Rentals() {
                                                     </p>
 
                                                     <div className="rent-actions">
-                                                        <Link className="hero-btn hero-btn-link" to={rentalPath(item)} aria-label={`Explore more about ${item.name}`}>
-                                                            Explore More
+                                                        <Link className="hero-btn hero-btn-link" to={rentalPath(item)} aria-label={`View ${item.name}`}>
+                                                            View
                                                         </Link>
                                                     </div>
                                                 </div>

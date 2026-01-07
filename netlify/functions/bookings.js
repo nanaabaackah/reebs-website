@@ -10,6 +10,77 @@ import {
   backfillAuditDefaults,
   normalizeActor,
 } from "./auditHelpers.js";
+import { notifyManager } from "./_shared/managerPush.js";
+import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
+
+const formatAmount = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "0.00";
+  return (parsed / 100).toFixed(2);
+};
+
+const buildBookingNotification = (booking) => {
+  const start = booking?.startTime ? ` ${booking.startTime}` : "";
+  const end = booking?.endTime ? `-${booking.endTime}` : "";
+  const itemsCount = Array.isArray(booking?.items) ? booking.items.length : 0;
+  const itemLabel = itemsCount === 1 ? "item" : "items";
+  const dateLabel = booking?.eventDate || "Date TBD";
+
+  const bodyParts = [
+    booking?.customerName || "New customer",
+    `GHS ${formatAmount(booking?.totalAmount || 0)}`,
+    `${itemsCount} ${itemLabel}`,
+    `${dateLabel}${start}${end}`,
+  ];
+
+  if (booking?.venueAddress) {
+    bodyParts.push(booking.venueAddress);
+  }
+
+  return {
+    title: `New booking #${booking?.id || ""}`.trim(),
+    body: bodyParts.filter(Boolean).join(" · "),
+    data: {
+      type: "booking",
+      id: booking?.id,
+    },
+  };
+};
+
+const buildBookingWhatsAppLines = (booking) => {
+  const start = booking?.startTime ? ` ${booking.startTime}` : "";
+  const end = booking?.endTime ? `-${booking.endTime}` : "";
+  const items = Array.isArray(booking?.items) ? booking.items : [];
+  const itemLines = items
+    .map((item) => {
+      const name = item?.productName || (item?.productId ? `Item ${item.productId}` : "");
+      const qty = Number.isFinite(Number(item?.quantity)) ? ` x${item.quantity}` : "";
+      return name ? `${name}${qty}` : "";
+    })
+    .filter(Boolean);
+
+  const lines = [
+    `New booking #${booking?.id || ""}`.trim(),
+    `Customer: ${booking?.customerName || "Unknown"}`,
+    `Total: GHS ${formatAmount(booking?.totalAmount || 0)}`,
+    `Event date: ${booking?.eventDate || "Date TBD"}${start}${end}`,
+  ];
+
+  if (booking?.venueAddress) {
+    lines.push(`Venue: ${booking.venueAddress}`);
+  }
+  if (itemLines.length) {
+    lines.push(`Items: ${items.length}`);
+    lines.push(...itemLines.slice(0, 6));
+    if (itemLines.length > 6) {
+      lines.push(`+${itemLines.length - 6} more`);
+    }
+  }
+  return lines;
+};
+
+const BUNDLE_MIN_ITEMS = 3;
+const BUNDLE_DISCOUNT_RATE = 0.1;
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -20,6 +91,25 @@ const json = (statusCode, body, extraHeaders = {}) => ({
   },
   body: JSON.stringify(body),
 });
+
+const ensureBookingSequence = async (client) => {
+  try {
+    await client.query(
+      `SELECT setval(pg_get_serial_sequence('booking','id'),
+        COALESCE((SELECT MAX(id) FROM "booking"), 0) + 1,
+        false)`
+    );
+  } catch (err) {
+    console.warn("Booking sequence sync failed:", err?.message || err);
+  }
+};
+
+const ensureValidUserId = async (client, userId) => {
+  const parsedId = Number(userId);
+  if (!Number.isFinite(parsedId)) return null;
+  const res = await client.query(`SELECT id FROM "user" WHERE id = $1`, [parsedId]);
+  return res.rowCount > 0 ? parsedId : null;
+};
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -121,8 +211,11 @@ export async function handler(event) {
     const endTime = typeof data.endTime === "string" ? data.endTime.trim() : null;
     const venueAddress = typeof data.venueAddress === "string" ? data.venueAddress.trim() : "";
     const status = typeof data.status === "string" && data.status.trim() ? data.status.trim() : "pending";
+    const assignedUserIdRaw = data.assignedUserId;
+    const hasAssignedUser = Object.prototype.hasOwnProperty.call(data, "assignedUserId");
     const items = Array.isArray(data.items) ? data.items : [];
-    const discountValue = Number.isFinite(Number(data.discount)) ? Math.max(0, Number(data.discount)) : 0;
+    let discountValue = Number.isFinite(Number(data.discount)) ? Math.max(0, Number(data.discount)) : 0;
+    const applyBundleDiscount = data.applyBundleDiscount === true;
 
     if (!Number.isFinite(customerId)) return json(400, { error: "customerId is required." });
     if (!eventDate) return json(400, { error: "eventDate is required." });
@@ -140,7 +233,15 @@ export async function handler(event) {
       return json(400, { error: "At least one booking item is required." });
     }
 
+    const bundleEligible = normalizedItems.length >= BUNDLE_MIN_ITEMS;
+
     const actor = await resolveActor(client, normalizeActor(data));
+    const actorUserId = await ensureValidUserId(client, actor.userId);
+    const assignedUserIdValue = hasAssignedUser
+      ? assignedUserIdRaw === null
+        ? null
+        : await ensureValidUserId(client, assignedUserIdRaw)
+      : null;
 
     await client.query("BEGIN");
 
@@ -173,15 +274,78 @@ export async function handler(event) {
         const source = typeof product.sourceCategoryCode === "string"
           ? product.sourceCategoryCode.trim().toUpperCase()
           : "";
-        if (source !== "RENTAL" && !sku.startsWith("RENT")) {
+        if (source !== "RENTAL" && !sku.startsWith("RENT") && !sku.startsWith("PUM")) {
           await client.query("ROLLBACK");
           return json(400, { error: `Bookings can only include rental items. Item ${item.productId} is not a rental.` });
         }
       }
 
+      if (applyBundleDiscount) {
+        if (bundleEligible) {
+          const bundleSubtotalCents = normalizedItems.reduce((sum, item) => {
+            const product = productMap.get(item.productId);
+            const priceCents = Number.isFinite(item.price)
+              ? Math.round(item.price * 100)
+              : product.price;
+            return sum + priceCents * item.quantity;
+          }, 0);
+          discountValue = bundleSubtotalCents > 0
+            ? Math.round(bundleSubtotalCents * BUNDLE_DISCOUNT_RATE) / 100
+            : 0;
+        } else {
+          discountValue = 0;
+        }
+      }
+
+      const motorsRes = await client.query(
+        `SELECT "productId", COALESCE("motorsToPump", 0) AS motors
+         FROM "bouncy_castles"
+         WHERE "productId" = ANY($1::int[])`,
+        [productIds]
+      );
+      const motorsMap = new Map(
+        motorsRes.rows.map((row) => [Number(row.productId), Number(row.motors) || 0])
+      );
+
+      let finalItems = [...normalizedItems];
+      const pumpQuantity = normalizedItems.reduce((sum, item) => {
+        const motors = motorsMap.get(item.productId) || 0;
+        return sum + motors * item.quantity;
+      }, 0);
+
+      if (pumpQuantity > 0) {
+        const pumpRes = await client.query(
+          `SELECT id, price, sku, "sourceCategoryCode"
+           FROM "product"
+           WHERE LOWER(name) LIKE '%motor pump%' OR UPPER(sku) LIKE 'PUM-%'
+           ORDER BY id
+           LIMIT 1`
+        );
+        const pumpProduct = pumpRes.rows[0];
+        if (!pumpProduct) {
+          await client.query("ROLLBACK");
+          return json(500, { error: "Motor Pump product is missing. Import motor pumps first." });
+        }
+        const pumpSku = typeof pumpProduct.sku === "string" ? pumpProduct.sku.trim().toUpperCase() : "";
+        const pumpSource = typeof pumpProduct.sourceCategoryCode === "string"
+          ? pumpProduct.sourceCategoryCode.trim().toUpperCase()
+          : "";
+        if (pumpSource !== "RENTAL" && !pumpSku.startsWith("RENT") && !pumpSku.startsWith("PUM")) {
+          await client.query("ROLLBACK");
+          return json(500, { error: "Motor Pump product is not marked as a rental." });
+        }
+        productMap.set(pumpProduct.id, pumpProduct);
+        const existingPump = finalItems.find((item) => item.productId === pumpProduct.id);
+        if (existingPump) {
+          existingPump.quantity = pumpQuantity;
+        } else {
+          finalItems.push({ productId: pumpProduct.id, quantity: pumpQuantity, price: null });
+        }
+      }
+
       const totalAmount = Math.max(
         0,
-        normalizedItems.reduce((sum, item) => {
+        finalItems.reduce((sum, item) => {
           const product = productMap.get(item.productId);
           const priceCents = Number.isFinite(item.price)
             ? Math.round(item.price * 100)
@@ -193,6 +357,7 @@ export async function handler(event) {
       let bookingId;
 
       if (event.httpMethod === "POST") {
+        await ensureBookingSequence(client);
         const bookingRes = await client.query(
           `INSERT INTO "booking" (
              "customerId",
@@ -209,7 +374,7 @@ export async function handler(event) {
              "updatedByUserId",
              "assignedUserId"
            )
-           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW(),NOW(),$8,$8,$8)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW(),NOW(),$8,$8,$9)
            RETURNING id`,
           [
             customerId,
@@ -219,7 +384,8 @@ export async function handler(event) {
             venueAddress,
             totalAmount,
             status,
-            actor.userId,
+            actorUserId,
+            hasAssignedUser ? assignedUserIdValue : actorUserId,
           ]
         );
         bookingId = bookingRes.rows[0].id;
@@ -248,7 +414,7 @@ export async function handler(event) {
                "updatedAt" = NOW(),
                "lastModifiedAt" = NOW(),
                "updatedByUserId" = $9,
-               "assignedUserId" = COALESCE("assignedUserId", $9)
+               "assignedUserId" = CASE WHEN $10 THEN $11 ELSE "assignedUserId" END
            WHERE id = $8`,
           [
             customerId,
@@ -259,14 +425,16 @@ export async function handler(event) {
             totalAmount,
             status,
             bookingId,
-            actor.userId,
+            actorUserId,
+            hasAssignedUser,
+            assignedUserIdValue,
           ]
         );
 
         await client.query(`DELETE FROM "bookingItem" WHERE "bookingId" = $1`, [bookingId]);
       }
 
-      for (const item of normalizedItems) {
+      for (const item of finalItems) {
         const fallbackPrice = productMap.get(item.productId)?.price;
         const price = Number.isFinite(item.price) ? Math.round(item.price * 100) : fallbackPrice;
         await client.query(
@@ -323,6 +491,21 @@ export async function handler(event) {
          GROUP BY b.id, c.id, assignee.id, updater.id, creator.id`,
         [bookingId]
       );
+
+      if (event.httpMethod === "POST") {
+        try {
+          await sendManagerWhatsApp({
+            lines: buildBookingWhatsAppLines(payload.rows[0]),
+          });
+        } catch (err) {
+          console.warn("WhatsApp notify failed:", err?.message || err);
+        }
+        try {
+          await notifyManager(client, buildBookingNotification(payload.rows[0]));
+        } catch (err) {
+          console.warn("Manager push failed:", err?.message || err);
+        }
+      }
 
       return json(event.httpMethod === "POST" ? 201 : 200, payload.rows[0]);
     } catch (err) {

@@ -328,24 +328,6 @@ function AdminDirectory() {
 
           {!loading && !error && activeTab !== "vendors" && (
             <div className="customers-table-wrapper">
-              <div className="table-pagination">
-                <span>
-                  Showing {currentList.length === 0 ? 0 : clampedPage * pageSize + 1}-
-                  {Math.min(currentList.length, (clampedPage + 1) * pageSize)} of {currentList.length}
-                </span>
-                <div className="table-pagination-controls">
-                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={clampedPage >= pageCount - 1}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
               <table className="customers-table">
                 <thead>
                   {activeTab === "customers" ? (
@@ -405,6 +387,24 @@ function AdminDirectory() {
                   )}
                 </tbody>
               </table>
+              <div className="table-pagination">
+                <span>
+                  Showing {currentList.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(currentList.length, (clampedPage + 1) * pageSize)} of {currentList.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>

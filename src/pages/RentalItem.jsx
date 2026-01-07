@@ -11,7 +11,7 @@ import {
   faTruckFast,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "/src/components/CartContext";
-import bouncyCastleTypes from "/src/data/bouncyCastleTypes.json";
+// Bouncy castle variants are fetched from the database
 
 const slugify = (value = "") =>
   value
@@ -70,6 +70,12 @@ const formatRate = (rate) => {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
+const formatAttendantsNeeded = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return "Not required";
+  return `${parsed} attendant${parsed === 1 ? "" : "s"}`;
+};
+
 const isBouncyCastleRental = (item) => {
   if (!item) return false;
   const nameSlug = slugify(item.name);
@@ -120,14 +126,6 @@ const BouncyVariantCard = ({ type, selected, onSelect }) => {
       </div>
       <dl className="bouncy-specs">
         <div>
-          <dt>Footprint</dt>
-          <dd>{type.footprint}</dd>
-        </div>
-        <div>
-          <dt>Height</dt>
-          <dd>{type.height}</dd>
-        </div>
-        <div>
           <dt>Capacity</dt>
           <dd>{type.capacity}</dd>
         </div>
@@ -157,6 +155,7 @@ function RentalItem() {
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBouncyType, setSelectedBouncyType] = useState(null);
+  const [bouncyTypes, setBouncyTypes] = useState([]);
 
   useEffect(() => {
     fetch("/.netlify/functions/inventory")
@@ -178,6 +177,17 @@ function RentalItem() {
   }, []);
 
   useEffect(() => {
+    fetch("/.netlify/functions/bouncy_castles")
+      .then((res) => res.json())
+      .then((data) => {
+        setBouncyTypes(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => {
+        console.error("❌ Error fetching bouncy castles:", err);
+      });
+  }, []);
+
+  useEffect(() => {
     document.body.classList.add("rentals-theme");
     return () => document.body.classList.remove("rentals-theme");
   }, []);
@@ -185,15 +195,40 @@ function RentalItem() {
 const rental = useMemo(() => {
   if (!slug) return null;
   const normalized = slug.toLowerCase();
-  return (
+  const directMatch =
     rentals.find((item) => {
       const pageSlug = item.page?.split("/").filter(Boolean).pop()?.toLowerCase();
       const nameSlug = slugify(item.name);
       const idSlug = String(item.id || "").toLowerCase();
       return pageSlug === normalized || nameSlug === normalized || idSlug === normalized;
-    }) || null
-  );
-}, [rentals, slug]);
+    }) || null;
+  if (directMatch) return directMatch;
+  const bouncyMatch = bouncyTypes.find((type) => slugify(type.name) === normalized);
+  if (bouncyMatch) {
+    return rentals.find((item) => isBouncyCastleRental(item)) || null;
+  }
+  return null;
+}, [rentals, slug, bouncyTypes]);
+
+useEffect(() => {
+  if (!slug || !bouncyTypes.length) return;
+  const normalized = slug.toLowerCase();
+  const matched = bouncyTypes.find((type) => slugify(type.name) === normalized);
+  if (matched) {
+    setSelectedBouncyType(matched);
+  }
+}, [slug, bouncyTypes]);
+
+const displayRental = rental && selectedBouncyType
+  ? {
+      ...rental,
+      name: selectedBouncyType.name,
+      image: selectedBouncyType.image || rental.image,
+      imageUrl: selectedBouncyType.image || rental.imageUrl,
+      price: selectedBouncyType.priceRange ?? rental.price,
+      age: selectedBouncyType.recommendedAge ?? rental.age,
+    }
+  : rental;
 
   const similar = useMemo(() => {
     if (!rental) return [];
@@ -222,6 +257,9 @@ const rental = useMemo(() => {
   const bookingLink = showBouncyTable
     ? `/Book?rental=${bookingSlug}${selectedBouncySlug ? `&bouncy=${selectedBouncySlug}` : ""}`
     : `/Book?rental=${bookingSlug}`;
+  const attendantsNeeded = formatAttendantsNeeded(
+    selectedBouncyType?.attendantsNeeded ?? rental?.attendantsNeeded
+  );
 
   const handleBookingClick = (event) => {
     if (!showBouncyTable || selectedBouncyType) return;
@@ -292,26 +330,26 @@ const rental = useMemo(() => {
             </button>
             <Link to="/Rentals">Rentals</Link>
             <FontAwesomeIcon icon={faArrowRightLong} aria-hidden="true" />
-            <span>{rental.name}</span>
+            <span>{displayRental.name}</span>
           </nav>
 
           <section className="rental-hero-card glass-card">
             <div className="rental-hero-media">
-              <img src={rental.image || rental.imageUrl || "/imgs/placeholder.png"} alt={rental.name} />
-              <span className="rent-tag">{rental.specificCategory || rental.specificcategory || rental.category}</span>
+              <img src={displayRental.image || displayRental.imageUrl || "/imgs/placeholder.png"} alt={displayRental.name} />
+              <span className="rent-tag">{displayRental.specificCategory || displayRental.specificcategory || displayRental.category}</span>
             </div>
             <div className="rental-hero-copy">
               <p className="kicker">Rental highlight</p>
-              <h1>{rental.name}</h1>
+              <h1>{displayRental.name}</h1>
               <p className="rental-sub">
                 Styled the REEBS way — delivered, set up, and ready for fun.
               </p>
 
               <div className="rental-price-line">
                 <div>
-                  <p className="price">{formatRentalPrice(rental, convertPrice, formatCurrency)}</p>
+                  <p className="price">{formatRentalPrice(displayRental, convertPrice, formatCurrency)}</p>
                   <p className="rent-meta">
-                    {rental.quantity ? `${rental.quantity} available` : "Availability upon request"}
+                    {displayRental.quantity ? `${displayRental.quantity} available` : "Availability upon request"}
                   </p>
                 </div>
                 <div className="rental-currency">
@@ -335,11 +373,11 @@ const rental = useMemo(() => {
 
               <div className="rental-meta-grid">
                 <div>
-                  <strong>{rental.specificCategory || rental.specificcategory || rental.category}</strong>
+                  <strong>{displayRental.specificCategory || displayRental.specificcategory || displayRental.category}</strong>
                 </div>
                 <div>
                   <span className="rent-meta">Rate</span>
-                  <strong>{formatRate(rental.rate)}</strong>
+                  <strong>{formatRate(displayRental.rate)}</strong>
                 </div>
                 <div className={isAvailable ? "status-available" : ""}>
                   <span className="rent-meta">Status</span>
@@ -347,7 +385,11 @@ const rental = useMemo(() => {
                 </div>
                 <div>
                   <span className="rent-meta">Age range</span>
-                  <strong>{formatAge(rental.age)}</strong>
+                  <strong>{formatAge(displayRental.age)}</strong>
+                </div>
+                <div>
+                  <span className="rent-meta">Attendants needed</span>
+                  <strong>{attendantsNeeded}</strong>
                 </div>
               </div>
 
@@ -373,11 +415,11 @@ const rental = useMemo(() => {
                 <p className="kicker">Bouncy castles</p>
                 <h2 id="bouncy-table-heading">Choose the right size for your party</h2>
                 <p className="rental-sub">
-                  Compare footprints, capacity, and pricing so you can match the castle to your guest count and venue space.
+                  Compare capacity and pricing so you can match the castle to your guest count and venue space.
                 </p>
               </div>
               <div className="bouncy-card-grid">
-                {bouncyCastleTypes.map((type) => (
+                {bouncyTypes.map((type) => (
                   <BouncyVariantCard
                     key={type.name}
                     type={type}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import CookieBanner from '/src/components/CookieBanner';
 import Map from '/src/components/Map';
 import { Link } from 'react-router-dom';
@@ -7,8 +7,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEnvelope, faPhone, faLocationDot, faClock } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp, faFacebook, faInstagram, faTiktok } from '@fortawesome/free-brands-svg-icons';
 import './master.css';
+import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
 
 function Contact() {
+    useEffect(() => {
+        const controller = new AbortController();
+        fetchInventoryWithCache({ signal: controller.signal }).catch((err) => {
+            if (err?.name !== "AbortError") {
+                console.error("Error warming inventory cache:", err);
+            }
+        });
+        return () => controller.abort();
+    }, []);
+
     return (
         <div className="contact-page">
             <CookieBanner />

@@ -30,13 +30,12 @@
           - img [ref=e27] [cursor=pointer]
         - button [ref=e29] [cursor=pointer]:
           - img [ref=e31] [cursor=pointer]
-        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
-          - img [ref=e34] [cursor=pointer]
-  - link "Skip to main content" [ref=e36] [cursor=pointer]:
+        - button "User menu" [ref=e34] [cursor=pointer]:
+          - img [ref=e35] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e37] [cursor=pointer]:
+          - img [ref=e38] [cursor=pointer]
+  - link "Skip to main content" [ref=e40] [cursor=pointer]:
     - /url: "#main"
-  - generic [ref=e38]:
-    - button "×" [ref=e39] [cursor=pointer]
-    - img [ref=e40]
   - main [ref=e41]:
     - region "REEBS Party Themes We promise less hustle, more fun!" [ref=e42]:
       - generic [ref=e46]:
@@ -45,7 +44,7 @@
         - heading "We promise less hustle, more fun!" [level=2] [ref=e49]:
           - generic [ref=e50]: We promise less hustle, more fun!
           - generic [ref=e51]: We promise less hustle, more fun!
-        - paragraph [ref=e52]: Bouncy castles, full setups, balloons, and curated party boxes delivered or set up for you.
+        - paragraph [ref=e52]: Bouncy castles, party planning, balloons, and curated party boxes delivered or set up for you.
         - generic "heading-buttons" [ref=e53]:
           - link "View Rentals" [ref=e54] [cursor=pointer]:
             - /url: /rentals
@@ -62,11 +61,11 @@
             - generic [ref=e63]: Delivery available
           - generic [ref=e64]:
             - strong [ref=e65]: Free
-            - generic [ref=e66]: Planning consult
-    - region "Less hustle. More fun." [ref=e67]:
+            - generic [ref=e66]: Planning consultation
+    - region "Simple, Less hustle. More fun." [ref=e67]:
       - generic [ref=e68]:
         - paragraph [ref=e69]: Why choose us
-        - heading "Less hustle. More fun." [level=2] [ref=e70]
+        - heading "Simple, Less hustle. More fun." [level=2] [ref=e70]
       - list [ref=e71]:
         - listitem [ref=e72]:
           - heading "Easy Booking" [level=3] [ref=e73]
@@ -92,12 +91,12 @@
           - generic [ref=e93]: "1"
           - generic [ref=e94]:
             - heading "Dream & Define" [level=3] [ref=e95]
-            - paragraph [ref=e96]: Tell us the vibe, theme, and guest list. We share a mini moodboard within 24 hours.
+            - paragraph [ref=e96]: Tell us the vibe, theme, and guest list. We send potential ideas within 24 hours.
         - listitem [ref=e97]:
           - generic [ref=e98]: "2"
           - generic [ref=e99]:
             - heading "Design & Prep" [level=3] [ref=e100]
-            - paragraph [ref=e101]: We lock rentals, decor, and supplies, then prep everything in our studio before your date.
+            - paragraph [ref=e101]: We lock rentals, decor, and supplies, then prep everything before your date.
         - listitem [ref=e102]:
           - generic [ref=e103]: "3"
           - generic [ref=e104]:
@@ -142,7 +141,7 @@
         - listitem [ref=e141]:
           - link "Custom Event Decor" [ref=e142] [cursor=pointer]:
             - /url: /Rentals#Event%20Decor%20&%20Setup
-          - paragraph [ref=e143]: We design and set up stunning balloon arches, table styling, and more.
+          - paragraph [ref=e143]: We design and set up decorations, table styling, and more.
         - listitem [ref=e144]:
           - link "All-in-One Party Packages" [ref=e145] [cursor=pointer]:
             - /url: /Rentals#Event%20Decor%20&%20Setup

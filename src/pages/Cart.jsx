@@ -21,6 +21,8 @@ const Cart = () => {
 
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.cartQuantity, 0);
+  const convertedSubtotal = convertPrice(subtotal);
+  const formattedSubtotal = formatCurrency(convertedSubtotal);
   const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
   const getItemImage = (item) =>
     item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
@@ -42,22 +44,18 @@ const Cart = () => {
     <main className="cart-shell" id="main">
       <section className="cart-hero" id="cart-intro" aria-labelledby="cart-heading">
         <div className="cart-hero-copy back-heading">
-          <p className="cart-hero-kicker">Bags & bundles</p>
+          <p className="cart-hero-kicker">Check out your items</p>
           <h1 id="cart-heading">Your Cart</h1>
-          <p className="cart-hero-sub">
-            Curate the party stack you love—switch currency, tweak quantities, and checkout when you are ready.
-          </p>
           <div className="cart-hero-pills" aria-label="Cart highlights">
             <span className="pill">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
-            <span className="pill pill-ghost">Realtime stock holds your picks</span>
-            <span className="pill pill-accent">Dark-mode ready ✨</span>
+            <span className="pill pill-accent">Subtotal {formattedSubtotal}</span>
           </div>
         </div>
         <div className="cart-hero-card">
           <div className="hero-card-top">
             <div>
               <p className="kicker">Current subtotal</p>
-              <strong>{formatCurrency(convertPrice(subtotal))}</strong>
+              <strong>{formattedSubtotal}</strong>
             </div>
             <div className="currency-picker">
               <label htmlFor="currency-select">Currency</label>
@@ -110,8 +108,12 @@ const Cart = () => {
               </div>
 
               <div className="cart-list">
-                {cart.map((item) => (
-                  <article className="cart-line" key={item.id}>
+                {cart.map((item, index) => (
+                  <article
+                    className="cart-line"
+                    key={item.id}
+                    style={{ "--cart-delay": `${Math.min(index, 8) * 0.05}s` }}
+                  >
                     <div className="cart-line-media">
                       <img src={getItemImage(item)} alt={item.name} loading="lazy" />
                       {getItemCategory(item) && (
@@ -207,7 +209,7 @@ const Cart = () => {
                 </div>
                 <div className="summary-row">
                   <span>Subtotal</span>
-                  <strong>{formatCurrency(convertPrice(subtotal))}</strong>
+                  <strong>{formattedSubtotal}</strong>
                 </div>
               </div>
               <div className="summary-perks">
@@ -215,9 +217,9 @@ const Cart = () => {
                 <span><FontAwesomeIcon icon={faTruck} /> We deliver & pick up</span>
                 <span><FontAwesomeIcon icon={faGift} /> Styled for fun</span>
               </div>
-              <button className="checkout-btn">Proceed to Checkout</button>
+              <Link className="checkout-btn" to="/Checkout">Proceed to Checkout</Link>
               <Link className="ghost-btn summary-continue" to="/Shop">
-                Keep adding items
+                Add more items
               </Link>
             </aside>
           </div>

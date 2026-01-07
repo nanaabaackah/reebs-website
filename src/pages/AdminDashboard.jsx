@@ -8,6 +8,7 @@ import {
   faGear,
   faUsers,
   faChartPie,
+  faChartLine,
   faCalendarDays,
   faHandshake,
   faCalendarCheck,
@@ -16,7 +17,13 @@ import {
   faMoneyBillWave,
   faFolderOpen,
   faWrench,
+  faTruck,
+  faRoute,
   faUserAlt,
+  faRotateRight,
+  faTimes,
+  faClock,
+  faBullhorn,
 } from "@fortawesome/free-solid-svg-icons";
 import "./master.css";
 import { useAuth } from "../components/AuthContext";
@@ -62,10 +69,15 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
+const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState("");
+  const [analytics, setAnalytics] = useState(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState("");
   const { user } = useAuth();
   const [userStats, setUserStats] = useState(null);
   const [userStatsError, setUserStatsError] = useState("");
@@ -75,6 +87,11 @@ function AdminDashboard() {
   const [userDetailsLoaded, setUserDetailsLoaded] = useState(false);
   const [userDetailsError, setUserDetailsError] = useState("");
   const [selectedUserStat, setSelectedUserStat] = useState("");
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const [lowStockModalOpen, setLowStockModalOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches
+  );
   const roleKey = (user?.role || "admin").toLowerCase();
   const effectiveRole = roleKey === "manager" ? "admin" : roleKey;
   const showGlobalKpis = effectiveRole === "admin"; // admin + manager
@@ -83,6 +100,19 @@ function AdminDashboard() {
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia(MOBILE_VIEW_QUERY);
+    const handleChange = () => setIsMobileView(mediaQuery.matches);
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
   }, []);
 
   const defaultUserStats = { orders: 0, orderRevenue: 0, bookings: 0, bookingRevenue: 0, stockMovements: 0 };
@@ -110,12 +140,13 @@ function AdminDashboard() {
 
     try {
       const response = await fetch(
-        `/.netlify/functions/userStats?userId=${user.id}${includeDetails ? "&details=1" : ""}`
+        `/.netlify/functions/userStats?userId=${user.id}${includeDetails ? "&details=1" : ""}&ts=${Date.now()}`
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Failed to load your KPIs");
 
       applyUserStats(data);
+      setLastRefreshedAt(new Date().toISOString());
 
       if (includeDetails) {
         setUserDetails({
@@ -154,6 +185,12 @@ function AdminDashboard() {
       units: toNumber(payload.units),
       bookings: toNumber(payload.bookings),
       bookingRevenue: toNumber(payload.bookingRevenue),
+      operatingExpenses: toNumber(payload.operatingExpenses),
+      operatingExpensesWindow: toNumber(payload.operatingExpensesWindow),
+      operatingExpensesTotal: toNumber(payload.operatingExpensesTotal),
+      expenseWindowLabel: payload.expenseWindowLabel || "",
+      maintenanceOpen: toNumber(payload.maintenanceOpen),
+      maintenanceCost: toNumber(payload.maintenanceCost),
       lockedInNextQuarter: toNumber(payload.lockedInNextQuarter),
       nextQuarterLabel: payload.nextQuarterLabel || "Next quarter",
       conflicts: Array.isArray(payload.conflicts) ? payload.conflicts : [],
@@ -166,6 +203,11 @@ function AdminDashboard() {
         ...row,
         units: toNumber(row.units),
       })),
+      lowStockCount: toNumber(payload.lowStockCount),
+      lowStockItems: list(payload.lowStockItems, (row) => ({
+        ...row,
+        stock: toNumber(row.stock),
+      })),
     };
   }, []);
 
@@ -173,12 +215,13 @@ function AdminDashboard() {
     setLoadingStats(true);
     setStatsError("");
     try {
-      const response = await fetch("/.netlify/functions/orderStats");
+      const response = await fetch(`/.netlify/functions/orderStats?ts=${Date.now()}`);
       if (!response.ok) {
         throw new Error("Failed to load KPI data.");
       }
       const data = await response.json();
       setStats(normalizeStats(data));
+      setLastRefreshedAt(new Date().toISOString());
     } catch (err) {
       console.error("Failed to load KPI data", err);
       setStatsError(err.message || "Unable to load KPIs right now.");
@@ -187,9 +230,29 @@ function AdminDashboard() {
     }
   }, [normalizeStats]);
 
+  const fetchAnalytics = useCallback(async () => {
+    setLoadingAnalytics(true);
+    setAnalyticsError("");
+    try {
+      const response = await fetch(`/.netlify/functions/analytics?ts=${Date.now()}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Failed to load analytics.");
+      setAnalytics(data);
+    } catch (err) {
+      console.error("Failed to load analytics", err);
+      setAnalyticsError(err.message || "Unable to load analytics.");
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   useEffect(() => {
     setUserDetails({ orders: [], bookings: [], stockMovements: [] });
@@ -204,9 +267,29 @@ function AdminDashboard() {
 
   const topProducts = useMemo(() => stats?.topProducts || [], [stats]);
   const windowLabel = stats?.windowDays ? `Last ${stats.windowDays} days` : "Last 30 days";
+  const expenseWindowLabel = stats?.expenseWindowLabel || windowLabel;
+  const operatingExpensesWindow = stats?.operatingExpensesWindow ?? stats?.operatingExpenses ?? 0;
+  const operatingExpensesDisplay = stats?.operatingExpenses ?? 0;
   const lockedInNextQuarter = formatCurrency(stats?.lockedInNextQuarter || 0);
   const nextQuarterLabel = stats?.nextQuarterLabel || "Next quarter";
-  const topRental = stats?.topRentalBookings?.[0];
+  const lowStockItems = useMemo(() => stats?.lowStockItems || [], [stats]);
+  const topBookedRental = useMemo(() => stats?.topRentalBookings?.[0], [stats]);
+  const lowStockCount = stats?.lowStockCount ?? lowStockItems.length ?? 0;
+  const inventoryValue = analytics?.inventoryValue ?? 0;
+  const retailRevenue = analytics?.retailRevenue ?? 0;
+  const rentalRevenue = analytics?.rentalRevenue ?? 0;
+  const revenueTotal = retailRevenue + rentalRevenue || 1;
+  const revenueSplit = {
+    retailPct: Math.round((retailRevenue / revenueTotal) * 100),
+    rentalPct: Math.round((rentalRevenue / revenueTotal) * 100),
+  };
+  const categories = analytics?.categories || [];
+  const categoryTotal = categories.reduce((sum, item) => sum + (item.count || 0), 0) || 1;
+  const velocity = analytics?.velocity || [];
+  const maxVelocity = velocity.reduce(
+    (max, row) => Math.max(max, row.stockIn || 0, row.stockOut || 0),
+    0
+  );
   const displayName =
     user?.firstName ||
     user?.fullName ||
@@ -216,23 +299,48 @@ function AdminDashboard() {
     user?.role ||
     "User";
 
+  const refreshDashboard = () => {
+    fetchStats();
+    fetchAnalytics();
+    if (showPersonalKpis) {
+      const includeDetails = Boolean(selectedUserStat || userDetailsLoaded);
+      fetchUserStats(includeDetails);
+    }
+  };
+
   const apps = [
     { label: "Inventory", path: "/admin/inventory", icon: faBoxOpen, roles: ["admin", "staff", "warehouse", "manager"] },
+    { label: "Vendors", path: "/admin/vendors", icon: faTruck, roles: ["admin", "manager"] },
+    { label: "Delivery", path: "/admin/delivery", icon: faRoute, roles: ["admin", "staff", "manager", "driver"] },
     { label: "Orders", path: "/admin/orders", icon: faReceipt, roles: ["admin", "staff", "manager"] },
     { label: "Settings", path: "/admin/settings", icon: faGear, roles: ["admin", "staff", "manager"] },
     { label: "Accounting", path: "/admin/accounting", icon: faChartPie, roles: ["admin", "manager"] },
+    { label: "Marketing", path: "/admin/marketing", icon: faBullhorn, roles: ["admin", "manager"] },
     { label: "Bookings", path: "/admin/bookings", icon: faCalendarDays, roles: ["admin", "staff", "manager"] },
-    { label: "Directory", path: "/admin/crm", icon: faHandshake, roles: ["admin", "staff", "manager"] },
+    { label: "Customers", path: "/admin/customers", icon: faHandshake, roles: ["admin", "staff", "manager"] },
+    { label: "Directory", path: "/admin/crm", icon: faUsers, roles: ["admin", "staff", "manager"] },
     { label: "Scheduler", path: "/admin/schedule", icon: faCalendarCheck, roles: ["admin", "staff", "manager"] },
     { label: "HR", path: "/admin/hr", icon: faUserTie, roles: ["admin", "manager"] },
     { label: "Invoicing", path: "/admin/invoicing", icon: faFileInvoiceDollar, roles: ["admin", "manager"] },
     { label: "Expenses", path: "/admin/expenses", icon: faMoneyBillWave, roles: ["admin", "staff", "manager"] },
     { label: "Documents", path: "/admin/documents", icon: faFolderOpen, roles: ["admin", "staff", "manager"] },
+    { label: "Timesheets", path: "/admin/timesheets", icon: faClock, roles: ["admin", "staff", "manager", "warehouse", "driver", "sales"] },
     { label: "Users", path: "/admin/roles", icon: faUserAlt, roles: ["admin", "manager"] },
     { label: "Maintenance", path: "/admin/maintenance", icon: faWrench, roles: ["admin", "staff", "manager"] },
   ];
 
-  const visibleApps = apps.filter((app) => app.roles.includes(effectiveRole));
+  const mobileHiddenPaths = new Set([
+    "/admin/settings",
+    "/admin/roles",
+    "/admin/documents",
+    "/admin/hr",
+    "/admin/marketing",
+  ]);
+  const visibleApps = apps.filter((app) => {
+    if (!app.roles.includes(effectiveRole)) return false;
+    if (isMobileView && mobileHiddenPaths.has(app.path)) return false;
+    return true;
+  });
   const conflictText = useMemo(() => {
     const conflicts = stats?.conflicts || [];
     if (!conflicts.length) return "No inventory conflicts detected.";
@@ -244,6 +352,15 @@ function AdminDashboard() {
     const extra = conflicts.length > 1 ? ` + ${conflicts.length - 1} more conflict(s)` : "";
     return `Product #${first.product_id} (${first.product_name || "Item"}) needs ${first.total_quantity} on ${shortDate} with only ${first.product_stock ?? 0} in stock. Bookings: ${bookingList}${extra}`;
   }, [stats]);
+
+  const totalRevenue = useMemo(
+    () => (stats?.revenue ?? 0) + (stats?.bookingRevenue ?? 0),
+    [stats]
+  );
+  const netAfterExpenses = useMemo(
+    () => totalRevenue - operatingExpensesWindow,
+    [totalRevenue, operatingExpensesWindow]
+  );
 
   const personalStatMeta = {
     orders: {
@@ -375,6 +492,19 @@ function AdminDashboard() {
               Launch tools for stock, orders, and fulfillment.
             </p>
           </div>
+          <div className="admin-dashboard-actions">
+            <span className="admin-dashboard-refresh">
+              Last refreshed: {lastRefreshedAt ? formatDateTime(lastRefreshedAt) : "-"}
+            </span>
+            <button
+              type="button"
+              className="admin-kpi-retry"
+              onClick={refreshDashboard}
+              disabled={loadingStats || loadingAnalytics || loadingUserStats || loadingUserDetails}
+            >
+              <FontAwesomeIcon icon={faRotateRight} />
+            </button>
+          </div>
         </header>
 
         {showGlobalKpis && (
@@ -416,21 +546,57 @@ function AdminDashboard() {
                     <span className="admin-kpi-sub">{formatCurrency(stats?.bookingRevenue ?? 0)}</span>
                   </Link>
                 </div>
-                <Link to="/admin/inventory" className="admin-kpi-card admin-kpi-popular admin-kpi-link-card">
-                  <p className="admin-kpi-label">Popular products</p>
-                  {topProducts.length === 0 ? (
-                    <p className="admin-kpi-sub">No product data yet.</p>
-                  ) : (
-                    <ul className="admin-kpi-list">
-                      {topProducts.map((product) => (
-                        <li key={product.id}>
-                          <span>{product.name || "Untitled"}</span>
-                          <span>{product.units} sold</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Link>
+                <div className="admin-kpi-grid">
+                  <Link to="/admin/expenses" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Operating expenses</p>
+                    <h3 className="admin-kpi-value">{formatCurrency(operatingExpensesDisplay)}</h3>
+                    <span className="admin-kpi-sub">{expenseWindowLabel}</span>
+                  </Link>
+                  <Link to="/admin/maintenance" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Maintenance Request</p>
+                    <h3 className="admin-kpi-value">{stats?.maintenanceOpen ?? 0}</h3>
+                    <span className="admin-kpi-sub">
+                      {formatCurrency(stats?.maintenanceCost ?? 0)} · {expenseWindowLabel}
+                    </span>
+                  </Link>
+                  <Link to="/admin/accounting" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Net after expenses</p>
+                    <h3 className="admin-kpi-value">{formatCurrency(netAfterExpenses)}</h3>
+                    <span className="admin-kpi-sub">Sales minus OPEX</span>
+                  </Link>
+                </div>
+                <div className="admin-kpi-grid">
+                  <Link to="/admin/inventory" className="admin-kpi-card admin-kpi-popular admin-kpi-link-card">
+                    <p className="admin-kpi-label">Popular products</p>
+                    {topProducts.length === 0 ? (
+                      <p className="admin-kpi-sub">No product data yet.</p>
+                    ) : (
+                      <ul className="admin-kpi-list">
+                        {topProducts.map((product) => (
+                          <li key={product.id}>
+                            <span>{product.name || "Untitled"}</span>
+                            <span>{product.units} sold</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Link>
+                  <Link to="/admin/bookings" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Top booked rental</p>
+                    {topBookedRental ? (
+                      <>
+                        <p className="admin-kpi-note-value">{topBookedRental.name || "Untitled"}</p>
+                        <p className="admin-kpi-sub">
+                          {topBookedRental.units} units ·{" "}
+                          {topBookedRental.sku ? `SKU ${topBookedRental.sku}` : "No SKU"} ·{" "}
+                          {formatCurrency(topBookedRental.revenue)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="admin-kpi-sub">No recent rental bookings.</p>
+                    )}
+                  </Link>
+                </div>
                 <div className="admin-kpi-notes">
                   <div className="admin-kpi-note">
                     <div>
@@ -445,22 +611,97 @@ function AdminDashboard() {
                       <p className="admin-kpi-sub">{conflictText}</p>
                     </div>
                   </div>
-                  <div className="admin-kpi-note">
+                  <button
+                    type="button"
+                    className="admin-kpi-note admin-kpi-note-action"
+                    onClick={() => setLowStockModalOpen(true)}
+                    disabled={!lowStockItems.length}
+                    aria-label="View low stock items"
+                  >
                     <div>
-                      <p className="admin-kpi-label">Top booked rental</p>
-                      {topRental ? (
-                        <>
-                          <p className="admin-kpi-note-value">{topRental.name || "Untitled"}</p>
-                          <p className="admin-kpi-sub">
-                            {topRental.units} units · {topRental.sku ? `SKU ${topRental.sku}` : "No SKU"} · {formatCurrency(topRental.revenue)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="admin-kpi-sub">No recent rental bookings.</p>
+                      <p className="admin-kpi-label">Low stock items</p>
+                      <p className="admin-kpi-note-value">
+                        {lowStockCount} item{lowStockCount === 1 ? "" : "s"}
+                      </p>
+                      {!lowStockItems.length && (
+                        <p className="admin-kpi-sub">All products are above 2 in stock.</p>
                       )}
                     </div>
-                  </div>
+                  </button>
                 </div>
+                {loadingAnalytics && <p className="admin-kpi-status">Loading analytics...</p>}
+                {!loadingAnalytics && analyticsError && (
+                  <p className="admin-kpi-error">{analyticsError}</p>
+                )}
+                {!loadingAnalytics && !analyticsError && analytics && (
+                  <div className="admin-analytics-grid">
+                    <div className="admin-analytics-card">
+                      <div className="admin-analytics-head">
+                        <div>
+                          <p className="admin-kpi-label">Inventory Health</p>
+                          <h3>{formatCurrency(inventoryValue)}</h3>
+                        </div>
+                      </div>
+                      <div className="admin-category-bars">
+                        {categories.slice(0, 5).map((cat) => (
+                          <div key={cat.category} className="admin-category-row">
+                            <span>{cat.category || "Uncategorized"}</span>
+                            <div className="admin-progress">
+                              <span
+                                style={{ width: `${Math.max(6, (cat.count / categoryTotal) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        {!categories.length && <p className="admin-kpi-sub">No category data.</p>}
+                      </div>
+                    </div>
+
+                    <div className="admin-analytics-card">
+                      <div className="admin-analytics-head">
+                        <div>
+                          <p className="admin-kpi-label">Revenue Split</p>
+                          <h3>{formatCurrency(retailRevenue + rentalRevenue)}</h3>
+                        </div>
+                      </div>
+                      <div className="admin-split-bar">
+                        <span style={{ width: `${Math.max(5, revenueSplit.retailPct)}%` }} />
+                        <span className="rental" style={{ width: `${Math.max(5, revenueSplit.rentalPct)}%` }} />
+                      </div>
+                      <div className="admin-split-legend">
+                        <span>Retail {revenueSplit.retailPct}%</span>
+                        <span>Rentals {revenueSplit.rentalPct}%</span>
+                      </div>
+                    </div>
+
+                    <div className="admin-analytics-card">
+                      <div className="admin-analytics-head">
+                        <div>
+                          <p className="admin-kpi-label">Stock Velocity</p>
+                          <h3>Last 6 months</h3>
+                        </div>
+                      </div>
+                      <div className="admin-velocity">
+                        {velocity.map((row) => (
+                          <div key={row.label} className="admin-velocity-row">
+                            <span>{row.label}</span>
+                            <div className="admin-velocity-bars">
+                              <span
+                                className="in"
+                                style={{ width: `${maxVelocity ? (row.stockIn / maxVelocity) * 100 : 0}%` }}
+                              />
+                              <span
+                                className="out"
+                                style={{ width: `${maxVelocity ? (row.stockOut / maxVelocity) * 100 : 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        {!velocity.length && <p className="admin-kpi-sub">No stock movement data.</p>}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -572,6 +813,50 @@ function AdminDashboard() {
           ))}
         </section>
       </div>
+
+      {lowStockModalOpen && (
+        <div className="customers-modal" role="dialog" aria-modal="true">
+          <div className="customers-modal-panel">
+            <header>
+              <div>
+                <p className="customers-eyebrow">Inventory</p>
+                <h2>Low stock items</h2>
+              </div>
+              <button
+                type="button"
+                className="customers-modal-close"
+                onClick={() => setLowStockModalOpen(false)}
+                aria-label="Close"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </header>
+            <div className="admin-kpi-detail-body">
+              {lowStockItems.length ? (
+                <ul className="admin-kpi-list">
+                  {lowStockItems.map((item) => {
+                    const target = item.sku || item.name || "";
+                    const query = encodeURIComponent(target);
+                    return (
+                      <li key={item.id}>
+                        <Link
+                          to={`/admin/inventory?search=${query}`}
+                          onClick={() => setLowStockModalOpen(false)}
+                        >
+                          {item.name || "Untitled"}
+                        </Link>
+                        <span>Stock {item.stock ?? 0}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="admin-kpi-sub">All products are above 2 in stock.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

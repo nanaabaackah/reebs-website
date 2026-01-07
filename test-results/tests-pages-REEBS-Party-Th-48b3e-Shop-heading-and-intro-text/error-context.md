@@ -30,133 +30,119 @@
           - img [ref=e27] [cursor=pointer]
         - button [ref=e29] [cursor=pointer]:
           - img [ref=e31] [cursor=pointer]
-        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
-          - img [ref=e34] [cursor=pointer]
-  - link "Skip to main content" [ref=e36] [cursor=pointer]:
+        - button "User menu" [ref=e34] [cursor=pointer]:
+          - img [ref=e35] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e37] [cursor=pointer]:
+          - img [ref=e38] [cursor=pointer]
+  - link "Skip to main content" [ref=e40] [cursor=pointer]:
     - /url: "#main"
-  - main [ref=e37]:
-    - generic [ref=e38]:
-      - generic [ref=e39]:
-        - heading "Shop" [level=1] [ref=e40]
-        - paragraph [ref=e41]: Party supplies, toys, decor, and all the little delights that make celebrations feel magical.
-        - generic [ref=e42]:
-          - button "View cart" [ref=e43]
-          - link "Browse rentals" [ref=e44] [cursor=pointer]:
+  - main [ref=e41]:
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - heading "Shop" [level=1] [ref=e44]
+        - paragraph [ref=e45]: Party supplies, stationary, house supplieess, toys, decor, and all the little delights that make celebrations feel magical.
+        - generic [ref=e46]:
+          - button "View cart" [ref=e47]
+          - link "Browse rentals" [ref=e48] [cursor=pointer]:
             - /url: /rentals
-      - generic [ref=e46]:
-        - generic [ref=e47]:
-          - generic [ref=e48]: Daily currency rates → GHS
-          - generic [ref=e49]: Auto-updated
-        - generic [ref=e50]:
-          - generic [ref=e51]:
-            - generic [ref=e52]: 1 USD
-            - generic [ref=e53]: 11.64 GHS
-          - generic [ref=e54]:
-            - generic [ref=e55]: 1 GBP
-            - generic [ref=e56]: 15.53 GHS
-          - generic [ref=e57]:
-            - generic [ref=e58]: 1 EUR
-            - generic [ref=e59]: 13.57 GHS
-          - generic [ref=e60]:
-            - generic [ref=e61]: 1 CAD
-            - generic [ref=e62]: 8.43 GHS
-          - generic [ref=e63]:
-            - generic [ref=e64]: 1 NGN
-            - generic [ref=e65]: 0.01 GHS
-    - generic [ref=e67]:
-      - generic [ref=e68]:
-        - generic [ref=e69]:
-          - generic [ref=e70]:
-            - textbox "Search products" [ref=e71]
-            - generic "Powered by AI" [ref=e72]: ✨AI
-          - combobox "Filter by category" [ref=e73]:
-            - option "All categories" [selected]
-            - option "Party Supplies"
-            - option "Kid's Toys"
-          - combobox "Select currency" [ref=e74]:
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: Daily currency rates → GHS
+          - generic [ref=e53]: Auto-updated
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: 1 USD
+            - generic [ref=e57]: 12.50 GHS
+          - generic [ref=e58]:
+            - generic [ref=e59]: 1 GBP
+            - generic [ref=e60]: 16.67 GHS
+          - generic [ref=e61]:
+            - generic [ref=e62]: 1 EUR
+            - generic [ref=e63]: 14.29 GHS
+          - generic [ref=e64]:
+            - generic [ref=e65]: 1 CAD
+            - generic [ref=e66]: 10.00 GHS
+          - generic [ref=e67]:
+            - generic [ref=e68]: 1 NGN
+            - generic [ref=e69]: 0.01 GHS
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - textbox "Search products" [ref=e75]
+          - combobox "Select currency" [ref=e76]:
             - option "GHS" [selected]
             - option "USD"
             - option "CAD"
             - option "GBP"
             - option "EUR"
             - option "NGN"
-        - generic [ref=e75]:
-          - button "All" [ref=e76] [cursor=pointer]
-          - button "Party Supplies" [ref=e77] [cursor=pointer]
-          - button "Kid's Toys" [ref=e78] [cursor=pointer]
+          - generic [ref=e77]:
+            - checkbox "In stock only" [ref=e78] [cursor=pointer]
+            - text: In stock only
         - generic [ref=e79]:
-          - navigation [ref=e80]:
-            - link "Home" [ref=e81] [cursor=pointer]:
+          - button "All" [ref=e80] [cursor=pointer]
+          - button "Party Supplies" [ref=e81] [cursor=pointer]
+          - button "Kid's Toys" [ref=e82] [cursor=pointer]
+        - generic [ref=e83]:
+          - navigation [ref=e84]:
+            - link "Home" [ref=e85] [cursor=pointer]:
               - /url: /
-            - img [ref=e82]
-            - generic [ref=e84] [cursor=pointer]: Shop
-          - generic [ref=e85]: Showing 3 of 3 items
-      - generic [ref=e86]:
-        - generic [ref=e87]:
-          - button "Rainbow Balloon Set Tap to zoom" [ref=e88]:
-            - img "Rainbow Balloon Set" [ref=e89] [cursor=pointer]
-            - generic [ref=e90]: Tap to zoom
-          - generic [ref=e91]:
-            - generic [ref=e92]: Party Supplies
-            - heading "Rainbow Balloon Set" [level=3] [ref=e93]
-            - generic [ref=e94]:
-              - paragraph [ref=e95]: GHS 50.00
-              - paragraph [ref=e96]: 4 left in stock
-            - button "Show details" [ref=e97] [cursor=pointer]
-            - paragraph [ref=e98]: Colorful balloons for any party.
-            - button "Add to cart" [ref=e99] [cursor=pointer]:
-              - img [ref=e100] [cursor=pointer]
-              - text: Add to Cart
-        - generic [ref=e102]:
-          - button "Cotton Candy Kit Tap to zoom" [ref=e103]:
-            - img "Cotton Candy Kit" [ref=e104] [cursor=pointer]
-            - generic [ref=e105]: Tap to zoom
-          - generic [ref=e106]:
-            - generic [ref=e107]: Party Supplies
-            - heading "Cotton Candy Kit" [level=3] [ref=e108]
-            - generic [ref=e109]:
-              - paragraph [ref=e110]: GHS 120.00
-              - paragraph [ref=e111]: 6 left in stock
-            - button "Show details" [ref=e112] [cursor=pointer]
-            - paragraph [ref=e113]: Everything you need for fluffy cotton candy.
-            - button "Add to cart" [ref=e114] [cursor=pointer]:
-              - img [ref=e115] [cursor=pointer]
-              - text: Add to Cart
-        - generic [ref=e117]:
-          - button "Kids Headphones Tap to zoom" [ref=e118]:
-            - img "Kids Headphones" [ref=e119] [cursor=pointer]
-            - generic [ref=e120]: Tap to zoom
-          - generic [ref=e121]:
-            - generic [ref=e122]: Kid's Toys
-            - heading "Kids Headphones" [level=3] [ref=e123]
-            - generic [ref=e124]:
-              - paragraph [ref=e125]: GHS 220.00
-              - paragraph [ref=e126]: 3 left in stock
-            - button "Show details" [ref=e127] [cursor=pointer]
-            - paragraph [ref=e128]: Safe volume limit for kids.
-            - button "Add to cart" [ref=e129] [cursor=pointer]:
-              - img [ref=e130] [cursor=pointer]
-              - text: Add to Cart
-      - separator [ref=e132]
-      - generic [ref=e133]:
-        - generic [ref=e134]:
-          - generic [ref=e135]:
-            - paragraph [ref=e136]: Most popular
-            - heading "Fan-favorite picks" [level=3] [ref=e137]
-            - paragraph [ref=e138]: A quick rotation of items guests keep coming back for.
+            - img [ref=e86]
+            - generic [ref=e88] [cursor=pointer]: Shop
+          - generic [ref=e89]: Showing 1-3 of 3 items
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - button "Rainbow Balloon Set" [ref=e92]:
+            - img "Rainbow Balloon Set" [ref=e93] [cursor=pointer]
+            - img [ref=e95]
+          - generic [ref=e97]:
+            - paragraph [ref=e99]: GHS 50.00
+            - generic [ref=e100]: Party Supplies
+            - heading "Rainbow Balloon Set" [level=3] [ref=e101]
+            - paragraph [ref=e102]: 4 left in stock
+            - button "Add to cart" [ref=e103] [cursor=pointer]:
+              - img [ref=e104] [cursor=pointer]
+        - generic [ref=e106]:
+          - button "Cotton Candy Kit" [ref=e107]:
+            - img "Cotton Candy Kit" [ref=e108] [cursor=pointer]
+            - img [ref=e110]
+          - generic [ref=e112]:
+            - paragraph [ref=e114]: GHS 120.00
+            - generic [ref=e115]: Party Supplies
+            - heading "Cotton Candy Kit" [level=3] [ref=e116]
+            - paragraph [ref=e117]: 6 left in stock
+            - button "Add to cart" [ref=e118] [cursor=pointer]:
+              - img [ref=e119] [cursor=pointer]
+        - generic [ref=e121]:
+          - button "Kids Headphones" [ref=e122]:
+            - img "Kids Headphones" [ref=e123] [cursor=pointer]
+            - img [ref=e125]
+          - generic [ref=e127]:
+            - paragraph [ref=e129]: GHS 220.00
+            - generic [ref=e130]: Kid's Toys
+            - heading "Kids Headphones" [level=3] [ref=e131]
+            - paragraph [ref=e132]: 3 left in stock
+            - button "Add to cart" [ref=e133] [cursor=pointer]:
+              - img [ref=e134] [cursor=pointer]
+      - separator [ref=e136]
+      - generic [ref=e137]:
+        - generic [ref=e138]:
           - generic [ref=e139]:
-            - button "Previous popular item" [ref=e140] [cursor=pointer]: ‹
-            - button "Next popular item" [ref=e141] [cursor=pointer]: ›
-        - 'generic "Popular item: Cotton Candy Kit" [ref=e142]':
-          - img "Cotton Candy Kit" [ref=e144]
-          - generic [ref=e145]:
-            - generic [ref=e146]: Party Supplies
-            - heading "Cotton Candy Kit" [level=4] [ref=e147]
-            - paragraph [ref=e148]: GHS 120.00
-            - paragraph [ref=e149]: 6 in stock
-            - button "Add to cart" [ref=e150] [cursor=pointer]:
-              - img [ref=e151] [cursor=pointer]
-              - text: Add to Cart
+            - paragraph [ref=e140]: Most popular
+            - heading "Fan-favorite picks" [level=3] [ref=e141]
+            - paragraph [ref=e142]: A quick rotation of items guests keep coming back for.
+          - generic [ref=e143]:
+            - button "Previous popular item" [ref=e144] [cursor=pointer]: ‹
+            - button "Next popular item" [ref=e145] [cursor=pointer]: ›
+        - 'generic "Popular item: Cotton Candy Kit" [ref=e146]':
+          - img "Cotton Candy Kit" [ref=e148]
+          - generic [ref=e149]:
+            - generic [ref=e150]: Party Supplies
+            - heading "Cotton Candy Kit" [level=4] [ref=e151]
+            - paragraph [ref=e152]: GHS 120.00
+            - paragraph [ref=e153]: 6 in stock
+            - button "Add to cart" [ref=e154] [cursor=pointer]:
+              - img [ref=e155] [cursor=pointer]
   - generic:
     - dialog:
       - generic:
@@ -187,71 +173,71 @@
         - link:
           - /url: /shop
           - text: Browse the shop
-  - contentinfo [ref=e154]:
-    - link "REEBS Logo" [ref=e155] [cursor=pointer]:
+  - contentinfo [ref=e158]:
+    - link "REEBS Logo" [ref=e159] [cursor=pointer]:
       - /url: /
-      - img "REEBS Logo" [ref=e156] [cursor=pointer]
-    - search [ref=e157]:
-      - img [ref=e158]
-      - searchbox "Search site" [ref=e160]
-    - generic [ref=e161]:
-      - generic [ref=e162]:
-        - link "Contact & Shop Info" [ref=e163] [cursor=pointer]:
+      - img "REEBS Logo" [ref=e160] [cursor=pointer]
+    - search [ref=e161]:
+      - img [ref=e162]
+      - searchbox "Search site" [ref=e164]
+    - generic [ref=e165]:
+      - generic [ref=e166]:
+        - link "Contact & Shop Info" [ref=e167] [cursor=pointer]:
           - /url: /Contact
-        - link "Refund Policy" [ref=e164] [cursor=pointer]:
+        - link "Refund Policy" [ref=e168] [cursor=pointer]:
           - /url: /refund-policy
-        - link "Delivery Policy" [ref=e165] [cursor=pointer]:
+        - link "Delivery Policy" [ref=e169] [cursor=pointer]:
           - /url: /delivery-policy
-        - link "Privacy Policy" [ref=e166] [cursor=pointer]:
+        - link "Privacy Policy" [ref=e170] [cursor=pointer]:
           - /url: /privacy-policy
-        - link "FAQ" [ref=e167] [cursor=pointer]:
+        - link "FAQ" [ref=e171] [cursor=pointer]:
           - /url: /faq
-        - link "Terms of Service" [ref=e168] [cursor=pointer]:
+        - link "Terms of Service" [ref=e172] [cursor=pointer]:
           - /url: /terms-of-service
-      - generic [ref=e169]:
-        - link "Sakumono Broadway, Tema, Ghana" [ref=e170] [cursor=pointer]:
+      - generic [ref=e173]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e174] [cursor=pointer]:
           - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-          - img [ref=e171] [cursor=pointer]
+          - img [ref=e175] [cursor=pointer]
           - text: Sakumono Broadway, Tema, Ghana
-        - link "+233 24 423 8419" [ref=e173] [cursor=pointer]:
+        - link "+233 24 423 8419" [ref=e177] [cursor=pointer]:
           - /url: tel:+233244238419
-          - img [ref=e174] [cursor=pointer]
+          - img [ref=e178] [cursor=pointer]
           - text: +233 24 423 8419
-        - paragraph [ref=e176]:
+        - paragraph [ref=e180]:
           - text: Open Monday to Saturday | 8:30am - 7pm
-          - emphasis [ref=e177]: Holiday Hours may vary
-      - generic [ref=e178]:
-        - link [ref=e179] [cursor=pointer]:
+          - emphasis [ref=e181]: Holiday Hours may vary
+      - generic [ref=e182]:
+        - link [ref=e183] [cursor=pointer]:
           - /url: https://www.facebook.com/reebspartythemes
-          - img [ref=e180] [cursor=pointer]
-        - link [ref=e182] [cursor=pointer]:
+          - img [ref=e184] [cursor=pointer]
+        - link [ref=e186] [cursor=pointer]:
           - /url: https://www.instagram.com/reebspartythemes_/
-          - img [ref=e183] [cursor=pointer]
-        - link [ref=e185] [cursor=pointer]:
+          - img [ref=e187] [cursor=pointer]
+        - link [ref=e189] [cursor=pointer]:
           - /url: https://www.tiktok.com/@reebspartythemes_
-          - img [ref=e186] [cursor=pointer]
-        - link [ref=e188] [cursor=pointer]:
+          - img [ref=e190] [cursor=pointer]
+        - link [ref=e192] [cursor=pointer]:
           - /url: https://wa.me/233244238419
-          - img [ref=e189] [cursor=pointer]
-        - link [ref=e191] [cursor=pointer]:
+          - img [ref=e193] [cursor=pointer]
+        - link [ref=e195] [cursor=pointer]:
           - /url: mailto:info@reebspartythemes.com
-          - img [ref=e192] [cursor=pointer]
-    - navigation [ref=e195]:
-      - list [ref=e197]:
-        - listitem [ref=e198]:
-          - link "About" [ref=e199] [cursor=pointer]:
-            - /url: /about
-        - listitem [ref=e200]:
-          - link "Shop" [ref=e201] [cursor=pointer]:
-            - /url: /shop
+          - img [ref=e196] [cursor=pointer]
+    - navigation [ref=e199]:
+      - list [ref=e201]:
         - listitem [ref=e202]:
-          - link "Rentals" [ref=e203] [cursor=pointer]:
-            - /url: /rentals
+          - link "About" [ref=e203] [cursor=pointer]:
+            - /url: /about
         - listitem [ref=e204]:
-          - link "Gallery" [ref=e205] [cursor=pointer]:
-            - /url: /gallery
+          - link "Shop" [ref=e205] [cursor=pointer]:
+            - /url: /shop
         - listitem [ref=e206]:
-          - link "Contact" [ref=e207] [cursor=pointer]:
+          - link "Rentals" [ref=e207] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e208]:
+          - link "Gallery" [ref=e209] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e210]:
+          - link "Contact" [ref=e211] [cursor=pointer]:
             - /url: /contact
-    - generic [ref=e208]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+    - generic [ref=e212]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
 ```

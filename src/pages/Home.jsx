@@ -7,6 +7,7 @@ import PopupModal from '/src/components/PopupModal';
 import TypingEffect from '/src/components/TypingEffect';
 import CookieBanner from '/src/components/CookieBanner';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 
 function Home() {
     const [suggestedRentals, setSuggestedRentals] = useState([]);
@@ -16,39 +17,26 @@ function Home() {
 
     useEffect(() => {
         let isMounted = true;
+        const controller = new AbortController();
         const loadData = async () => {
             try {
-                // 1. Fetch only the single combined endpoint (inventory.js)
-                const productsRes = await fetch("/.netlify/functions/inventory");
-                
-                if (productsRes.ok) {
-                    const data = await productsRes.json();
-                    
-                    if (isMounted) {
-                        const records = Array.isArray(data) ? data : [];
-                        const rentals = records.filter((item) => {
-                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
-                            return source === 'rental';
-                        });
-                        const retail = records.filter((item) => {
-                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
-                            if (!source) return true;
-                            return source !== 'rental';
-                        });
-
-                        setSuggestedRentals(rentals.slice(0, 3));
-                        setSuggestedProducts(retail.slice(0, 3));
-                    }
-                } else {
-                    console.error(`Error fetching products: ${productsRes.status}`);
-                }
+                const { items } = await fetchInventoryWithCache({ signal: controller.signal });
+                if (!isMounted) return;
+                const { rentals, products } = splitInventory(items);
+                setSuggestedRentals(rentals.slice(0, 3));
+                setSuggestedProducts(products.slice(0, 3));
             } catch (err) {
-                console.error("Error loading data:", err);
+                if (err?.name !== "AbortError") {
+                    console.error("Error loading data:", err);
+                }
             }
         };
 
         loadData();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
     }, []);
 
     useEffect(() => {
@@ -119,9 +107,9 @@ function Home() {
                             <p className="hero-kicker">Party rentals, decor, and supplies across Ghana</p>
                             <h1 id="home-hero-heading">REEBS Party Themes</h1>
                             <h2 id="home-tagline" className="hero-tagline">
-                                <span className="sr-only">We promise less hustle, more fun!</span>
+                                <span className="sr-only">We promise less hassle, more fun!</span>
                                 <TypingEffect
-                                    text="We promise less hustle, more fun!"
+                                    text="We promise less hassle, more fun!"
                                     speed={120}
                                     ariaHidden
                                     className="hero-typing"
@@ -154,7 +142,7 @@ function Home() {
                 <section id='r1-info' className="home-section home-why" aria-labelledby="why-heading">
                     <div className="section-header">
                         <p className="kicker">Why choose us</p>
-                        <h2 id="why-heading">Simple, Less hustle. More fun.</h2>
+                        <h2 id="why-heading">Simple, Less hassle. More fun.</h2>
                     </div>
                     <ul className="why-grid">
                         <li>

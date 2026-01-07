@@ -22,6 +22,7 @@ import RefundPolicy from './pages/refund-policy';
 import DeliveryPolicy from './pages/delivery-policy';
 import TermsOfService from './pages/terms-of-service';
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Book from './pages/Book';
 import Admin from './pages/Admin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -32,6 +33,17 @@ import AdminBookings from './pages/AdminBookings';
 import AdminScheduler from './pages/AdminScheduler';
 import AdminAccounting from './pages/AdminAccounting';
 import AdminRoles from './pages/AdminRoles';
+import AdminSettings from './pages/AdminSettings';
+import AdminCustomers from './pages/AdminCustomers';
+import AdminInvoicing from './pages/AdminInvoicing';
+import AdminExpenses from './pages/AdminExpenses';
+import AdminHR from './pages/AdminHR';
+import AdminDocuments from './pages/AdminDocuments';
+import AdminTimesheets from './pages/AdminTimesheets';
+import AdminVendors from './pages/AdminVendors';
+import AdminMaintenance from './pages/AdminMaintenance';
+import AdminDelivery from './pages/AdminDelivery';
+import AdminMarketing from './pages/AdminMarketing';
 import Login from './pages/Login';
 import AuthProvider, { useAuth } from './components/AuthContext';
 
@@ -42,6 +54,33 @@ function RequireAuth({ children }) {
   if (!authReady) return null;
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  return children;
+}
+
+const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+
+function MobileRestricted({ children }) {
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia(MOBILE_VIEW_QUERY);
+    const handleChange = () => setIsMobileView(mediaQuery.matches);
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  if (isMobileView) {
+    return <Navigate to="/admin" replace />;
   }
 
   return children;
@@ -71,6 +110,7 @@ function AppLayout() {
               <Route path="/delivery-policy" element={<DeliveryPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/Cart" element={<Cart />} />
+              <Route path="/Checkout" element={<Checkout />} />
               <Route path="/About" element={<About />} />
               <Route path="/Shop" element={<Shop />} />
               <Route path="/Rentals/:slug" element={<RentalItem />} />
@@ -89,7 +129,33 @@ function AppLayout() {
               <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
               <Route path="/admin/schedule" element={<RequireAuth><AdminScheduler /></RequireAuth>} />
               <Route path="/admin/accounting" element={<RequireAuth><AdminAccounting /></RequireAuth>} />
-              <Route path="/admin/roles" element={<RequireAuth><AdminRoles /></RequireAuth>} />
+              <Route path="/admin/expenses" element={<RequireAuth><AdminExpenses /></RequireAuth>} />
+              <Route
+                path="/admin/hr"
+                element={<RequireAuth><MobileRestricted><AdminHR /></MobileRestricted></RequireAuth>}
+              />
+              <Route
+                path="/admin/documents"
+                element={<RequireAuth><MobileRestricted><AdminDocuments /></MobileRestricted></RequireAuth>}
+              />
+              <Route path="/admin/timesheets" element={<RequireAuth><AdminTimesheets /></RequireAuth>} />
+              <Route path="/admin/vendors" element={<RequireAuth><AdminVendors /></RequireAuth>} />
+              <Route path="/admin/maintenance" element={<RequireAuth><AdminMaintenance /></RequireAuth>} />
+              <Route path="/admin/delivery" element={<RequireAuth><AdminDelivery /></RequireAuth>} />
+              <Route
+                path="/admin/roles"
+                element={<RequireAuth><MobileRestricted><AdminRoles /></MobileRestricted></RequireAuth>}
+              />
+              <Route
+                path="/admin/settings"
+                element={<RequireAuth><MobileRestricted><AdminSettings /></MobileRestricted></RequireAuth>}
+              />
+              <Route path="/admin/customers" element={<RequireAuth><AdminCustomers /></RequireAuth>} />
+              <Route path="/admin/invoicing" element={<RequireAuth><AdminInvoicing /></RequireAuth>} />
+              <Route
+                path="/admin/marketing"
+                element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
+              />
           </Routes>
           <CartOverlay 
             open={cartOpen} 

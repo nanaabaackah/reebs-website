@@ -1,0 +1,5 @@
+productName,issue,type,cost,status,notes,createdAt,resolvedAt
+Bouncy Castle,Seam tear on side panel,repair,350,open,Requires patch kit,2025-03-18T09:30:00,
+Trampoline,Frame rust spots,inspection,120,resolved,Cleaned and coated,2025-03-12T08:10:00,2025-03-12T12:30:00
+Chairs,Loose screws on legs,maintenance,45,resolved,Tightened and inspected,2025-03-14T10:45:00,2025-03-14T11:15:00
+Cotton Candy,Heating element check,inspection,60,open,Needs replacement filter,2025-03-19T14:05:00,

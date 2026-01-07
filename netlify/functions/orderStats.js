@@ -3,6 +3,21 @@
 import "dotenv/config";
 import { Client } from "pg";
 
+const statusColumnStatements = [
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isArchived" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN DEFAULT false`,
+];
+
+const ensureProductStatusColumns = async (client) => {
+  for (const statement of statusColumnStatements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Product status column check failed:", err?.message || err);
+    }
+  }
+};
+
 export async function handler() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -11,6 +26,7 @@ export async function handler() {
 
   try {
     await client.connect();
+    await ensureProductStatusColumns(client);
 
     const windowDays = 30;
     const now = new Date();
@@ -21,7 +37,19 @@ export async function handler() {
     const nextQuarterStart = new Date(Date.UTC(nextQuarterYear, nextQuarterStartMonth, 1));
     const nextQuarterEnd = new Date(Date.UTC(nextQuarterYear, nextQuarterStartMonth + 3, 1));
     const nextQuarterLabel = `Q${nextQuarter + 1} ${nextQuarterYear}`;
-    const [orderSummary, unitsSummary, topProducts, conflictRows, topRentalRows, bookingSummary] = await Promise.all([
+    const [
+      orderSummary,
+      unitsSummary,
+      topProducts,
+      conflictRows,
+      topRentalRows,
+      bookingSummary,
+      lowStockRows,
+      expenseSummary,
+      expenseTotalSummary,
+      maintenanceOpenSummary,
+      maintenanceCostSummary,
+    ] = await Promise.all([
       client.query(
         `SELECT
            COUNT(*)::int AS orders,
@@ -89,6 +117,35 @@ export async function handler() {
          WHERE "eventDate" >= NOW() - INTERVAL '${windowDays} days'
            AND COALESCE(status, '') NOT ILIKE 'cancelled'`
       ),
+      client.query(
+        `SELECT
+           id,
+           name,
+           sku,
+           COALESCE(stock, 0)::int AS stock
+         FROM "product"
+         WHERE COALESCE(stock, 0) <= 2
+           AND COALESCE("isArchived", false) = false
+           AND COALESCE("isDeleted", false) = false
+         ORDER BY stock ASC, name ASC
+         LIMIT 6`
+      ),
+      client.query(
+        `SELECT COALESCE(SUM(amount), 0) AS expense_cents
+         FROM "expense"
+         WHERE date >= NOW() - INTERVAL '${windowDays} days'`
+      ),
+      client.query(`SELECT COALESCE(SUM(amount), 0) AS expense_cents FROM "expense"`),
+      client.query(
+        `SELECT COUNT(*)::int AS open_count
+         FROM "maintenanceLog"
+         WHERE LOWER(status) = 'open'`
+      ),
+      client.query(
+        `SELECT COALESCE(SUM(cost), 0) AS cost_cents
+         FROM "maintenanceLog"
+         WHERE "createdAt" >= NOW() - INTERVAL '${windowDays} days'`
+      ),
     ]);
 
     const orders = orderSummary.rows[0]?.orders || 0;
@@ -96,6 +153,13 @@ export async function handler() {
     const units = unitsSummary.rows[0]?.units || 0;
     const bookings = bookingSummary.rows[0]?.bookings || 0;
     const bookingRevenueCents = Number(bookingSummary.rows[0]?.revenue_cents || 0);
+    const expenseWindowCents = Number(expenseSummary.rows[0]?.expense_cents || 0);
+    const expenseTotalCents = Number(expenseTotalSummary.rows[0]?.expense_cents || 0);
+    const expenseCents = expenseWindowCents > 0 ? expenseWindowCents : expenseTotalCents;
+    const expenseWindowLabel =
+      expenseWindowCents > 0 || expenseTotalCents === 0 ? `Last ${windowDays} days` : "All time";
+    const maintenanceOpen = maintenanceOpenSummary.rows[0]?.open_count || 0;
+    const maintenanceCostCents = Number(maintenanceCostSummary.rows[0]?.cost_cents || 0);
 
     let lockedInCents = 0;
     try {
@@ -125,6 +189,14 @@ export async function handler() {
         units,
         bookings,
         bookingRevenue: bookingRevenueCents / 100,
+        operatingExpenses: expenseCents / 100,
+        operatingExpensesWindow: expenseWindowCents / 100,
+        operatingExpensesTotal: expenseTotalCents / 100,
+        expenseWindowLabel,
+        maintenanceOpen,
+        maintenanceCost: maintenanceCostCents / 100,
+        lowStockCount: lowStockRows.rows?.length || 0,
+        lowStockItems: lowStockRows.rows || [],
         topRentalBookings: (topRentalRows.rows || []).map((row) => ({
           id: row.id,
           name: row.name,

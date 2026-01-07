@@ -1,12 +1,8 @@
-name,quantity,price,rate,status,category,image,page
-Cotton Candy,2,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_1.png,/Rentals/CottonCandy
-Popcorn,3,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_2.png,/Rentals/Popcorn
-Snow Cone,1,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_3.png,/Rentals/SnowCone
-Bouncy Castle,8,700 - 1500,,available,Kid's Party Rentals,/imgs/rentalItems/img_5.png,/Rentals/BouncyCastle
-Trampoline,2,600,per hour,available,Kid's Party Rentals,/imgs/rentalItems/img_7.png,/Rentals/Trammpoline
-Canopies & Tents,2,100-250,per item,available,Party Setup Rentals,/imgs/rentalItems/img_8.png,/Rentals/Canopies
-Chairs,2,15,per chair,available,Party Setup Rentals,/imgs/rentalItems/img_9.png,/Rentals/Chairs
-Tables,2,30,per table,available,Party Setup Rentals,/imgs/rentalItems/img_10.png,/Rentals/Tables
-Package Deals,4,Contact us for more info,,available,Event Decor & Setup,/imgs/rentalItems/img_11.png,/Rentals/Packages
-Face Painting,2,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_12.png,/Rentals/FacePainting
-Indoor Board Games,2,200,for 3,available,Kid's Party Rentals,/imgs/rentalItems/img_13.png,/Rentals/IndoorGames
+name,quantity,price,rate,status,category,image,page,attendantsNeeded
+Cotton Candy,2,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_1.png,/Rentals/CottonCandy,1
+Popcorn,3,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_2.png,/Rentals/Popcorn,1
+Snow Cone,1,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_3.png,/Rentals/SnowCone,1
+Bouncy Castle,8,700 - 1500,,available,Kid's Party Rentals,/imgs/rentalItems/img_5.png,/Rentals/BouncyCastle,2
+Trampoline,2,600,per hour,available,Kid's Party Rentals,/imgs/rentalItems/img_7.png,/Rentals/Trammpoline,2
+Face Painting,2,15,per head,available,Kid's Party Rentals,/imgs/rentalItems/img_12.png,/Rentals/FacePainting,1
+Indoor Board Games,2,200,for 3,available,Kid's Party Rentals,/imgs/rentalItems/img_13.png,/Rentals/IndoorGames,1

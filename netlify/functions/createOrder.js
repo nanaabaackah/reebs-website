@@ -8,16 +8,151 @@ import {
   backfillAuditDefaults,
   normalizeActor,
 } from "./auditHelpers.js";
+import { notifyManager } from "./_shared/managerPush.js";
+import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
+
+const formatAmount = (cents) => {
+  const value = Number(cents);
+  if (!Number.isFinite(value)) return "0.00";
+  return (value / 100).toFixed(2);
+};
+
+const formatWindow = (value) => {
+  const map = {
+    "9am-11am": "9:00am-11:00am",
+    "11am-1pm": "11:00am-1:00pm",
+    "1pm-3pm": "1:00pm-3:00pm",
+    "3pm-5pm": "3:00pm-5:00pm",
+    "5pm-7pm": "5:00pm-7:00pm",
+  };
+  if (!value) return "";
+  return map[value] || value;
+};
+
+const buildOrderNotification = ({
+  orderId,
+  orderNumber,
+  customerName,
+  totalAmountCents,
+  itemsCount,
+  deliveryMethod,
+  deliveryDetails,
+  pickupDetails,
+  customerPhone,
+}) => {
+  const isPickup = String(deliveryMethod || "").toLowerCase().includes("pickup");
+  const details = isPickup ? pickupDetails : deliveryDetails;
+  const when = details?.date ? `${details.date}` : "Date TBD";
+  const windowLabel = formatWindow(details?.window);
+  const methodLabel = isPickup ? "Pickup" : "Delivery";
+  const itemLabel = itemsCount === 1 ? "item" : "items";
+
+  let body = `${customerName || "New customer"} · GHS ${formatAmount(totalAmountCents)} · ${itemsCount || 0} ${itemLabel}`;
+  body += ` · ${methodLabel} ${when}`;
+  if (windowLabel) body += ` (${windowLabel})`;
+  if (!isPickup && details?.address) body += ` · ${details.address}`;
+  if (!isPickup && (details?.contact || customerPhone)) {
+    body += ` · ${details?.contact || customerPhone}`;
+  }
+
+  return {
+    title: `New order ${orderNumber}`,
+    body,
+    data: {
+      type: "order",
+      id: orderId,
+      orderNumber,
+    },
+  };
+};
+
+const buildWhatsAppLines = ({
+  orderNumber,
+  customerName,
+  customerPhone,
+  totalAmountCents,
+  deliveryMethod,
+  deliveryDetails,
+  pickupDetails,
+  itemsCount,
+}) => {
+  const isPickup = String(deliveryMethod || "").toLowerCase().includes("pickup");
+  const details = isPickup ? pickupDetails : deliveryDetails;
+  const windowLabel = formatWindow(details?.window);
+
+  const lines = [
+    `New order ${orderNumber}`,
+    `Customer: ${customerName || "Unknown"}`,
+    `Total: GHS ${formatAmount(totalAmountCents)}`,
+    `Items: ${itemsCount || 0}`,
+    `Fulfillment: ${isPickup ? "Pickup" : "Delivery"}`,
+  ];
+
+  if (details?.date) {
+    lines.push(`${isPickup ? "Pickup" : "Delivery"} date: ${details.date}`);
+  }
+  if (windowLabel) {
+    lines.push(`${isPickup ? "Pickup" : "Delivery"} window: ${windowLabel}`);
+  }
+  if (!isPickup && details?.address) {
+    lines.push(`Address: ${details.address}`);
+  }
+  if ((details?.contact || customerPhone) && !isPickup) {
+    lines.push(`Contact: ${details?.contact || customerPhone}`);
+  }
+  if (details?.notes) {
+    lines.push(`Notes: ${details.notes}`);
+  }
+  return lines;
+};
+
+const json = (statusCode, body, extraHeaders = {}) => ({
+  statusCode,
+  headers: {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    ...extraHeaders,
+  },
+  body: JSON.stringify(body),
+});
 
 export async function handler(event) {
-  if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
-
-  const { customerId, items, status, userId, userName, userEmail, deliveryMethod, discount } = JSON.parse(event.body);
-  if (!customerId || !Array.isArray(items) || items.length === 0) {
+  if (event.httpMethod === "OPTIONS") {
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Missing customerId or items." }),
+      statusCode: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+      },
+      body: "",
     };
+  }
+  if (event.httpMethod !== "POST") {
+    return json(405, { error: "Method Not Allowed" }, { "Access-Control-Allow-Methods": "POST,OPTIONS" });
+  }
+
+  let payload = {};
+  try {
+    payload = JSON.parse(event.body || "{}");
+  } catch {
+    return json(400, { error: "Invalid JSON body." });
+  }
+  const {
+    customerId,
+    items,
+    status,
+    userId,
+    userName,
+    userEmail,
+    deliveryMethod,
+    deliveryDetails,
+    pickupDetails,
+    discount,
+    source,
+  } = payload;
+  if (!customerId || !Array.isArray(items) || items.length === 0) {
+    return json(400, { error: "Missing customerId or items." });
   }
 
   const toCents = (value) => {
@@ -34,6 +169,22 @@ export async function handler(event) {
       return sum + toCents(item.price) * quantity;
     }, 0) - discountCents
   );
+  const safeJson = (value) => (value && typeof value === "object" ? value : null);
+  const normalizedDelivery = safeJson(deliveryDetails);
+  const normalizedPickup = safeJson(pickupDetails);
+  const ensureOrderColumns = async (dbClient) => {
+    const statements = [
+      `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "deliveryDetails" JSONB`,
+      `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "pickupDetails" JSONB`,
+    ];
+    for (const statement of statements) {
+      try {
+        await dbClient.query(statement);
+      } catch (err) {
+        console.warn("Order column check failed:", err?.message || err);
+      }
+    }
+  };
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -42,9 +193,25 @@ export async function handler(event) {
   try {
     await client.connect();
     await ensureAuditColumns(client);
+    await ensureOrderColumns(client);
 
     const actorInput = normalizeActor({ userId, userName, userEmail });
-    const actor = await resolveActor(client, actorInput);
+    const actor =
+      source === "checkout"
+        ? { userId: null, userName: userName || "Checkout", userEmail: userEmail || null }
+        : await resolveActor(client, actorInput);
+    if (actor.userId) {
+      const userRes = await client.query(
+        `SELECT id FROM "user" WHERE id = $1`,
+        [actor.userId]
+      );
+      if (userRes.rowCount === 0) {
+        actor.userId = null;
+      }
+    }
+    if (!actor.userId) {
+      actor.userName = actor.userName || "Guest";
+    }
     if (actor.userId) {
       await backfillAuditDefaults(client, actor.userId);
     }
@@ -56,7 +223,7 @@ export async function handler(event) {
     );
 
     const customerRes = await client.query(
-      `SELECT name FROM "customer" WHERE id = $1`,
+      `SELECT name, phone FROM "customer" WHERE id = $1`,
       [customerId]
     );
     if (customerRes.rowCount === 0) {
@@ -67,6 +234,7 @@ export async function handler(event) {
       };
     }
     const customerName = customerRes.rows[0].name;
+    const customerPhone = customerRes.rows[0].phone;
     const today = new Date();
     const dateStamp = today.toISOString().slice(0, 10).replace(/-/g, "");
     const sequenceRes = await client.query(
@@ -85,6 +253,8 @@ export async function handler(event) {
          "customerName",
          "status",
          "deliveryMethod",
+         "deliveryDetails",
+         "pickupDetails",
          "total_amount",
          "orderDate",
          "createdAt",
@@ -94,13 +264,15 @@ export async function handler(event) {
          "updatedByUserId",
          "lastModifiedAt"
        ) 
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW(), $7, $8, $9, NOW()) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW(), $9, $10, $11, NOW()) RETURNING id`,
       [
         orderNumber,
         customerId,
         customerName,
         status || 'pending',
         deliveryMethod || 'delivery',
+        normalizedDelivery,
+        normalizedPickup,
         totalAmountCents,
         actor.userId,
         actor.userId,
@@ -161,19 +333,50 @@ export async function handler(event) {
     }
 
     await client.query('COMMIT');
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        message: "Order created successfully",
-        orderId,
-        orderNumber,
-        assignedUserId: actor.userId,
-        updatedByUserId: actor.userId,
-      }),
-    };
+    try {
+      await sendManagerWhatsApp({
+        lines: buildWhatsAppLines({
+          orderNumber,
+          customerName,
+          customerPhone,
+          totalAmountCents,
+          deliveryMethod: deliveryMethod || "delivery",
+          deliveryDetails: normalizedDelivery,
+          pickupDetails: normalizedPickup,
+          itemsCount: items.length,
+        }),
+      });
+    } catch (err) {
+      console.warn("WhatsApp notify failed:", err?.message || err);
+    }
+    try {
+      await notifyManager(
+        client,
+        buildOrderNotification({
+          orderId,
+          orderNumber,
+          customerName,
+          customerPhone,
+          totalAmountCents,
+          itemsCount: items.length,
+          deliveryMethod: deliveryMethod || "delivery",
+          deliveryDetails: normalizedDelivery,
+          pickupDetails: normalizedPickup,
+        })
+      );
+    } catch (err) {
+      console.warn("Manager push failed:", err?.message || err);
+    }
+    return json(200, {
+      message: "Order created successfully",
+      orderId,
+      orderNumber,
+      assignedUserId: actor.userId,
+      updatedByUserId: actor.userId,
+    });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    return json(500, { error: err.message || "Failed to create order." });
   } finally {
     await client.end().catch(() => {});
   }

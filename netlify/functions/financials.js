@@ -45,6 +45,11 @@ const getWindowRange = (windowKey = "thisMonth") => {
       const end = new Date(Date.UTC(year, month, now.getUTCDate() + 1));
       return { start, end, label: "Today" };
     }
+    case "allTime": {
+      const start = new Date(Date.UTC(2000, 0, 1));
+      const end = new Date(Date.UTC(2100, 0, 1));
+      return { start, end, label: "All time" };
+    }
     case "thisMonth":
     default: {
       const start = startOfMonth(year, month);

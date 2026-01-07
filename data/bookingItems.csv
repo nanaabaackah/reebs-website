@@ -1,18 +1,27 @@
-bookingId,productId,quantity,price
-1,1239,1,70000
-1,1240,2,1500
-2,1241,1,60000
-3,1242,1,1500
-3,1243,1,10000
-4,1244,2,1500
-4,1245,10,3000
-5,1246,1,60000
-5,1247,5,1500
-6,1248,2,70000
-6,1249,1,1500
-7,1239,1,1500
-7,1240,4,20000
-8,1241,1,3000
-8,1242,10,1500
-9,1243,2,60000
-10,1244,2,10000
+bookingId,productName,quantity,price
+1,Spiderman Bouncy House,1,85000
+1,Popcorn,2,1500
+2,Giant Jenga,1,20000
+2,Cotton Candy,2,1500
+3,Princess Bouncer,1,85000
+3,Snow Cone,1,1500
+4,Rock Climber Bouncer,1,105000
+4,Connect Four,1,9000
+5,Bouncer + Slide Combo,1,100000
+5,UNO,1,7000
+6,Finding Nemo Bouncer,1,85000
+6,Board Game Bundle,1,15000
+7,Double Side Slide Bouncer,1,130000
+7,UNO,2,7000
+8,Chess,1,8000
+8,Popcorn,3,1500
+9,Trampoline,1,60000
+9,Giant Jenga,1,20000
+10,Canopies & Tents,2,10000
+10,Dominoes,1,5000
+11,Spiderman Bouncy House,1,85000
+11,Popcorn,1,1500
+12,Princess Bouncer,1,85000
+12,Snow Cone,2,1500
+13,Rock Climber Bouncer,1,105000
+13,Cotton Candy,2,1500

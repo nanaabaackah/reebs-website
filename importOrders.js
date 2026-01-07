@@ -48,6 +48,8 @@ const toInt = (value, fallback = 0) => {
     return Number.isFinite(num) ? num : fallback;
 };
 
+const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
+
 const toDate = (value) => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -69,13 +71,17 @@ async function importTransactionalData() {
     // 2. Clear Tables (Must be done in reverse dependency order)
     try {
         console.log("🧹 Clearing existing data...");
-        await prisma.bookingItem.deleteMany({});
-        await prisma.booking.deleteMany({});
-        await prisma.stockMovement.deleteMany({});
-        await prisma.orderItem.deleteMany({});
-        await prisma.order.deleteMany({});
-        await prisma.customer.deleteMany({}); 
-        await prisma.user.deleteMany({}); 
+        await prisma.$executeRaw`
+            TRUNCATE TABLE
+                "bookingItem",
+                "booking",
+                "stockMovement",
+                "orderItem",
+                "order",
+                "customer",
+                "user"
+            RESTART IDENTITY CASCADE
+        `;
         console.log("✅ Tables cleared.");
     } catch (e) {
         console.error("Critical error clearing tables:", e.message);
@@ -118,6 +124,30 @@ async function importTransactionalData() {
     }));
     await prisma.user.createMany({ data: usersToCreate, skipDuplicates: true });
     console.log(`✅ Imported ${usersToCreate.length} Users (Admin Profiles).`);
+
+    const employeeProfiles = usersData
+        .map((row) => {
+            const userId = row.id ? parseInt(row.id, 10) : undefined;
+            if (!Number.isFinite(userId)) return null;
+            const jobTitle = cleanText(row.jobTitle) || null;
+            const phone = cleanText(row.phone) || null;
+            const emergencyContactName = cleanText(row.emergencyContactName) || null;
+            const emergencyContactPhone = cleanText(row.emergencyContactPhone) || null;
+            if (!jobTitle && !phone && !emergencyContactName && !emergencyContactPhone) return null;
+            return {
+                userId,
+                jobTitle,
+                phone,
+                emergencyContactName,
+                emergencyContactPhone,
+            };
+        })
+        .filter(Boolean);
+
+    if (employeeProfiles.length) {
+        await prisma.employeeProfile.createMany({ data: employeeProfiles, skipDuplicates: true });
+        console.log(`✅ Imported ${employeeProfiles.length} Employee Profiles.`);
+    }
 
     // 4. Import Customers 
     const customersToCreate = customersData.map(row => ({
@@ -184,6 +214,19 @@ async function importTransactionalData() {
     const bookingItemsData = await readCsv('data/bookingItems.csv');
 
     console.log("Importing Bookings...");
+    const products = await prisma.product.findMany({
+        select: { id: true, sku: true, name: true },
+    });
+    const productBySku = new Map(
+        products
+            .filter((p) => p.sku)
+            .map((p) => [String(p.sku).trim().toUpperCase(), p.id])
+    );
+    const productByName = new Map(
+        products
+            .filter((p) => p.name)
+            .map((p) => [String(p.name).trim().toLowerCase(), p.id])
+    );
 
     for (const row of bookingsData) {
     await prisma.booking.create({
@@ -202,14 +245,28 @@ async function importTransactionalData() {
     }
 
     for (const row of bookingItemsData) {
-    await prisma.bookingItem.create({
-        data: {
-        bookingId: toInt(row.bookingId),
-        productId: toInt(row.productId),
-        quantity: toInt(row.quantity, 0),
-        price: toInt(row.price, 0),
+        const rawProductId = toInt(row.productId, null);
+        const rawSku = typeof row.productSku === "string" ? row.productSku.trim() : "";
+        const rawName = typeof row.productName === "string" ? row.productName.trim() : "";
+
+        const productId =
+            rawProductId ||
+            (rawSku ? productBySku.get(rawSku.toUpperCase()) : null) ||
+            (rawName ? productByName.get(rawName.toLowerCase()) : null);
+
+        if (!productId) {
+            console.warn("Skipping booking item with missing product reference:", row);
+            continue;
         }
-    });
+
+        await prisma.bookingItem.create({
+            data: {
+                bookingId: toInt(row.bookingId),
+                productId: productId,
+                quantity: toInt(row.quantity, 0),
+                price: toInt(row.price, 0),
+            }
+        });
     }
 
     console.log("✅ Bookings populated!");

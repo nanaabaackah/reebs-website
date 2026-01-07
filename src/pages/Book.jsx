@@ -12,7 +12,7 @@ import {
   faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../components/CartContext";
-import bouncyCastleTypes from "/src/data/bouncyCastleTypes.json";
+// Bouncy castles are loaded from the database
 
 const slugify = (value = "") =>
   value
@@ -37,8 +37,23 @@ const isBouncyRental = (item) => {
 
 const getItemPrice = (item) => {
   if (item?.price !== undefined && item.price !== null && item.price !== "") return item.price;
+  if (item?.priceRange !== undefined && item.priceRange !== null && item.priceRange !== "") return item.priceRange;
+  if (item?.displayPrice !== undefined && item.displayPrice !== null && item.displayPrice !== "") return item.displayPrice;
   if (typeof item?.priceCents === "number") return item.priceCents / 100;
   return undefined;
+};
+
+const parseNumericPrice = (value) => {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = value.toString().trim();
+  if (!raw) return null;
+  if (raw.includes("-")) {
+    const [min] = raw.split("-").map((part) => Number(part.trim()));
+    return Number.isFinite(min) ? min : null;
+  }
+  const parsed = Number(raw.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
 };
 
 const formatRentalPrice = (item, convertPrice, formatCurrency) => {
@@ -70,34 +85,104 @@ const formatStatus = (status, isActive) => {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
+const formatDateShort = (value) => {
+  if (!value) return "Date TBD";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const BUNDLE_MIN_ITEMS = 3;
+const BUNDLE_DISCOUNT_RATE = 0.1;
+
 function Book() {
   const { convertPrice, formatCurrency } = useCart();
+  const defaultFormValues = {
+    name: "",
+    email: "",
+    phone: "",
+    eventDate: "",
+    eventWindow: "",
+    location: "",
+    guestCount: "",
+    contactPreference: "",
+  };
   const [rentals, setRentals] = useState([]);
+  const [bouncyTypes, setBouncyTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [itemsNote, setItemsNote] = useState("");
   const [noteTouched, setNoteTouched] = useState(false);
+  const [formValues, setFormValues] = useState(defaultFormValues);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
+  const [bookingReceipt, setBookingReceipt] = useState(null);
   const [searchParams] = useSearchParams();
   const today = new Date().toISOString().split("T")[0];
+  const draftLoadedRef = React.useRef(false);
 
   useEffect(() => {
-    fetch("/.netlify/functions/inventory")
-      .then((res) => res.json())
-      .then((data) => {
-        const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("bookingDraft");
+    if (!raw) {
+      draftLoadedRef.current = true;
+      return;
+    }
+    try {
+      const draft = JSON.parse(raw);
+      if (draft?.formValues) {
+        setFormValues((prev) => ({ ...prev, ...draft.formValues }));
+      }
+      if (Array.isArray(draft?.selectedIds)) {
+        setSelectedIds(draft.selectedIds);
+      }
+      if (typeof draft?.itemsNote === "string") {
+        setItemsNote(draft.itemsNote);
+      }
+      if (typeof draft?.noteTouched === "boolean") {
+        setNoteTouched(draft.noteTouched);
+      }
+    } catch {
+      // ignore corrupted drafts
+    } finally {
+      draftLoadedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [inventoryRes, bouncyRes] = await Promise.all([
+          fetch("/.netlify/functions/inventory"),
+          fetch("/.netlify/functions/bouncy_castles"),
+        ]);
+
+        const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+        const bouncyData = bouncyRes.ok ? await bouncyRes.json() : [];
+
+        const rentalsOnly = (Array.isArray(inventoryData) ? inventoryData : []).filter((item) => {
           const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
           const isRental = source ? source === "rental" : (item.sku || "").toString().toUpperCase().startsWith("REN");
           const isActive = (item.status ?? item.isActive) !== false;
           return isRental && isActive;
         });
+
         setRentals(rentalsOnly);
-        setLoading(false);
-      })
-      .catch((err) => {
+        setBouncyTypes(Array.isArray(bouncyData) ? bouncyData : []);
+      } catch (err) {
         console.error("❌ Error fetching rental:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    load();
   }, []);
 
   useEffect(() => {
@@ -110,7 +195,10 @@ function Book() {
     const baseBouncy = rentals.find((item) => isBouncyRental(item));
     if (!baseBouncy) return rentals;
 
-    const bouncyOptions = bouncyCastleTypes.map((type) => ({
+    const availableBouncy = bouncyTypes.filter((type) =>
+      Number.isFinite(Number(type.productId))
+    );
+    const bouncyOptions = availableBouncy.map((type) => ({
       id: `bouncy-${slugify(type.name)}`,
       name: type.name,
       image: type.image,
@@ -119,14 +207,20 @@ function Book() {
       status: baseBouncy.status,
       isActive: baseBouncy.isActive,
       displayPrice: type.priceRange,
+      productId: Number(type.productId),
       specificCategory: baseBouncy.specificCategory || baseBouncy.specificcategory || baseBouncy.category || "Bouncy Castle",
       detailSlug: rentalSlug(baseBouncy),
       type: "bouncy",
     }));
 
-    const filtered = rentals.filter((item) => !isBouncyRental(item));
+    const filtered = rentals
+      .filter((item) => !isBouncyRental(item))
+      .map((item) => ({
+        ...item,
+        productId: Number.isFinite(Number(item.productId)) ? Number(item.productId) : item.id,
+      }));
     return [...bouncyOptions, ...filtered];
-  }, [rentals]);
+  }, [rentals, bouncyTypes]);
 
   useEffect(() => {
     if (!bookingRentals.length) return;
@@ -173,11 +267,32 @@ function Book() {
     [bookingRentals, selectedIds]
   );
 
+  const bundleEligible = selectedRentals.length >= BUNDLE_MIN_ITEMS;
+  const subtotal = selectedRentals.reduce((sum, item) => {
+    const price = parseNumericPrice(getItemPrice(item));
+    return sum + (Number.isFinite(price) ? price : 0);
+  }, 0);
+  const bundleDiscount = bundleEligible ? subtotal * BUNDLE_DISCOUNT_RATE : 0;
+  const totalAfterDiscount = Math.max(0, subtotal - bundleDiscount);
+  const bundleRemaining = Math.max(0, BUNDLE_MIN_ITEMS - selectedRentals.length);
+
   useEffect(() => {
     if (!noteTouched) {
       setItemsNote(selectedRentals.map((item) => item.name).join(", "));
     }
   }, [selectedRentals, noteTouched]);
+
+  useEffect(() => {
+    if (!draftLoadedRef.current) return;
+    if (typeof window === "undefined") return;
+    const draft = {
+      formValues,
+      selectedIds,
+      itemsNote,
+      noteTouched,
+    };
+    window.localStorage.setItem("bookingDraft", JSON.stringify(draft));
+  }, [formValues, selectedIds, itemsNote, noteTouched]);
 
   const toggleRental = (id) => {
     setSelectedIds((prev) =>
@@ -185,10 +300,164 @@ function Book() {
     );
   };
 
+  const updateFormValue = (field) => (event) => {
+    const value = event.target.value;
+    setFormValues((prev) => ({ ...prev, [field]: value }));
+  };
+
   const itemsSummaryValue = selectedRentals
     .map((item) => `${item.name} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`)
     .join(", ");
   const itemsSummaryDisplay = itemsSummaryValue || "Add rentals to your booking";
+
+  const formatAmount = (amount) => (amount > 0 ? formatCurrency(convertPrice(amount)) : "TBD");
+  const formatBookingTotal = (amountCents) => {
+    const parsed = Number(amountCents);
+    if (!Number.isFinite(parsed) || parsed <= 0) return "TBD";
+    return formatCurrency(convertPrice(parsed / 100));
+  };
+  const bundleLabel = `Bundle discount (${Math.round(BUNDLE_DISCOUNT_RATE * 100)}% off ${BUNDLE_MIN_ITEMS}+ items)`;
+  const subtotalReady = subtotal > 0;
+  const discountDisplay = bundleEligible
+    ? subtotalReady
+      ? `- ${formatAmount(bundleDiscount)}`
+      : "Applied at confirmation"
+    : `Add ${bundleRemaining} more`;
+  const totalDisplay = subtotalReady ? formatAmount(totalAfterDiscount) : "TBD";
+
+  const fetchExistingCustomer = async ({ email: lookupEmail, phone: lookupPhone, name: lookupName }) => {
+    const lookups = [];
+    if (lookupEmail) {
+      lookups.push(`/.netlify/functions/customers?email=${encodeURIComponent(lookupEmail)}`);
+    }
+    if (lookupPhone) {
+      lookups.push(`/.netlify/functions/customers?phone=${encodeURIComponent(lookupPhone)}`);
+    }
+    if (lookupName) {
+      lookups.push(`/.netlify/functions/customers?name=${encodeURIComponent(lookupName)}`);
+    }
+    for (const lookupUrl of lookups) {
+      const existingRes = await fetch(lookupUrl);
+      if (!existingRes.ok) continue;
+      const payload = await existingRes.json();
+      if (payload?.id) return payload;
+    }
+    return null;
+  };
+
+  const buildBookingItems = () =>
+    selectedRentals
+      .map((item) => ({
+        productId: Number(item.productId ?? item.id),
+        quantity: 1,
+      }))
+      .filter((item) => Number.isFinite(item.productId));
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    if (!selectedRentals.length) {
+      setSubmitError("Select at least one rental item before booking.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+    setBookingReceipt(null);
+
+    const name = formValues.name.trim();
+    const email = formValues.email.trim();
+    const phone = formValues.phone.trim();
+    const eventDate = formValues.eventDate.trim();
+    const eventWindow = formValues.eventWindow.trim();
+    const location = formValues.location.trim();
+
+    try {
+      let customerPayload = await fetchExistingCustomer({ email, phone, name });
+      if (!customerPayload?.id) {
+        const customerRes = await fetch("/.netlify/functions/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, phone }),
+        });
+        customerPayload = await customerRes.json();
+        if (!customerRes.ok) {
+          if (customerRes.status === 409) {
+            const existing = await fetchExistingCustomer({ email, phone, name });
+            if (existing) {
+              customerPayload = existing;
+            }
+          }
+          if (!customerPayload?.id) {
+            throw new Error(customerPayload?.error || "Failed to save customer.");
+          }
+        }
+      }
+
+      const bookingItems = buildBookingItems();
+      if (!bookingItems.length) {
+        throw new Error("Selected items are missing product data. Try again.");
+      }
+
+      const bookingBody = {
+        customerId: customerPayload.id,
+        eventDate,
+        startTime: eventWindow || null,
+        endTime: null,
+        venueAddress: location,
+        items: bookingItems,
+        discount: bundleEligible ? bundleDiscount : 0,
+        applyBundleDiscount: true,
+        status: "pending",
+      };
+      let bookingRes = await fetch("/.netlify/functions/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingBody),
+      });
+      let bookingPayload = await bookingRes.json();
+      if (!bookingRes.ok && typeof bookingPayload?.error === "string" && bookingPayload.error.toLowerCase().includes("customer")) {
+        const existing = await fetchExistingCustomer({ email, phone, name });
+        if (existing?.id) {
+          bookingBody.customerId = existing.id;
+          bookingRes = await fetch("/.netlify/functions/bookings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bookingBody),
+          });
+          bookingPayload = await bookingRes.json();
+        }
+      }
+      if (!bookingRes.ok) {
+        throw new Error(bookingPayload?.error || "Failed to create booking.");
+      }
+
+      setBookingReceipt({
+        ...bookingPayload,
+        bundleApplied: bundleEligible,
+        bundleSubtotal: subtotal,
+        bundleDiscount: bundleEligible ? bundleDiscount : 0,
+      });
+      setSubmitSuccess(`Booking #${bookingPayload.id} received! We’ll confirm availability shortly.`);
+      setSelectedIds([]);
+      setItemsNote("");
+      setNoteTouched(false);
+      setFormValues(defaultFormValues);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("bookingDraft");
+      }
+      form.reset();
+    } catch (err) {
+      setSubmitError(err.message || "Unable to submit booking right now.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -295,6 +564,7 @@ function Book() {
                 method="POST"
                 data-netlify="true"
                 netlify-honeypot="bot-field"
+                onSubmit={handleSubmit}
               >
                 <input type="hidden" name="form-name" value="rental-booking" />
                 <p className="hidden">
@@ -317,6 +587,8 @@ function Book() {
                       name="name"
                       autoComplete="name"
                       placeholder="Your full name"
+                      value={formValues.name}
+                      onChange={updateFormValue("name")}
                       required
                     />
                   </div>
@@ -328,6 +600,8 @@ function Book() {
                       name="email"
                       autoComplete="email"
                       placeholder="you@example.com"
+                      value={formValues.email}
+                      onChange={updateFormValue("email")}
                       required
                     />
                   </div>
@@ -341,6 +615,8 @@ function Book() {
                       autoComplete="tel"
                       placeholder="+233 24 423 8419"
                       pattern="^[0-9+\\-()\\s]{7,}$"
+                      value={formValues.phone}
+                      onChange={updateFormValue("phone")}
                       required
                     />
                     <small className="hint">We’ll confirm on call or WhatsApp.</small>
@@ -352,12 +628,19 @@ function Book() {
                       type="date"
                       name="eventDate"
                       min={today}
+                      value={formValues.eventDate}
+                      onChange={updateFormValue("eventDate")}
                       required
                     />
                   </div>
                   <div className="form-group">
                     <label htmlFor="eventWindow">Setup & pickup window</label>
-                    <select id="eventWindow" name="eventWindow" defaultValue="">
+                    <select
+                      id="eventWindow"
+                      name="eventWindow"
+                      value={formValues.eventWindow}
+                      onChange={updateFormValue("eventWindow")}
+                    >
                       <option value="" disabled>
                         Choose a timing window
                       </option>
@@ -376,6 +659,8 @@ function Book() {
                       name="location"
                       placeholder="Neighborhood or venue in Accra"
                       autoComplete="address-level2"
+                      value={formValues.location}
+                      onChange={updateFormValue("location")}
                       required
                     />
                   </div>
@@ -387,11 +672,18 @@ function Book() {
                       name="guestCount"
                       min="1"
                       placeholder="Approx. guests"
+                      value={formValues.guestCount}
+                      onChange={updateFormValue("guestCount")}
                     />
                   </div>
                   <div className="form-group">
                     <label htmlFor="contactPreference">How should we confirm?</label>
-                    <select id="contactPreference" name="contactPreference" defaultValue="">
+                    <select
+                      id="contactPreference"
+                      name="contactPreference"
+                      value={formValues.contactPreference}
+                      onChange={updateFormValue("contactPreference")}
+                    >
                       <option value="" disabled>
                         Choose a contact method
                       </option>
@@ -420,11 +712,56 @@ function Book() {
 
                 <div className="form-footer">
                   <small className="hint">We reply same day for bookings within Accra.</small>
-                  <button type="submit" className="btn btn-primary">
-                    Request booking
+                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                    {submitting ? "Submitting..." : "Request booking"}
                   </button>
                 </div>
+                {submitError && <p className="form-error">{submitError}</p>}
+                {submitSuccess && <p className="form-success">{submitSuccess}</p>}
               </form>
+              {bookingReceipt && (
+                <div className="booking-receipt" role="status" aria-live="polite">
+                  <div className="booking-receipt-head">
+                    <div>
+                      <p className="kicker">Booking received</p>
+                      <h3>Booking #{bookingReceipt.id}</h3>
+                      <p className="booking-receipt-meta">
+                        {formatDateShort(bookingReceipt.eventDate)}
+                        {bookingReceipt.startTime ? ` · ${bookingReceipt.startTime}` : ""}
+                      </p>
+                    </div>
+                    {bookingReceipt.bundleApplied && (
+                      <span className="booking-receipt-pill">Bundle discount applied</span>
+                    )}
+                  </div>
+                  <div className="booking-receipt-list">
+                    {(bookingReceipt.items || []).map((item) => (
+                      <div key={item.id || item.productId} className="booking-receipt-item">
+                        <div className="booking-receipt-media">
+                          <img
+                            src={item.productImage || "/imgs/placeholder.png"}
+                            alt={item.productName || "Rental item"}
+                          />
+                        </div>
+                        <div className="booking-receipt-info">
+                          <h4>{item.productName || `Item ${item.productId}`}</h4>
+                          <p>
+                            Qty {item.quantity || 1} ·{" "}
+                            {formatBookingTotal(item.price)}
+                          </p>
+                        </div>
+                        <strong className="booking-receipt-line-total">
+                          {formatBookingTotal((item.price || 0) * (item.quantity || 1))}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="booking-receipt-total">
+                    <span>Total</span>
+                    <strong>{formatBookingTotal(bookingReceipt.totalAmount)}</strong>
+                  </div>
+                </div>
+              )}
             </article>
 
             <aside className="booking-rentals glass-card" aria-label="Add rentals to your booking">
@@ -453,13 +790,29 @@ function Book() {
                 {selectedRentals.length === 0 ? (
                   <p className="booking-empty">No rentals added yet.</p>
                 ) : (
-                  <div className="booking-selected-chips">
-                    {selectedRentals.map((item) => (
-                      <span key={item.id} className="booking-chip">
-                        {item.name}
-                      </span>
-                    ))}
-                  </div>
+                  <>
+                    <div className="booking-selected-chips">
+                      {selectedRentals.map((item) => (
+                        <span key={item.id} className="booking-chip">
+                          {item.name}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="booking-summary">
+                      <div className="booking-summary-row">
+                        <span>Subtotal</span>
+                        <strong>{formatAmount(subtotal)}</strong>
+                      </div>
+                      <div className={`booking-summary-row ${bundleEligible ? "is-discount" : ""}`}>
+                        <span>{bundleLabel}</span>
+                        <strong>{discountDisplay}</strong>
+                      </div>
+                      <div className="booking-summary-total">
+                        <span>Estimated total</span>
+                        <strong>{totalDisplay}</strong>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

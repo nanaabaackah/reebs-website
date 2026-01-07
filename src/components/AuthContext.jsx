@@ -55,10 +55,20 @@ function AuthProvider({ children }) {
     }
   };
 
+  const updateUser = (nextUser) => {
+    setUser(nextUser);
+    try {
+      localStorage.setItem("reebs_auth_user", JSON.stringify(nextUser));
+    } catch (err) {
+      console.warn("Failed to persist user", err);
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
+    updateUser,
     authLoading,
     authError,
     authReady,

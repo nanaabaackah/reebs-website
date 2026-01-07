@@ -26,6 +26,20 @@ const normalizeStatus = (status) =>
 const isCancelledStatus = (status) =>
   ["cancelled", "canceled"].includes(normalizeStatus(status));
 
+const ensureOrderColumns = async (client) => {
+  const statements = [
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "deliveryDetails" JSONB`,
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "pickupDetails" JSONB`,
+  ];
+  for (const statement of statements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Order column check failed:", err?.message || err);
+    }
+  }
+};
+
 export async function handler(event = {}) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -47,12 +61,16 @@ export async function handler(event = {}) {
   try {
     await client.connect();
     await ensureAuditColumns(client);
+    await ensureOrderColumns(client);
     const admin = await findDefaultAdmin(client);
     if (admin?.id) {
       await backfillAuditDefaults(client, admin.id);
     }
 
     if (event.httpMethod === "GET") {
+      const orderId = Number(event.queryStringParameters?.orderId);
+      const hasOrderId = Number.isFinite(orderId) && orderId > 0;
+      const params = hasOrderId ? [orderId] : [];
       const result = await client.query(
         `SELECT
            o.id,
@@ -60,6 +78,8 @@ export async function handler(event = {}) {
            o."customerName",
            o.status,
            o."deliveryMethod",
+           o."deliveryDetails",
+           o."pickupDetails",
            (o."total_amount"::numeric / 100) AS total,
            o."orderDate",
            o."deliveryDate",
@@ -71,7 +91,7 @@ export async function handler(event = {}) {
            (
              SELECT COALESCE(json_agg(json_build_object(
                'id', oi.id,
-               'productId', p.id,
+               'productId', oi."productId",
                'productName', p.name,
                'sku', p.sku,
                'quantity', oi.quantity,
@@ -80,14 +100,24 @@ export async function handler(event = {}) {
                'imageUrl', p."imageUrl"
              )), '[]'::json)
              FROM "orderItem" oi
-             JOIN "product" p ON p.id = oi."productId"
+             LEFT JOIN "product" p ON p.id = oi."productId"
              WHERE oi."orderId" = o.id
            ) AS items
          FROM "order" o
          LEFT JOIN "user" assignee ON assignee.id = o."assignedUserId"
          LEFT JOIN "user" updater ON updater.id = o."updatedByUserId"
+         ${hasOrderId ? `WHERE o.id = $1` : ""}
          ORDER BY o."orderDate" DESC, o."id" DESC`
+      ,
+        params
       );
+
+      if (hasOrderId) {
+        if (result.rowCount === 0) {
+          return json(404, { error: "Order not found." });
+        }
+        return json(200, result.rows[0]);
+      }
 
       return json(200, result.rows);
     }

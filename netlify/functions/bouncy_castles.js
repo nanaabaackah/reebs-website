@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { Client } from "pg";
 
 export async function handler() {
@@ -11,19 +12,22 @@ export async function handler() {
 
     const result = await client.query(`
       SELECT 
-        id,
-        "bouncerId",
-        name,
-        footprint,
-        height,
-        capacity,
-        "recommendedAge",
-        "priceRange",
-        "bestFor",
-        features,
-        image,
-        images
-      FROM "BouncyCastle"
+        b.id,
+        b."bouncerId",
+        b.name,
+        b."productId",
+        b.capacity,
+        b."recommendedAge",
+        b."priceRange",
+        b."motorsToPump",
+        p."attendantsNeeded" AS "attendantsNeeded",
+        p.rate AS rate,
+        b."bestFor",
+        b.features,
+        b.image,
+        b.images
+      FROM "bouncy_castles" b
+      LEFT JOIN "product" p ON p.id = b."productId"
     `);
 
     await client.end();

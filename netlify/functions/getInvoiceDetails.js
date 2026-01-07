@@ -54,13 +54,14 @@ export async function handler(event) {
          c.phone AS "customerPhone",
          COALESCE(
            json_agg(
-             json_build_object(
-               'id', bi.id,
-               'productId', bi."productId",
-               'quantity', bi.quantity,
-               'price', bi.price,
-               'productName', p.name
-             )
+               json_build_object(
+                 'id', bi.id,
+                 'productId', bi."productId",
+                 'quantity', bi.quantity,
+                 'price', bi.price,
+                 'productName', p.name,
+                 'attendantsNeeded', p."attendantsNeeded"
+               )
              ORDER BY bi.id
            ) FILTER (WHERE bi.id IS NOT NULL),
            '[]'::json
@@ -74,6 +75,14 @@ export async function handler(event) {
       [id]
     );
 
+    const expensesRes = await client.query(
+      `SELECT id, category, amount, description, date
+       FROM "expense"
+       WHERE "bookingId" = $1
+       ORDER BY date ASC, id ASC`,
+      [id]
+    );
+
     if (result.rowCount === 0) {
       return {
         statusCode: 404,
@@ -82,13 +91,92 @@ export async function handler(event) {
       };
     }
 
+    const bookingRow = result.rows[0];
+    let bookingItems = bookingRow?.items || [];
+    if (typeof bookingItems === "string") {
+      try {
+        bookingItems = JSON.parse(bookingItems);
+      } catch {
+        bookingItems = [];
+      }
+    }
+    if (!Array.isArray(bookingItems)) bookingItems = [];
+
+    const itemProductIds = bookingItems
+      .map((item) => Number(item?.productId))
+      .filter((value) => Number.isFinite(value));
+
+    if (itemProductIds.length > 0) {
+      const motorsRes = await client.query(
+        `SELECT "productId", COALESCE("motorsToPump", 0) AS motors
+         FROM "bouncy_castles"
+         WHERE "productId" = ANY($1::int[])`,
+        [itemProductIds]
+      );
+      const motorsMap = new Map(
+        motorsRes.rows.map((row) => [Number(row.productId), Number(row.motors) || 0])
+      );
+      const pumpQty = bookingItems.reduce((sum, item) => {
+        const motors = motorsMap.get(Number(item?.productId)) || 0;
+        if (!motors) return sum;
+        const qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+        return sum + motors * qty;
+      }, 0);
+
+      const hasPump = bookingItems.some((item) => {
+        const name = String(item?.productName || "").toLowerCase();
+        return name.includes("pump");
+      });
+
+      if (pumpQty > 0 && !hasPump) {
+        let pumpProduct = null;
+        const pumpRes = await client.query(
+          `SELECT id, name, price
+           FROM "product"
+           WHERE UPPER(sku) LIKE 'PUM-%' OR LOWER(name) LIKE '%motor pump%'
+           ORDER BY id
+           LIMIT 1`
+        );
+        pumpProduct = pumpRes.rows[0] || null;
+        bookingItems = [
+          ...bookingItems,
+          {
+            id: `pump-${id}`,
+            productId: pumpProduct?.id || null,
+            quantity: pumpQty,
+            price: Number(pumpProduct?.price || 0),
+            productName: pumpProduct?.name || "Motor Pump",
+            attendantsNeeded: 0,
+          },
+        ];
+      }
+    }
+
+    const expenses = (expensesRes.rows || []).map((row) => ({
+      id: row.id,
+      category: row.category,
+      description: row.description,
+      date: row.date,
+      amount: Number(row.amount || 0) / 100,
+    }));
+
+    const expensesTotal = (expensesRes.rows || []).reduce(
+      (sum, row) => sum + Number(row.amount || 0),
+      0
+    );
+
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify(result.rows[0]),
+      body: JSON.stringify({
+        ...bookingRow,
+        items: bookingItems,
+        expenses,
+        expensesTotal: expensesTotal / 100,
+      }),
     };
   } catch (err) {
     console.error("❌ getInvoiceDetails error:", err);

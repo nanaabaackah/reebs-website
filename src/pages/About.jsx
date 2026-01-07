@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import CookieBanner from '/src/components/CookieBanner';
 import InstagramFeed from '/src/components/InstagramFeed';
 import { Link } from 'react-router-dom';
+import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 
 import './master.css';
+
+const formatCount = (value) => (Number.isFinite(value) ? `${value}+` : '…');
 
 function About() {
     const [rentalsCount, setRentalsCount] = useState(null);
@@ -15,34 +18,44 @@ function About() {
 
     useEffect(() => {
         let isMounted = true;
+        const controller = new AbortController();
         const loadCounts = async () => {
             try {
-                // 1. Fetch only the single combined endpoint (inventory.js)
-                const productsRes = await fetch("/.netlify/functions/inventory");
-                
-                if (productsRes.ok) {
+                const { items } = await fetchInventoryWithCache({ signal: controller.signal });
+                if (!isMounted) return;
+                const { rentals, products } = splitInventory(items);
+                setRentalsCount(rentals.length);
+                setProductsCount(products.length);
+            } catch (err) {
+                if (err?.name === "AbortError") return;
+                console.error("Error loading counts:", err);
+                try {
+                    const productsRes = await fetch("/.netlify/functions/inventoryCounts", {
+                        signal: controller.signal,
+                    });
+                    if (!productsRes.ok) {
+                        console.error(`Error fetching products: ${productsRes.status}`);
+                        return;
+                    }
                     const data = await productsRes.json();
-                    
-                    if (isMounted) {
-                        const records = Array.isArray(data) ? data : [];
-                        const rentals = records.filter(item => (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase() === 'rental');
-                        const products = records.filter(item => {
-                            const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toString().toLowerCase();
-                            if (!source) return true;
-                            return source !== 'rental';
-                        });
-
-                        setRentalsCount(rentals.length);
-                        setProductsCount(products.length);
+                    if (!isMounted) return;
+                    const rentals = Number(data?.rentals);
+                    const products = Number(data?.products);
+                    setRentalsCount(Number.isFinite(rentals) ? rentals : null);
+                    setProductsCount(Number.isFinite(products) ? products : null);
+                } catch (fallbackErr) {
+                    if (fallbackErr?.name !== "AbortError") {
+                        console.error("Error loading counts fallback:", fallbackErr);
                     }
                 }
-            } catch (err) {
-                console.error("Error loading counts:", err);
             }
         };
 
         loadCounts();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
     }, []);
 
     useEffect(() => {
@@ -76,8 +89,8 @@ function About() {
     ];
 
    const highlights = [
-        { label: 'Rental items', value: rentalsCount ? `${rentalsCount}+` : '…' },
-        { label: 'Shop items', value: productsCount ? `${productsCount}+` : '…' },
+        { label: 'Rental items', value: formatCount(rentalsCount) },
+        { label: 'Shop items', value: formatCount(productsCount) },
         { label: 'Parties styled', value: '2k+' },
         { label: 'Cities served', value: '6+' },
         { label: 'Average response', value: 'under 1 hr' }

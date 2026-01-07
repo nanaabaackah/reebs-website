@@ -113,6 +113,7 @@ html, body {
 
 .auth-menu {
     position: relative;
+    z-index: 20;
 }
 
 .auth-menu-dropdown {
@@ -126,7 +127,7 @@ html, body {
     box-shadow: 0 16px 30px rgba(0,0,0,0.16);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
-    z-index: 60;
+    z-index: 200;
     display: grid;
     gap: 0.35rem;
     transform: translateY(6px);
@@ -386,6 +387,8 @@ html, body {
     align-items: center;
     gap: 0.65rem;
     margin-right: 0.75rem;
+    position: relative;
+    z-index: 5;
 }
 
 .glass-btn {
@@ -521,6 +524,14 @@ html, body {
     .menu li a {
         padding: 0.45rem 0.55rem;
         font-size: 0.75rem;
+    }
+
+    .drop .dropdown-content {
+        display: none !important;
+    }
+
+    .nav-caret {
+        display: none;
     }
 
     .navbar-scrolled-mob {

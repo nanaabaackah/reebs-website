@@ -28,6 +28,7 @@ const Navbar = ({ onCartToggle }) => {
   const { user, logout, authReady } = useAuth();
 
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
+  const showCommerceButtons = authReady && Boolean(user);
   const searchIndex = [
     { title: 'Home', path: '/', tags: 'hero rentals shop contact' },
     { title: 'About', path: '/About', tags: 'team mission values' },
@@ -142,6 +143,35 @@ const Navbar = ({ onCartToggle }) => {
     }
   }, [authReady, user, location.pathname, navigate]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const isReadonlyRoute = (path) => {
+      if (!path.startsWith("/admin")) return false;
+      const normalized = path.replace(/\/+$/, "") || "/admin";
+      const isOrders = normalized === "/admin/orders";
+      const isBookings = normalized === "/admin/bookings";
+      return !(isOrders || isBookings);
+    };
+    const updateReadonly = () => {
+      const shouldReadonly = mediaQuery.matches && isReadonlyRoute(location.pathname);
+      document.body.classList.toggle("admin-readonly", shouldReadonly);
+    };
+    updateReadonly();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", updateReadonly);
+      return () => {
+        mediaQuery.removeEventListener("change", updateReadonly);
+        document.body.classList.remove("admin-readonly");
+      };
+    }
+    mediaQuery.addListener(updateReadonly);
+    return () => {
+      mediaQuery.removeListener(updateReadonly);
+      document.body.classList.remove("admin-readonly");
+    };
+  }, [location.pathname]);
+
   const renderSearch = (variant) => (
     <div className={`nav-search nav-search--${variant}`}>
       <form onSubmit={handleSearchSubmit}>
@@ -239,7 +269,7 @@ const Navbar = ({ onCartToggle }) => {
       <li className="drop">
         <button type="button" className="dropbtn">
           <Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link>
-          <FontAwesomeIcon icon={faCaretDown} />
+          <FontAwesomeIcon icon={faCaretDown} className="nav-caret" />
         </button>
         <div className="dropdown-content">
           <Link to="/Rentals#Kid's%20Party%20Rentals">Kid's Party Equipment</Link>
@@ -267,20 +297,24 @@ const Navbar = ({ onCartToggle }) => {
           >
             <FontAwesomeIcon icon={faSearch} />
           </button>
-          <button
-            type="button"
-            className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
-            onClick={() => navigate('/Book')}
-            aria-label="Book"
-          >
-            <FontAwesomeIcon icon={faCalendarDays} />
-          </button>
-          <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
-            <span className="cart-icon-wrapper">
-              <FontAwesomeIcon icon={faShoppingCart} />
-              {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-            </span>
-          </button>
+          {showCommerceButtons && (
+            <>
+              <button
+                type="button"
+                className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
+                onClick={() => navigate('/Book')}
+                aria-label="Book"
+              >
+                <FontAwesomeIcon icon={faCalendarDays} />
+              </button>
+              <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
+                <span className="cart-icon-wrapper">
+                  <FontAwesomeIcon icon={faShoppingCart} />
+                  {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
+                </span>
+              </button>
+            </>
+          )}
           <div className="auth-menu">
             <button
               type="button"
@@ -323,20 +357,24 @@ const Navbar = ({ onCartToggle }) => {
             >
               <FontAwesomeIcon icon={faSearch} />
             </button>
-            <button
-              type="button"
-              className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
-              onClick={() => navigate('/Book')}
-              aria-label="Book"
-            >
-              <FontAwesomeIcon icon={faCalendarDays} />
-            </button>
-          <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
-            <span className="cart-icon-wrapper">
-              <FontAwesomeIcon icon={faShoppingCart} />
-              {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-            </span>
-          </button>
+            {showCommerceButtons && (
+              <>
+                <button
+                  type="button"
+                  className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
+                  onClick={() => navigate('/Book')}
+                  aria-label="Book"
+                >
+                  <FontAwesomeIcon icon={faCalendarDays} />
+                </button>
+                <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
+                  <span className="cart-icon-wrapper">
+                    <FontAwesomeIcon icon={faShoppingCart} />
+                    {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
+                  </span>
+                </button>
+              </>
+            )}
           <div className="auth-menu">
             <button
               type="button"

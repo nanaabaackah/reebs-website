@@ -17,47 +17,155 @@ const formatCurrency = (amount) => {
   }
 };
 
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 function AdminAccounting() {
-  const [windowKey, setWindowKey] = useState("thisMonth");
-  const [viewMode, setViewMode] = useState("overview"); // overview | charts | kanban
+  const [windowKey, setWindowKey] = useState("allTime");
+  const [viewMode, setViewMode] = useState("overview"); // overview | charts | kanban | list | taxes
   const [data, setData] = useState(null);
+  const [financeData, setFinanceData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [financeLoading, setFinanceLoading] = useState(false);
   const [error, setError] = useState("");
+  const [financeError, setFinanceError] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState("");
+  const [listLoaded, setListLoaded] = useState(false);
+  const [taxConfig, setTaxConfig] = useState({ taxRate: "0" });
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
+  );
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia("(max-width: 720px)");
+    const handleChange = () => setIsMobileView(mediaQuery.matches);
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (isMobileView && viewMode === "list") {
+      setViewMode("overview");
+    }
+  }, [isMobileView, viewMode]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("reebs_erp_config");
+      if (stored) {
+        setTaxConfig((prev) => ({ ...prev, ...JSON.parse(stored) }));
+      }
+    } catch {
+      setTaxConfig({ taxRate: "0" });
+    }
+  }, []);
+
+  const parseTaxRate = (value) => {
+    const raw = Number(value);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return raw > 1 ? raw / 100 : raw;
+  };
+
+  const fetchJson = async (url) => {
+    const res = await fetch(url);
+    const text = await res.text();
+    const json = (() => {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    })();
+    if (!res.ok) throw new Error(json?.error || "Failed to load data.");
+    return json;
+  };
+
   const fetchData = async (key = windowKey) => {
     if (!data) setLoading(true);
+    if (!financeData) setFinanceLoading(true);
     setIsFetching(true);
     setError("");
+    setFinanceError("");
     try {
-      const res = await fetch(`/.netlify/functions/financials?window=${key}`);
-      const text = await res.text();
-      const json = (() => {
-        try {
-          return JSON.parse(text);
-        } catch {
-          return null;
-        }
-      })();
-      if (!res.ok) throw new Error(json?.error || "Failed to load financial stats.");
-      setData(json);
+      const [financialResult, financeResult] = await Promise.allSettled([
+        fetchJson(`/.netlify/functions/financials?window=${key}`),
+        fetchJson(`/.netlify/functions/finance?window=${key}`),
+      ]);
+
+      if (financialResult.status === "fulfilled") {
+        setData(financialResult.value);
+      } else {
+        setError(financialResult.reason?.message || "Failed to load financial stats.");
+      }
+
+      if (financeResult.status === "fulfilled") {
+        setFinanceData(financeResult.value);
+      } else {
+        setFinanceError(financeResult.reason?.message || "Failed to reconcile finance data.");
+      }
     } catch (err) {
       console.error("Financials failed", err);
       setError(err.message || "Unable to load financial stats.");
     } finally {
       setLoading(false);
+      setFinanceLoading(false);
       setIsFetching(false);
     }
   };
 
   useEffect(() => {
-    fetchData("thisMonth");
+    fetchData("allTime");
   }, []);
+
+  const fetchListData = async () => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const [ordersRes, bookingsRes] = await Promise.all([
+        fetchJson("/.netlify/functions/orders"),
+        fetchJson("/.netlify/functions/bookings"),
+      ]);
+      setOrders(Array.isArray(ordersRes) ? ordersRes : []);
+      setBookings(Array.isArray(bookingsRes) ? bookingsRes : []);
+      setListLoaded(true);
+    } catch (err) {
+      console.error("List fetch failed", err);
+      setListError(err.message || "Unable to load receipts and invoices.");
+      setListLoaded(false);
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isMobileView && viewMode === "list") return;
+    if (viewMode !== "list" && viewMode !== "taxes") return;
+    if (listLoaded) return;
+    fetchListData();
+  }, [viewMode, listLoaded, isMobileView]);
 
   const revenueSplit = useMemo(() => {
     const retail = data?.revenueByCategory?.retail || 0;
@@ -76,15 +184,67 @@ function AdminAccounting() {
 
   const cashflowTrend = useMemo(() => data?.cashflow || [], [data]);
   const topProducts = useMemo(() => data?.topProducts || [], [data]);
-  const topProductsMax = useMemo(
-    () => Math.max(...topProducts.map((p) => p.revenue || 0), 0),
-    [topProducts]
-  );
+  const totalRevenue = useMemo(() => data?.revenue || 0, [data]);
+  const topProductsMax = useMemo(() => Math.max(...topProducts.map((p) => p.revenue || 0), 0), [topProducts]);
   const topRentals = useMemo(() => data?.topRentals || [], [data]);
-  const topRentalsMax = useMemo(
-    () => Math.max(...topRentals.map((p) => p.revenue || 0), 0),
-    [topRentals]
+  const topRentalsMax = useMemo(() => Math.max(...topRentals.map((p) => p.revenue || 0), 0), [topRentals]);
+  const financeSummary = useMemo(() => financeData?.summary || null, [financeData]);
+  const expenseWindowLabel = financeData?.expenseWindowLabel || data?.windowLabel || "";
+  const financeTransactions = useMemo(() => financeData?.transactions || [], [financeData]);
+
+  const windowStart = data?.startDate ? new Date(data.startDate) : null;
+  const windowEnd = data?.endDate ? new Date(data.endDate) : null;
+  const withinWindow = (value) => {
+    if (!windowStart || !windowEnd) return true;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return false;
+    return date >= windowStart && date < windowEnd;
+  };
+
+  const filteredOrders = useMemo(
+    () => orders.filter((order) => withinWindow(order.orderDate)),
+    [orders, windowStart, windowEnd]
   );
+
+  const filteredBookings = useMemo(
+    () => bookings.filter((booking) => withinWindow(booking.eventDate)),
+    [bookings, windowStart, windowEnd]
+  );
+
+  const listRows = useMemo(() => {
+    const orderRows = filteredOrders.map((order) => ({
+      id: `order-${order.id}`,
+      type: "Receipt",
+      number: order.orderNumber || `ORD-${order.id}`,
+      customer: order.customerName || "-",
+      date: order.orderDate,
+      status: order.status || "pending",
+      total: Number(order.total || 0),
+    }));
+    const bookingRows = filteredBookings.map((booking) => ({
+      id: `booking-${booking.id}`,
+      type: "Invoice",
+      number: `INV-${booking.id}`,
+      customer: booking.customerName || "-",
+      date: booking.eventDate,
+      status: booking.status || "pending",
+      total: Number(booking.totalAmount || 0) / 100,
+    }));
+    return [...orderRows, ...bookingRows].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filteredOrders, filteredBookings]);
+
+  const receiptsTotal = useMemo(
+    () => filteredOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    [filteredOrders]
+  );
+  const invoicesTotal = useMemo(
+    () => filteredBookings.reduce((sum, booking) => sum + Number(booking.totalAmount || 0) / 100, 0),
+    [filteredBookings]
+  );
+  const combinedTotal = receiptsTotal + invoicesTotal;
+  const taxRate = parseTaxRate(taxConfig?.taxRate);
+  const taxDue = combinedTotal * taxRate;
+  const taxLabel = `${Math.round(taxRate * 100)}%`;
   const cashflowSpark = useMemo(() => {
     if (!cashflowTrend.length) return { points: "", max: 0 };
     const max = Math.max(...cashflowTrend.map((d) => d.revenue || 0), 0);
@@ -126,6 +286,7 @@ function AdminAccounting() {
                   }}
                 >
                   <option value="today">Today</option>
+                  <option value="allTime">All time</option>
                   <option value="thisMonth">This month</option>
                   <option value="lastMonth">Last month</option>
                   <option value="thisQuarter">This quarter</option>
@@ -181,6 +342,26 @@ function AdminAccounting() {
                   >
                     Kanban
                   </button>
+                  {!isMobileView && (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={viewMode === "list"}
+                      className={viewMode === "list" ? "is-active" : ""}
+                      onClick={() => setViewMode("list")}
+                    >
+                      List
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "taxes"}
+                    className={viewMode === "taxes" ? "is-active" : ""}
+                    onClick={() => setViewMode("taxes")}
+                  >
+                    Taxes
+                  </button>
                 </div>
               </div>
               <div className="accounting-actions">
@@ -193,6 +374,9 @@ function AdminAccounting() {
         </header>
 
         {loading && <p className="accounting-status">Loading financial metrics…</p>}
+        {!loading && isFetching && data && (
+          <p className="accounting-status">Refreshing calculations…</p>
+        )}
         {!loading && error && (
           <div className="accounting-inline">
             <p className="accounting-error">{error}</p>
@@ -226,6 +410,113 @@ function AdminAccounting() {
                 <p className="accounting-kpi-label">Bookings revenue</p>
                 <h3 className="accounting-kpi-value">{formatCurrency(data.bookingRevenue || 0)}</h3>
                 <p className="accounting-kpi-sub">{data.bookings || 0} bookings</p>
+              </div>
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Operating expenses</p>
+                <h3 className="accounting-kpi-value">
+                  {formatCurrency(financeSummary?.operatingExpenses || 0)}
+                </h3>
+                <p className="accounting-kpi-sub">{expenseWindowLabel}</p>
+              </div>
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Net profit</p>
+                <h3 className="accounting-kpi-value">
+                  {formatCurrency(financeSummary?.netProfit || 0)}
+                </h3>
+                <p className="accounting-kpi-sub">After operating expenses</p>
+              </div>
+            </section>
+
+            <section className="accounting-panels accounting-panels-stack">
+              <div className="accounting-panel accounting-panel--margins">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Automated reconciliation</p>
+                    <h3>Profit & loss snapshot</h3>
+                    <p className="accounting-panel-sub">COGS uses purchase prices to reveal true gross profit.</p>
+                  </div>
+                </div>
+                {financeLoading && !financeSummary ? (
+                  <p className="accounting-muted">Reconciling ledgers…</p>
+                ) : financeError && !financeSummary ? (
+                  <p className="accounting-error">{financeError}</p>
+                ) : financeSummary ? (
+                  <div className="accounting-pnl">
+                    <div className="accounting-pnl-row">
+                      <span>Retail sales revenue</span>
+                      <span>{formatCurrency(financeSummary.revenue)}</span>
+                    </div>
+                    <div className="accounting-pnl-row">
+                      <span>Rental income (events)</span>
+                      <span>{formatCurrency(financeSummary.rentalIncome)}</span>
+                    </div>
+                    <div className="accounting-pnl-row accounting-negative">
+                      <span>Cost of goods sold</span>
+                      <span>-{formatCurrency(financeSummary.cogs)}</span>
+                    </div>
+                    <div className="accounting-pnl-row">
+                      <span>Gross profit</span>
+                      <span>{formatCurrency(financeSummary.grossProfit)}</span>
+                    </div>
+                    <div className="accounting-pnl-row accounting-negative">
+                      <span>Operating expenses</span>
+                      <span>-{formatCurrency(financeSummary.operatingExpenses)}</span>
+                    </div>
+                    <div className="accounting-pnl-row total">
+                      <strong>Net profit</strong>
+                      <strong>{formatCurrency(financeSummary.netProfit)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="accounting-muted">No reconciliation data in this window.</p>
+                )}
+              </div>
+
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Sales reconciliation</p>
+                    <h3>Margins by product</h3>
+                    <p className="accounting-panel-sub">Margins show where profit is strongest.</p>
+                  </div>
+                </div>
+                {financeLoading && !financeTransactions.length ? (
+                  <p className="accounting-muted">Calculating product margins…</p>
+                ) : financeError && !financeTransactions.length ? (
+                  <p className="accounting-error">{financeError}</p>
+                ) : financeTransactions.length === 0 ? (
+                  <p className="accounting-muted">No sales items in this window.</p>
+                ) : (
+                  <div className="accounting-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Revenue</th>
+                          <th>Unit cost</th>
+                          <th>Margin</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {financeTransactions.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <div className="accounting-table-title">
+                                <strong>{item.name || "Untitled"}</strong>
+                                <span>{item.sku ? `SKU ${item.sku}` : "No SKU"} · {item.qty} units</span>
+                              </div>
+                            </td>
+                            <td>{formatCurrency(item.revenue)}</td>
+                            <td>{formatCurrency(item.unitCost)}</td>
+                            <td className={item.marginPct >= 0 ? "accounting-positive" : "accounting-negative"}>
+                              {item.marginPct.toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -302,7 +593,10 @@ function AdminAccounting() {
                             <div className="accounting-list-bar">
                               <span
                                 style={{
-                                  width: `${Math.max(6, (product.revenue / topProductsMax) * 100)}%`,
+                                  width: `${Math.max(
+                                    6,
+                                    (product.revenue / Math.max(totalRevenue, topProductsMax || 1)) * 100
+                                  )}%`,
                                 }}
                               />
                             </div>
@@ -339,7 +633,10 @@ function AdminAccounting() {
                             <div className="accounting-list-bar">
                               <span
                                 style={{
-                                  width: `${Math.max(6, (rental.revenue / (topRentalsMax || 1)) * 100)}%`,
+                                  width: `${Math.max(
+                                    6,
+                                    (rental.revenue / Math.max(data.bookingRevenue || 0, topRentalsMax || 1)) * 100
+                                  )}%`,
                                 }}
                               />
                             </div>
@@ -508,7 +805,10 @@ function AdminAccounting() {
                           <div className="accounting-list-bar">
                             <span
                               style={{
-                                width: `${Math.max(6, (product.revenue / (topProductsMax || 1)) * 100)}%`,
+                                width: `${Math.max(
+                                  6,
+                                  (product.revenue / Math.max(totalRevenue, topProductsMax || 1)) * 100
+                                )}%`,
                               }}
                             />
                           </div>
@@ -542,7 +842,10 @@ function AdminAccounting() {
                           <div className="accounting-list-bar">
                             <span
                               style={{
-                                width: `${Math.max(6, (rental.revenue / (topRentalsMax || 1)) * 100)}%`,
+                                width: `${Math.max(
+                                  6,
+                                  (rental.revenue / Math.max(data.bookingRevenue || 0, topRentalsMax || 1)) * 100
+                                )}%`,
                               }}
                             />
                           </div>
@@ -586,7 +889,10 @@ function AdminAccounting() {
                     <div className="accounting-list-bar">
                       <span
                         style={{
-                          width: `${Math.max(6, (product.revenue / (topProductsMax || 1)) * 100)}%`,
+                          width: `${Math.max(
+                            6,
+                            (product.revenue / Math.max(totalRevenue, topProductsMax || 1)) * 100
+                          )}%`,
                         }}
                       />
                     </div>
@@ -645,7 +951,10 @@ function AdminAccounting() {
                     <div className="accounting-list-bar">
                       <span
                         style={{
-                          width: `${Math.max(6, (rental.revenue / (topRentalsMax || 1)) * 100)}%`,
+                          width: `${Math.max(
+                            6,
+                            (rental.revenue / Math.max(data.bookingRevenue || 0, topRentalsMax || 1)) * 100
+                          )}%`,
                         }}
                       />
                     </div>
@@ -655,6 +964,135 @@ function AdminAccounting() {
                   </div>
                 ))
               )}
+            </div>
+          </section>
+        )}
+
+        {!loading && !error && data && viewMode === "list" && (
+          <section className="accounting-table accounting-list-table">
+            <div className="accounting-table-title">
+              <h3>Receipts & invoices</h3>
+              <span>{data.windowLabel || ""}</span>
+            </div>
+            {listError && <p className="accounting-error">{listError}</p>}
+            {listLoading ? (
+              <p className="accounting-status">Loading receipts and invoices…</p>
+            ) : (
+              <div className="admin-table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Number</th>
+                      <th>Customer</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listRows.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="accounting-empty">
+                          No receipts or invoices in this window.
+                        </td>
+                      </tr>
+                    )}
+                    {listRows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.type}</td>
+                        <td>{row.number}</td>
+                        <td>{row.customer}</td>
+                        <td>{formatDate(row.date)}</td>
+                        <td>{row.status}</td>
+                        <td>{formatCurrency(row.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={5}>Receipts total</td>
+                      <td>{formatCurrency(receiptsTotal)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={5}>Invoices total</td>
+                      <td>{formatCurrency(invoicesTotal)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={5}>Combined total</td>
+                      <td>{formatCurrency(combinedTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
+
+        {!loading && !error && data && viewMode === "taxes" && (
+          <section className="accounting-panels accounting-panels-stack">
+            <div className="accounting-panel">
+              <div className="accounting-panel-head">
+                <h3>Tax summary</h3>
+                <span className="accounting-panel-label">{data.windowLabel || ""}</span>
+              </div>
+              <div className="accounting-pnl">
+                <div className="accounting-pnl-row">
+                  <span>Tax rate</span>
+                  <strong>{taxRate > 0 ? taxLabel : "Not set"}</strong>
+                </div>
+                <div className="accounting-pnl-row">
+                  <span>Receipts (retail)</span>
+                  <strong>{formatCurrency(receiptsTotal)}</strong>
+                </div>
+                <div className="accounting-pnl-row">
+                  <span>Invoices (rentals)</span>
+                  <strong>{formatCurrency(invoicesTotal)}</strong>
+                </div>
+                <div className="accounting-pnl-row total">
+                  <span>Estimated tax due</span>
+                  <strong>{formatCurrency(taxDue)}</strong>
+                </div>
+              </div>
+              {taxRate === 0 && (
+                <p className="accounting-muted">Set your tax rate in Settings → ERP Config.</p>
+              )}
+            </div>
+            <div className="accounting-panel">
+              <div className="accounting-panel-head">
+                <h3>Tax breakdown</h3>
+                <span className="accounting-panel-label">By document type</span>
+              </div>
+              <div className="accounting-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Taxable total</th>
+                      <th>Tax ({taxLabel})</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Receipts</td>
+                      <td>{formatCurrency(receiptsTotal)}</td>
+                      <td>{formatCurrency(receiptsTotal * taxRate)}</td>
+                    </tr>
+                    <tr>
+                      <td>Invoices</td>
+                      <td>{formatCurrency(invoicesTotal)}</td>
+                      <td>{formatCurrency(invoicesTotal * taxRate)}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td>{formatCurrency(combinedTotal)}</td>
+                      <td>{formatCurrency(taxDue)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           </section>
         )}

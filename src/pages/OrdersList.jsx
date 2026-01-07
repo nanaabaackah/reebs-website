@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import { useAuth } from "../components/AuthContext";
 
 const formatCurrency = (amount, currency = "GHS") => {
   try {
@@ -46,18 +47,101 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
+const normalizeStatus = (status) => {
+  if (typeof status !== "string") return "";
+  const normalized = status.trim().toLowerCase();
+  return normalized === "canceled" ? "cancelled" : normalized;
+};
+
+const isPickupOrder = (deliveryMethod) =>
+  String(deliveryMethod || "").toLowerCase().includes("pickup");
+
+const WINDOW_LABELS = {
+  "9am-11am": "9:00am - 11:00am",
+  "11am-1pm": "11:00am - 1:00pm",
+  "1pm-3pm": "1:00pm - 3:00pm",
+  "3pm-5pm": "3:00pm - 5:00pm",
+  "5pm-7pm": "5:00pm - 7:00pm",
+};
+
+const formatWindow = (value) => {
+  if (!value) return "-";
+  return WINDOW_LABELS[value] || value;
+};
+
+const normalizeOrderItems = (order) => {
+  let items =
+    order?.items ??
+    order?.lineItems ??
+    order?.orderItems ??
+    order?.products ??
+    [];
+  if (typeof items === "string") {
+    try {
+      items = JSON.parse(items);
+    } catch {
+      items = [];
+    }
+  }
+  if (!Array.isArray(items) && items && typeof items === "object") {
+    if (Array.isArray(items.items)) {
+      items = items.items;
+    } else if (Array.isArray(items.lineItems)) {
+      items = items.lineItems;
+    }
+  }
+  if (!Array.isArray(items)) items = [];
+  return { ...order, items };
+};
+
+const getFulfillmentDetails = (order) => {
+  const pickup = isPickupOrder(order?.deliveryMethod);
+  const details = pickup ? order?.pickupDetails : order?.deliveryDetails;
+  return {
+    pickup,
+    date: details?.date || order?.deliveryDate || null,
+    window: details?.window || null,
+    address: details?.address || null,
+    contact: details?.contact || null,
+    notes: details?.notes || null,
+  };
+};
+
+const getTimelineStage = (order) => {
+  const status = normalizeStatus(order?.status);
+  const details = getFulfillmentDetails(order);
+  const hasDeliveryDate = Boolean(details.date);
+  const pickup = isPickupOrder(order?.deliveryMethod);
+
+  if (["cancelled", "canceled"].includes(status)) return "cancelled";
+  if (["fulfilled", "delivered", "completed"].includes(status)) return "delivered";
+  if (status === "paid" && hasDeliveryDate) return pickup ? "pickup" : "delivery";
+  if (status === "paid") return "receipt";
+  return "received";
+};
+
+const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+
+const getIsMobileView = () =>
+  typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
+
 function OrdersList() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [viewMode, setViewMode] = useState("table"); // table | cards
+  const [viewMode] = useState("cards"); // cards only
+  const [isMobileView, setIsMobileView] = useState(getIsMobileView);
   const [page, setPage] = useState(0);
   const pageSize = 10;
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
   const [detailOrder, setDetailOrder] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const itemsFetchAttempted = useRef(new Set());
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -74,7 +158,7 @@ function OrdersList() {
           throw new Error("Failed to fetch orders.");
         }
         const data = await response.json();
-        setOrders(Array.isArray(data) ? data : []);
+        setOrders(Array.isArray(data) ? data.map(normalizeOrderItems) : []);
       } catch (err) {
         console.error("Failed to load orders", err);
         setError("We couldn't load orders right now.");
@@ -89,7 +173,8 @@ function OrdersList() {
   const filteredOrders = useMemo(() => {
     const needle = query.trim().toLowerCase();
     const list = orders.filter((order) => {
-      if (statusFilter !== "all" && String(order.status || "").toLowerCase() !== statusFilter) {
+      const orderStatus = normalizeStatus(order.status || "");
+      if (statusFilter !== "all" && orderStatus !== statusFilter) {
         return false;
       }
       if (!needle) return true;
@@ -142,6 +227,28 @@ function OrdersList() {
     return list;
   }, [filteredOrders, sortConfig]);
 
+  const kanbanColumns = useMemo(() => {
+    const columns = [
+      { id: "received", label: "Order received", items: [] },
+      { id: "receipt", label: "Receipt sent", items: [] },
+      { id: "delivery", label: "Delivery pending", items: [] },
+      { id: "pickup", label: "Pickup date", items: [] },
+      { id: "cancelled", label: "Cancelled", items: [] },
+      { id: "delivered", label: "Delivered", items: [] },
+    ];
+    const columnMap = new Map(columns.map((col) => [col.id, col]));
+    sortedOrders.forEach((order) => {
+      const stage = getTimelineStage(order);
+      columnMap.get(stage)?.items.push(order);
+    });
+    columns.forEach((col) => {
+      col.items.sort(
+        (a, b) => new Date(b.orderDate || 0).getTime() - new Date(a.orderDate || 0).getTime()
+      );
+    });
+    return columns;
+  }, [sortedOrders]);
+
   const detailIndex = useMemo(() => {
     if (!detailOrder) return -1;
     return sortedOrders.findIndex((order) => order.id === detailOrder.id);
@@ -171,6 +278,54 @@ function OrdersList() {
     setPage(0);
   }, [query, statusFilter, viewMode, orders.length]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia(MOBILE_VIEW_QUERY);
+    const handleChange = () => {
+      setIsMobileView(mediaQuery.matches);
+    };
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (!detailOrder?.id) return undefined;
+    const orderId = detailOrder.id;
+    const hasItems = Array.isArray(detailOrder.items) && detailOrder.items.length > 0;
+    if (hasItems || itemsFetchAttempted.current.has(orderId)) return undefined;
+    itemsFetchAttempted.current.add(orderId);
+    const controller = new AbortController();
+    const fetchItems = async () => {
+      try {
+        const response = await fetch(`/.netlify/functions/orders?orderId=${orderId}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const normalized = normalizeOrderItems(data);
+        if (normalized?.id !== orderId) return;
+        if (!Array.isArray(normalized.items) || normalized.items.length === 0) return;
+        setOrders((prev) =>
+          prev.map((order) => (order.id === orderId ? { ...order, items: normalized.items } : order))
+        );
+        setDetailOrder((prev) =>
+          prev && prev.id === orderId ? { ...prev, items: normalized.items } : prev
+        );
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Order item fetch failed", err);
+        }
+      }
+    };
+    fetchItems();
+    return () => controller.abort();
+  }, [detailOrder]);
+
   const totalAmount = useMemo(() => {
     return sortedOrders.reduce((sum, order) => sum + toNumber(order.total), 0);
   }, [sortedOrders]);
@@ -189,6 +344,52 @@ function OrdersList() {
     return sortConfig.direction === "asc" ? "↑" : "↓";
   };
 
+  const viewReceipt = (order) => {
+    if (!order?.id) return;
+    navigate(`/admin/invoicing?type=orders&id=${order.id}`);
+    setOpenMenuId(null);
+  };
+
+  const updateOrderStatus = async (order, nextStatus) => {
+    if (!order?.id) return;
+    setStatusUpdatingId(order.id);
+    setError("");
+    try {
+      const response = await fetch("/.netlify/functions/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: order.id,
+          status: nextStatus,
+          userId: user?.id,
+          userName:
+            user?.fullName ||
+            user?.name ||
+            [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+            undefined,
+          userEmail: user?.email,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to update order.");
+      }
+      setOrders((prev) =>
+        prev.map((row) =>
+          row.id === order.id ? { ...row, status: payload.status || nextStatus } : row
+        )
+      );
+      setDetailOrder((prev) =>
+        prev && prev.id === order.id ? { ...prev, status: payload.status || nextStatus } : prev
+      );
+    } catch (err) {
+      console.error("Order status update failed", err);
+      setError(err.message || "Failed to update order.");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   return (
     <div className="orders-page">
       <div className="orders-shell">
@@ -199,9 +400,11 @@ function OrdersList() {
             <h1>Order Ledger</h1>
             <p className="orders-subtitle">Review recent orders and jump into creation.</p>
           </div>
-          <Link to="/admin/orders/new" className="orders-create">
-            Create order
-          </Link>
+          {!isMobileView && (
+            <Link to="/admin/orders/new" className="orders-create">
+              Create order
+            </Link>
+          )}
         </header>
 
         <section className="orders-panel">
@@ -229,27 +432,10 @@ function OrdersList() {
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
                   <option value="fulfilled">Fulfilled</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="canceled">Canceled</option>
+                  <option value="cancelled">Canceled</option>
                   <option value="completed">Completed</option>
                 </select>
               </label>
-            </div>
-            <div className="orders-view-toggle" role="group" aria-label="Toggle orders view">
-              <button
-                type="button"
-                className={`orders-chip ${viewMode === "table" ? "is-active" : ""}`}
-                onClick={() => setViewMode("table")}
-              >
-                Table
-              </button>
-              <button
-                type="button"
-                className={`orders-chip ${viewMode === "cards" ? "is-active" : ""}`}
-                onClick={() => setViewMode("cards")}
-              >
-                Cards
-              </button>
             </div>
           </div>
 
@@ -258,24 +444,6 @@ function OrdersList() {
 
           {!loading && !error && viewMode === "table" && (
             <div className="orders-table-wrapper">
-              <div className="table-pagination">
-                <span>
-                  Showing {sortedOrders.length === 0 ? 0 : clampedPage * pageSize + 1}-
-                  {Math.min(sortedOrders.length, (clampedPage + 1) * pageSize)} of {sortedOrders.length}
-                </span>
-                <div className="table-pagination-controls">
-                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={clampedPage >= pageCount - 1}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
               <table className="orders-table">
                 <thead>
                   <tr>
@@ -347,26 +515,34 @@ function OrdersList() {
                       <td className="orders-fulfillment">{(order.deliveryMethod || "delivery").toUpperCase()}</td>
                       <td>{formatCurrency(order.total)}</td>
                       <td>
-                        <div
-                          className="bookings-menu inventory-menu"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            className="bookings-edit"
-                            aria-haspopup="true"
-                            aria-expanded={openMenuId === `table-${order.id}`}
-                            onClick={() =>
-                              setOpenMenuId((prev) => (prev === `table-${order.id}` ? null : `table-${order.id}`))
-                            }
+                        {!isMobileView && (
+                          <div
+                            className="bookings-menu inventory-menu"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            ⋮
-                          </button>
-                          <div className={`bookings-menu-list ${openMenuId === `table-${order.id}` ? "open" : ""}`}>
-                            <button type="button">Edit</button>
-                            <button type="button">Mark fulfilled</button>
+                            <button
+                              type="button"
+                              className="bookings-edit"
+                              aria-haspopup="true"
+                              aria-expanded={openMenuId === `table-${order.id}`}
+                              onClick={() =>
+                                setOpenMenuId((prev) => (prev === `table-${order.id}` ? null : `table-${order.id}`))
+                              }
+                            >
+                              ⋮
+                            </button>
+                            <div className={`bookings-menu-list ${openMenuId === `table-${order.id}` ? "open" : ""}`}>
+                              <button
+                                type="button"
+                                onClick={() => viewReceipt(order)}
+                              >
+                                Generate invoice
+                              </button>
+                              <button type="button">Edit</button>
+                              <button type="button">Mark fulfilled</button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -386,11 +562,6 @@ function OrdersList() {
                   </tr>
                 </tfoot>
               </table>
-            </div>
-          )}
-
-          {!loading && !error && viewMode === "cards" && (
-            <>
               <div className="table-pagination">
                 <span>
                   Showing {sortedOrders.length === 0 ? 0 : clampedPage * pageSize + 1}-
@@ -409,6 +580,11 @@ function OrdersList() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {!loading && !error && viewMode === "cards" && (
+            <>
               <div className="orders-card-grid">
                 {!sortedOrders.length && <p className="orders-empty">No orders match your filters.</p>}
                 {paginatedOrders.map((order) => (
@@ -429,31 +605,45 @@ function OrdersList() {
                       <span className={`orders-pill orders-status-pill ${order.status || "pending"}`}>
                         {order.status || "pending"}
                       </span>
-                      <div
-                        className="bookings-menu inventory-menu"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="bookings-edit"
-                          aria-haspopup="true"
-                          aria-expanded={openMenuId === `card-${order.id}`}
-                          onClick={() =>
-                            setOpenMenuId((prev) => (prev === `card-${order.id}` ? null : `card-${order.id}`))
-                          }
+                      {!isMobileView && (
+                        <div
+                          className="bookings-menu inventory-menu"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          ⋮
-                        </button>
-                        <div className={`bookings-menu-list ${openMenuId === `card-${order.id}` ? "open" : ""}`}>
-                          <button type="button">Edit</button>
-                          <button type="button">Mark fulfilled</button>
+                          <button
+                            type="button"
+                            className="bookings-edit"
+                            aria-haspopup="true"
+                            aria-expanded={openMenuId === `card-${order.id}`}
+                            onClick={() =>
+                              setOpenMenuId((prev) => (prev === `card-${order.id}` ? null : `card-${order.id}`))
+                            }
+                          >
+                            ⋮
+                          </button>
+                          <div className={`bookings-menu-list ${openMenuId === `card-${order.id}` ? "open" : ""}`}>
+                            <button
+                              type="button"
+                              onClick={() => viewReceipt(order)}
+                            >
+                              Generate invoice
+                            </button>
+                            <button type="button">Edit</button>
+                            <button type="button">Mark fulfilled</button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                     <h4>{order.orderNumber || `#${order.id}`}</h4>
                     <p className="orders-card-meta">{order.customerName || "-"}</p>
                     <p className="orders-card-meta">
-                      {formatDate(order.orderDate)} · Delivery {formatDate(order.deliveryDate)}
+                      {formatDate(order.orderDate)} ·{" "}
+                      {(() => {
+                        const details = getFulfillmentDetails(order);
+                        const label = details.pickup ? "Pickup" : "Delivery";
+                        const dateLabel = details.date ? formatDate(details.date) : "Not scheduled";
+                        return `${label} ${dateLabel}`;
+                      })()}
                     </p>
                     <p className="orders-card-meta">Fulfillment: {(order.deliveryMethod || "delivery").toUpperCase()}</p>
                     <p className="orders-card-meta">Assigned: {formatUser(order.assignedUserName)}</p>
@@ -461,7 +651,69 @@ function OrdersList() {
                   </div>
                 ))}
               </div>
+              <div className="table-pagination">
+                <span>
+                  Showing {sortedOrders.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(sortedOrders.length, (clampedPage + 1) * pageSize)} of {sortedOrders.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </>
+          )}
+
+          {!loading && !error && viewMode === "kanban" && (
+            <div className="orders-kanban">
+              {kanbanColumns.map((column) => (
+                <div key={column.id} className="orders-kanban-column">
+                  <div className="orders-kanban-header">
+                    <h4>{column.label}</h4>
+                    <span>{column.items.length}</span>
+                  </div>
+                  {column.items.length ? (
+                    column.items.map((order) => (
+                      <button
+                        key={order.id}
+                        type="button"
+                        className="orders-kanban-card"
+                        onClick={() => setDetailOrder(order)}
+                      >
+                        <div className="orders-kanban-card-head">
+                          <span className={`orders-pill orders-status-pill ${order.status || "pending"}`}>
+                            {order.status || "pending"}
+                          </span>
+                          <span className="orders-kanban-amount">{formatCurrency(order.total)}</span>
+                        </div>
+                        <h5>{order.orderNumber || `#${order.id}`}</h5>
+                        <p className="orders-kanban-meta">{order.customerName || "-"}</p>
+                        <p className="orders-kanban-meta">
+                          Ordered {formatDate(order.orderDate)} ·{" "}
+                          {(order.deliveryMethod || "delivery").toUpperCase()}
+                        </p>
+                        {getFulfillmentDetails(order).date && (
+                          <p className="orders-kanban-meta">
+                            {getFulfillmentDetails(order).pickup ? "Pickup" : "Delivery"}{" "}
+                            {formatDate(getFulfillmentDetails(order).date)}
+                          </p>
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="orders-empty">No orders here.</p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </section>
 
@@ -471,7 +723,12 @@ function OrdersList() {
               <header>
                 <div>
                   <p className="orders-eyebrow">Order detail</p>
-                  <h2>{detailOrder.orderNumber || `#${detailOrder.id}`}</h2>
+                  <div className="orders-detail-title">
+                    <h2>{detailOrder.orderNumber || `#${detailOrder.id}`}</h2>
+                    <span className={`orders-status-pill orders-status-pill--compact ${detailOrder.status || "pending"}`}>
+                      {detailOrder.status || "pending"}
+                    </span>
+                  </div>
                   <p className="orders-card-meta">{detailOrder.customerName || "-"}</p>
                 </div>
                 <div className="orders-detail-actions">
@@ -500,17 +757,57 @@ function OrdersList() {
                   </button>
                 </div>
               </header>
+              {isMobileView && (
+                <div className="orders-detail-mobile-actions">
+                  <button
+                    type="button"
+                    className="orders-action"
+                    onClick={() => updateOrderStatus(detailOrder, "paid")}
+                    disabled={
+                      statusUpdatingId === detailOrder.id ||
+                      ["paid", "fulfilled", "delivered", "completed", "cancelled", "canceled"].includes(
+                        normalizeStatus(detailOrder.status)
+                      )
+                    }
+                  >
+                    {statusUpdatingId === detailOrder.id ? "Updating..." : "Accept"}
+                  </button>
+                  <button
+                    type="button"
+                    className="orders-action orders-action-primary"
+                    onClick={() => updateOrderStatus(detailOrder, "fulfilled")}
+                    disabled={
+                      statusUpdatingId === detailOrder.id ||
+                      ["fulfilled", "delivered", "completed", "cancelled", "canceled"].includes(
+                        normalizeStatus(detailOrder.status)
+                      )
+                    }
+                  >
+                    {statusUpdatingId === detailOrder.id ? "Updating..." : "Confirm"}
+                  </button>
+                </div>
+              )}
               <div className="orders-detail-body">
-                <p>
-                  Status:{" "}
-                  <span className={`orders-status-pill ${detailOrder.status || "pending"}`}>
-                    {detailOrder.status || "pending"}
-                  </span>
-                </p>
                 <p>Total: {formatCurrency(detailOrder.total)}</p>
                 <p>Fulfillment: {(detailOrder.deliveryMethod || "delivery").toUpperCase()}</p>
                 <p>Order date: {formatDate(detailOrder.orderDate)}</p>
-                <p>Delivery: {formatDate(detailOrder.deliveryDate)}</p>
+                {(() => {
+                  const details = getFulfillmentDetails(detailOrder);
+                  const label = details.pickup ? "Pickup" : "Delivery";
+                  return (
+                    <>
+                      <p>{label} date: {details.date ? formatDate(details.date) : "-"}</p>
+                      <p>{label} window: {formatWindow(details.window)}</p>
+                      {!details.pickup && (
+                        <>
+                          <p>Address: {details.address || "-"}</p>
+                          <p>Contact: {details.contact || "-"}</p>
+                        </>
+                      )}
+                      {details.notes && <p>Notes: {details.notes}</p>}
+                    </>
+                  );
+                })()}
                 <p>Assigned: {formatUser(detailOrder.assignedUserName)}</p>
                 <p>Last updated: {formatDateTime(detailOrder.lastModifiedAt)}</p>
                 <div className="orders-detail-items">

@@ -21,6 +21,7 @@ model Order {
   
   customer        Customer      @relation(fields: [customerId], references: [id]) 
   orderItems      OrderItem[]
+  expenses        Expense[]
 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -48,6 +49,8 @@ model Product {
   sku                  String   @unique
   name                 String
   description          String?
+  vendorId             Int?
+  vendor               Vendor?  @relation(fields: [vendorId], references: [id])
   
   sourceCategoryCode   String
   specificCategory     String?
@@ -65,6 +68,7 @@ model Product {
   stock                Int      @default(0)
   isActive             Boolean  @default(true)
   imageUrl             String?
+  attendantsNeeded     Int?
   
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) 
@@ -72,6 +76,11 @@ model Product {
   OrderItem            OrderItem[]
   StockMovement        StockMovement[]
   bookingItems         BookingItem[]
+  maintenanceLogs      MaintenanceLog[]
+  bouncyCastle         BouncyCastle?
+  indoorGame           IndoorGame?
+  machine              Machine?
+  shopItem             ShopItem?
   
   @@map("product")
 }
@@ -110,8 +119,127 @@ model User {
   orders    Order[]
   stockMovements StockMovement[]
   bookings  Booking[]
+  expenses  Expense[]
+  profile   EmployeeProfile?
+  timesheets Timesheet[]
   
   @@map("user")
+}
+
+model EmployeeProfile {
+  id                     Int      @id @default(autoincrement())
+  userId                 Int      @unique
+  user                   User     @relation(fields: [userId], references: [id])
+  jobTitle               String?
+  phone                  String?
+  emergencyContactName   String?
+  emergencyContactPhone  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("employeeProfile")
+}
+
+model Document {
+  id        Int      @id @default(autoincrement())
+  title     String
+  category  String?
+  fileName  String
+  mimeType  String?
+  size      Int?
+  data      String
+  source    String?  @default("upload")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("document")
+}
+
+model Vendor {
+  id           Int      @id @default(autoincrement())
+  name         String
+  contactName  String?
+  email        String?
+  phone        String?
+  mobileMoneyNumber String?
+  address      String?
+  bankName     String?
+  bankAccount  String?
+  leadTimeDays Int?
+  notes        String?
+  products     Product[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("vendor")
+}
+
+model MaintenanceLog {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  issue      String
+  type       String
+  cost       Int      @default(0)
+  status     String   @default("open")
+  notes      String?
+  createdAt  DateTime @default(now())
+  resolvedAt DateTime?
+  updatedAt  DateTime @updatedAt
+
+  @@map("maintenanceLog")
+}
+
+model Timesheet {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  clockIn    DateTime
+  clockOut   DateTime?
+  clockInLat Float?
+  clockInLng Float?
+  clockOutLat Float?
+  clockOutLng Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("timesheet")
+}
+
+model Expense {
+  id          Int      @id @default(autoincrement())
+  category    String
+  amount      Int
+  description String
+  date        DateTime
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id])
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  bookingId   Int?
+  booking     Booking? @relation(fields: [bookingId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expense")
+}
+
+model Discount {
+  id            Int      @id @default(autoincrement())
+  code          String   @unique
+  type          String
+  value         Float
+  minOrderValue Float?
+  expiryDate    DateTime?
+  scope         String?
+  segment       String?
+  reward        String?
+  usageCount    Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("discount")
 }
 
 model Customer {
@@ -140,6 +268,7 @@ model Booking {
   totalAmount  Int           // In cents
   status       String        @default("pending") // pending, confirmed, completed, cancelled
   items        BookingItem[]
+  expenses     Expense[]
   createdAt    DateTime      @default(now())
   assignedUserId Int?
   assignedUser User?         @relation(fields: [assignedUserId], references: [id])
@@ -157,4 +286,83 @@ model BookingItem {
   price     Int     // Price at time of booking (in cents)
 
   @@map("bookingItem")
+}
+
+model BouncyCastle {
+  id             Int      @id @default(autoincrement())
+  bouncerId      String   @unique
+  name           String
+  productId      Int?     @unique
+  product        Product? @relation(fields: [productId], references: [id])
+  capacity       String?
+  recommendedAge String?
+  priceRange     String?
+  motorsToPump   Int?
+  bestFor        String?
+  features       String?
+  image          String?
+  images         String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("bouncy_castles")
+}
+
+model IndoorGame {
+  id           Int      @id @default(autoincrement())
+  name         String
+  productId    Int?     @unique
+  product      Product? @relation(fields: [productId], references: [id])
+  quantity     Int?
+  price        Int?
+  rate         String?
+  availability String?
+  category     String?
+  image        String?
+  page         String?
+  piecesTotal  Int?
+  piecesMissing Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("indoor_games")
+}
+
+model Machine {
+  id           Int      @id @default(autoincrement())
+  name         String
+  productId    Int?     @unique
+  product      Product? @relation(fields: [productId], references: [id])
+  quantity     Int?
+  price        Int?
+  rate         String?
+  availability String?
+  category     String?
+  image        String?
+  page         String?
+  power        String?
+  output       String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("machines")
+}
+
+model ShopItem {
+  id          Int      @id @default(autoincrement())
+  name        String
+  productId   Int?     @unique
+  product     Product? @relation(fields: [productId], references: [id])
+  description String?
+  price       Int
+  currency    String   @default("GHS")
+  ageRange    String?
+  category    String?
+  image       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("shop_items")
 }

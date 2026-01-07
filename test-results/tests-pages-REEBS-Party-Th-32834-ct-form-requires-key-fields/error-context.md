@@ -30,145 +30,147 @@
           - img [ref=e27] [cursor=pointer]
         - button [ref=e29] [cursor=pointer]:
           - img [ref=e31] [cursor=pointer]
-        - button "Toggle dark mode" [ref=e33] [cursor=pointer]:
-          - img [ref=e34] [cursor=pointer]
-  - main [ref=e37]:
-    - region "Contact REEBS" [ref=e38]:
-      - generic [ref=e39]:
-        - generic [ref=e40]:
-          - paragraph [ref=e41]: Let's plan your party
-          - heading "Contact REEBS" [level=1] [ref=e42]
-          - paragraph [ref=e43]: We’ll help with rentals, decor, or a full setup plan. Reach out and we’ll get you a clear game plan fast.
-          - generic "Quick highlights" [ref=e44]:
-            - generic [ref=e45]: Same-day delivery options
-            - generic [ref=e46]: Custom themes
-            - generic [ref=e47]: Friendly, fast replies
-          - group "Ways to reach us" [ref=e48]:
-            - link "Call us" [ref=e49] [cursor=pointer]:
+        - button "User menu" [ref=e34] [cursor=pointer]:
+          - img [ref=e35] [cursor=pointer]
+        - button "Toggle dark mode" [ref=e37] [cursor=pointer]:
+          - img [ref=e38] [cursor=pointer]
+  - main [ref=e41]:
+    - region "Contact REEBS" [ref=e42]:
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - paragraph [ref=e45]: Let's plan your party
+          - heading "Contact REEBS" [level=1] [ref=e46]
+          - paragraph [ref=e47]: We’ll help with rentals, decor, or a full setup plan. Reach out and we’ll get you a clear game plan fast.
+          - generic "Quick highlights" [ref=e48]:
+            - generic [ref=e49]: Same-day delivery options
+            - generic [ref=e50]: Custom themes
+            - generic [ref=e51]: Friendly, fast replies
+          - group "Ways to reach us" [ref=e52]:
+            - link "Call us" [ref=e53] [cursor=pointer]:
               - /url: tel:+233244238419
-              - img [ref=e50] [cursor=pointer]
+              - img [ref=e54] [cursor=pointer]
               - text: Call us
-            - link "WhatsApp" [ref=e52] [cursor=pointer]:
+            - link "WhatsApp" [ref=e56] [cursor=pointer]:
               - /url: https://wa.me/233244238419
-              - img [ref=e53] [cursor=pointer]
+              - img [ref=e57] [cursor=pointer]
               - text: WhatsApp
-            - link "Plan my setup" [ref=e55] [cursor=pointer]:
+            - link "Plan my setup" [ref=e59] [cursor=pointer]:
               - /url: /rentals
-          - generic [ref=e56]:
-            - generic [ref=e57]:
-              - img [ref=e58]
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - img [ref=e62]
               - text: 8:30am – 7pm (Mon–Sat)
-            - generic [ref=e60]:
-              - img [ref=e61]
+            - generic [ref=e64]:
+              - img [ref=e65]
               - text: Sakumono Broadway, Tema
-        - generic "Studio details" [ref=e63]:
-          - generic [ref=e64]:
-            - img [ref=e65]
-            - generic [ref=e67]:
-              - paragraph [ref=e68]: Visit or pickup
-              - heading "Swing by our store" [level=2] [ref=e69]
-          - paragraph [ref=e70]: Stop by in person, grab balloons, or chat through ideas with our team.
-          - generic [ref=e71]:
-            - link "Open in Maps" [ref=e72] [cursor=pointer]:
+        - generic "Studio details" [ref=e67]:
+          - generic [ref=e68]:
+            - img [ref=e69]
+            - generic [ref=e71]:
+              - paragraph [ref=e72]: Visit or pickup
+              - heading "Swing by our store" [level=2] [ref=e73]
+          - paragraph [ref=e74]: Stop by in person, grab balloons, or chat through ideas with our team.
+          - generic [ref=e75]:
+            - link "Open in Maps" [ref=e76] [cursor=pointer]:
               - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-            - link "info@reebspartythemes.com" [ref=e73] [cursor=pointer]:
+            - link "info@reebspartythemes.com" [ref=e77] [cursor=pointer]:
               - /url: mailto:info@reebspartythemes.com
-          - generic [ref=e74]:
-            - generic [ref=e75]:
-              - generic [ref=e76]: Weekdays
-              - strong [ref=e77]: 8:30am – 7pm
-            - generic [ref=e78]:
-              - generic [ref=e79]: Saturday
-              - strong [ref=e80]: 8:30am – 7pm
-            - paragraph [ref=e81]: We alternate some Mondays—call ahead to confirm. Holiday hours may vary.
-    - region "Stay connected" [ref=e82]:
-      - article [ref=e83]:
-        - generic [ref=e84]:
-          - img [ref=e85]
-          - heading "Talk to a human" [level=3] [ref=e87]
-        - paragraph [ref=e88]: Need quick answers on availability or pricing? Call or text and we’ll confirm details right away.
-        - generic [ref=e89]:
-          - link "+233 24 423 8419" [ref=e90] [cursor=pointer]:
-            - /url: tel:+233244238419
-          - link "Message on WhatsApp" [ref=e91] [cursor=pointer]:
-            - /url: https://wa.me/233244238419
-      - article [ref=e92]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - generic [ref=e80]: Weekdays
+              - strong [ref=e81]: 8:30am – 7pm
+            - generic [ref=e82]:
+              - generic [ref=e83]: Saturday
+              - strong [ref=e84]: 8:30am – 7pm
+            - paragraph [ref=e85]: We alternate some Mondays—call ahead to confirm. Holiday hours may vary.
+    - region "Stay connected" [ref=e86]:
+      - article [ref=e87]:
+        - generic [ref=e88]:
+          - img [ref=e89]
+          - heading "Talk to a human" [level=3] [ref=e91]
+        - paragraph [ref=e92]: Need quick answers on availability or pricing? Call or text and we’ll confirm details right away.
         - generic [ref=e93]:
-          - img [ref=e94]
-          - heading "Send a brief" [level=3] [ref=e96]
-        - paragraph [ref=e97]: Share your theme, date, guest count, and budget. We’ll reply within one business day with options.
-        - generic [ref=e98]:
-          - link "info@reebspartythemes.com" [ref=e99] [cursor=pointer]:
-            - /url: mailto:info@reebspartythemes.com
-          - link "View FAQs" [ref=e100] [cursor=pointer]:
-            - /url: /faq
-      - article [ref=e101]:
+          - link "+233 24 423 8419" [ref=e94] [cursor=pointer]:
+            - /url: tel:+233244238419
+          - link "Message on WhatsApp" [ref=e95] [cursor=pointer]:
+            - /url: https://wa.me/233244238419
+      - article [ref=e96]:
+        - generic [ref=e97]:
+          - img [ref=e98]
+          - heading "Send a brief" [level=3] [ref=e100]
+        - paragraph [ref=e101]: Share your theme, date, guest count, and budget. We’ll reply within one business day with options.
         - generic [ref=e102]:
-          - img [ref=e103]
-          - heading "Follow along" [level=3] [ref=e105]
-        - paragraph [ref=e106]: See new setups, balloons, and party inspo from events across Ghana.
-        - generic [ref=e107]:
-          - link "Facebook" [ref=e108] [cursor=pointer]:
+          - link "info@reebspartythemes.com" [ref=e103] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+          - link "View FAQs" [ref=e104] [cursor=pointer]:
+            - /url: /faq
+      - article [ref=e105]:
+        - generic [ref=e106]:
+          - img [ref=e107]
+          - heading "Follow along" [level=3] [ref=e109]
+        - paragraph [ref=e110]: See new setups, balloons, and party inspo from events across Ghana.
+        - generic [ref=e111]:
+          - link "Facebook" [ref=e112] [cursor=pointer]:
             - /url: https://www.facebook.com/reebspartythemes
-            - img [ref=e109] [cursor=pointer]
-          - link "Instagram" [ref=e111] [cursor=pointer]:
+            - img [ref=e113] [cursor=pointer]
+          - link "Instagram" [ref=e115] [cursor=pointer]:
             - /url: https://www.instagram.com/reebspartythemes_/
-            - img [ref=e112] [cursor=pointer]
-          - link "TikTok" [ref=e114] [cursor=pointer]:
+            - img [ref=e116] [cursor=pointer]
+          - link "TikTok" [ref=e118] [cursor=pointer]:
             - /url: https://www.tiktok.com/@reebspartythemes_
-            - img [ref=e115] [cursor=pointer]
-    - region "Send a message or find us" [ref=e117]:
-      - article [ref=e118]:
-        - generic [ref=e119]:
-          - paragraph [ref=e120]: Tell us about your event
-          - heading "Send a message" [level=3] [ref=e121]
-        - paragraph [ref=e122]: We’ll confirm availability, pricing, and next steps within one business day.
+            - img [ref=e119] [cursor=pointer]
+    - region "Send a message or find us" [ref=e121]:
+      - article [ref=e122]:
         - generic [ref=e123]:
-          - paragraph [ref=e124]: We reply within one business day with availability and options.
-          - generic [ref=e125]:
-            - generic [ref=e126]:
-              - generic [ref=e127]: Name
-              - textbox "Name" [ref=e128]
-            - generic [ref=e129]:
-              - generic [ref=e130]: Email
-              - textbox "Email" [ref=e131]
-            - generic [ref=e132]:
-              - generic [ref=e133]: Phone number
-              - textbox "Phone number" [ref=e134]
-              - generic [ref=e135]: WhatsApp or mobile preferred.
+          - paragraph [ref=e124]: Tell us about your event
+          - heading "Send a message" [level=3] [ref=e125]
+        - paragraph [ref=e126]: We’ll confirm availability, pricing, and next steps within one business day.
+        - generic [ref=e127]:
+          - paragraph [ref=e128]: We reply within one business day with availability and options.
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: Name
+              - textbox "Name" [ref=e132]
+            - generic [ref=e133]:
+              - generic [ref=e134]: Email
+              - textbox "Email" [ref=e135]
             - generic [ref=e136]:
-              - generic [ref=e137]: What do you need?
-              - combobox "What do you need?" [ref=e138]:
+              - generic [ref=e137]: Phone number
+              - textbox "Phone number" [ref=e138]
+              - generic [ref=e139]: WhatsApp or mobile preferred.
+            - generic [ref=e140]:
+              - generic [ref=e141]: What do you need?
+              - combobox "What do you need?" [ref=e142]:
                 - option "Select a service" [disabled] [selected]
                 - option "Party rentals"
                 - option "Full setup / styling"
                 - option "Balloons & backdrops"
                 - option "Party supplies box"
                 - option "Other"
-            - generic [ref=e139]:
-              - generic [ref=e140]: Event date
-              - textbox "Event date" [ref=e141]
-            - generic [ref=e142]:
-              - generic [ref=e143]: Location / venue
-              - textbox "Location / venue" [ref=e144]
-            - generic [ref=e145]:
-              - generic [ref=e146]: Tell us more
-              - textbox "Tell us more" [ref=e147]
-          - generic [ref=e148]:
-            - generic [ref=e149]: Need it fast? Call or WhatsApp for same-day options.
-            - button "Send message" [ref=e150] [cursor=pointer]
-      - article [ref=e151]:
-        - generic [ref=e152]:
-          - paragraph [ref=e153]: Find us
-          - heading "Map & directions" [level=3] [ref=e154]
+            - generic [ref=e143]:
+              - generic [ref=e144]: Event date
+              - textbox "Event date" [ref=e145]
+            - generic [ref=e146]:
+              - generic [ref=e147]: Location / venue
+              - textbox "Location / venue" [ref=e148]
+            - generic [ref=e149]:
+              - generic [ref=e150]: Tell us more
+              - textbox "Tell us more" [ref=e151]
+          - generic [ref=e152]:
+            - generic [ref=e153]: Need it fast? Call or WhatsApp for same-day options.
+            - button "Send message" [ref=e154] [cursor=pointer]
+      - article [ref=e155]:
         - generic [ref=e156]:
-          - generic [ref=e159]:
-            - generic [ref=e161]: Oops! Something went wrong.
-            - generic [ref=e162]: This page didn't load Google Maps correctly. See the JavaScript console for technical details.
+          - paragraph [ref=e157]: Find us
+          - heading "Map & directions" [level=3] [ref=e158]
+        - generic [ref=e160]:
           - generic [ref=e163]:
-            - button "Focus shop" [ref=e164] [cursor=pointer]
-            - button "Use my location" [ref=e165] [cursor=pointer]
-        - paragraph [ref=e167]: Use “Get Directions” on the map for a quick route from your location.
+            - generic [ref=e165]: Oops! Something went wrong.
+            - generic [ref=e166]: This page didn't load Google Maps correctly. See the JavaScript console for technical details.
+          - generic [ref=e167]:
+            - button "Focus shop" [ref=e168] [cursor=pointer]
+            - button "Use my location" [ref=e169] [cursor=pointer]
+        - paragraph [ref=e171]: Use “Get Directions” on the map for a quick route from your location.
   - generic:
     - dialog:
       - generic:
@@ -184,71 +186,71 @@
         - link:
           - /url: /shop
           - text: Browse the shop
-  - contentinfo [ref=e168]:
-    - link "REEBS Logo" [ref=e169] [cursor=pointer]:
+  - contentinfo [ref=e172]:
+    - link "REEBS Logo" [ref=e173] [cursor=pointer]:
       - /url: /
-      - img "REEBS Logo" [ref=e170] [cursor=pointer]
-    - search [ref=e171]:
-      - img [ref=e172]
-      - searchbox "Search site" [ref=e174]
-    - generic [ref=e175]:
-      - generic [ref=e176]:
-        - link "Contact & Shop Info" [ref=e177] [cursor=pointer]:
+      - img "REEBS Logo" [ref=e174] [cursor=pointer]
+    - search [ref=e175]:
+      - img [ref=e176]
+      - searchbox "Search site" [ref=e178]
+    - generic [ref=e179]:
+      - generic [ref=e180]:
+        - link "Contact & Shop Info" [ref=e181] [cursor=pointer]:
           - /url: /Contact
-        - link "Refund Policy" [ref=e178] [cursor=pointer]:
+        - link "Refund Policy" [ref=e182] [cursor=pointer]:
           - /url: /refund-policy
-        - link "Delivery Policy" [ref=e179] [cursor=pointer]:
+        - link "Delivery Policy" [ref=e183] [cursor=pointer]:
           - /url: /delivery-policy
-        - link "Privacy Policy" [ref=e180] [cursor=pointer]:
+        - link "Privacy Policy" [ref=e184] [cursor=pointer]:
           - /url: /privacy-policy
-        - link "FAQ" [ref=e181] [cursor=pointer]:
+        - link "FAQ" [ref=e185] [cursor=pointer]:
           - /url: /faq
-        - link "Terms of Service" [ref=e182] [cursor=pointer]:
+        - link "Terms of Service" [ref=e186] [cursor=pointer]:
           - /url: /terms-of-service
-      - generic [ref=e183]:
-        - link "Sakumono Broadway, Tema, Ghana" [ref=e184] [cursor=pointer]:
+      - generic [ref=e187]:
+        - link "Sakumono Broadway, Tema, Ghana" [ref=e188] [cursor=pointer]:
           - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
-          - img [ref=e185] [cursor=pointer]
+          - img [ref=e189] [cursor=pointer]
           - text: Sakumono Broadway, Tema, Ghana
-        - link "+233 24 423 8419" [ref=e187] [cursor=pointer]:
+        - link "+233 24 423 8419" [ref=e191] [cursor=pointer]:
           - /url: tel:+233244238419
-          - img [ref=e188] [cursor=pointer]
+          - img [ref=e192] [cursor=pointer]
           - text: +233 24 423 8419
-        - paragraph [ref=e190]:
+        - paragraph [ref=e194]:
           - text: Open Monday to Saturday | 8:30am - 7pm
-          - emphasis [ref=e191]: Holiday Hours may vary
-      - generic [ref=e192]:
-        - link [ref=e193] [cursor=pointer]:
+          - emphasis [ref=e195]: Holiday Hours may vary
+      - generic [ref=e196]:
+        - link [ref=e197] [cursor=pointer]:
           - /url: https://www.facebook.com/reebspartythemes
-          - img [ref=e194] [cursor=pointer]
-        - link [ref=e196] [cursor=pointer]:
+          - img [ref=e198] [cursor=pointer]
+        - link [ref=e200] [cursor=pointer]:
           - /url: https://www.instagram.com/reebspartythemes_/
-          - img [ref=e197] [cursor=pointer]
-        - link [ref=e199] [cursor=pointer]:
+          - img [ref=e201] [cursor=pointer]
+        - link [ref=e203] [cursor=pointer]:
           - /url: https://www.tiktok.com/@reebspartythemes_
-          - img [ref=e200] [cursor=pointer]
-        - link [ref=e202] [cursor=pointer]:
+          - img [ref=e204] [cursor=pointer]
+        - link [ref=e206] [cursor=pointer]:
           - /url: https://wa.me/233244238419
-          - img [ref=e203] [cursor=pointer]
-        - link [ref=e205] [cursor=pointer]:
+          - img [ref=e207] [cursor=pointer]
+        - link [ref=e209] [cursor=pointer]:
           - /url: mailto:info@reebspartythemes.com
-          - img [ref=e206] [cursor=pointer]
-    - navigation [ref=e209]:
-      - list [ref=e211]:
-        - listitem [ref=e212]:
-          - link "About" [ref=e213] [cursor=pointer]:
-            - /url: /about
-        - listitem [ref=e214]:
-          - link "Shop" [ref=e215] [cursor=pointer]:
-            - /url: /shop
+          - img [ref=e210] [cursor=pointer]
+    - navigation [ref=e213]:
+      - list [ref=e215]:
         - listitem [ref=e216]:
-          - link "Rentals" [ref=e217] [cursor=pointer]:
-            - /url: /rentals
+          - link "About" [ref=e217] [cursor=pointer]:
+            - /url: /about
         - listitem [ref=e218]:
-          - link "Gallery" [ref=e219] [cursor=pointer]:
-            - /url: /gallery
+          - link "Shop" [ref=e219] [cursor=pointer]:
+            - /url: /shop
         - listitem [ref=e220]:
-          - link "Contact" [ref=e221] [cursor=pointer]:
+          - link "Rentals" [ref=e221] [cursor=pointer]:
+            - /url: /rentals
+        - listitem [ref=e222]:
+          - link "Gallery" [ref=e223] [cursor=pointer]:
+            - /url: /gallery
+        - listitem [ref=e224]:
+          - link "Contact" [ref=e225] [cursor=pointer]:
             - /url: /contact
-    - generic [ref=e222]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
+    - generic [ref=e226]: © 2025 | REEBS Party Themes | MADE TO MATTER. MADE BY NANA.
 ```

@@ -9,6 +9,35 @@ import CookieBanner from '/src/components/CookieBanner';
 import { useCart } from "/src/components/CartContext";
 import { useAuth } from "/src/components/AuthContext";
 
+const SHOP_CACHE_KEY = "reebs_shop_inventory_v1";
+const SHOP_CACHE_TTL = 5 * 60 * 1000;
+
+const readShopCache = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(SHOP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.items || !parsed?.ts) return null;
+    if (Date.now() - parsed.ts > SHOP_CACHE_TTL) return null;
+    return parsed.items;
+  } catch {
+    return null;
+  }
+};
+
+const writeShopCache = (items) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      SHOP_CACHE_KEY,
+      JSON.stringify({ ts: Date.now(), items })
+    );
+  } catch {
+    // ignore cache write failures
+  }
+};
+
 function Shop() {
   const [inventory, setInventory] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,16 +54,17 @@ function Shop() {
   const pageSize = 12;
   const gridRef = React.useRef(null);
 
-  const [aiSearching, setAiSearching] = useState(false);
-  const [aiEnabled] = useState(true);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authReady } = useAuth();
 
   const { currency, setCurrency, convertPrice, formatCurrency, rates } = useCart();
   const getPrice = (item) =>
     item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
   const getQuantity = (item) => item.quantity ?? item.stock ?? 0;
-  const categories = Array.from(
-    new Set(inventory.map((item) => item.specificCategory || item.specificcategory || item.type || "Other"))
+  const getCategoryLabel = (item) =>
+    item.specificCategory || item.specificcategory || item.type || "Other";
+  const categories = React.useMemo(
+    () => Array.from(new Set(inventory.map((item) => getCategoryLabel(item)))),
+    [inventory]
   );
   const popularCurrencies = ["USD", "GBP", "EUR", "CAD", "NGN"];
   const ratesAvailable = rates && Object.keys(rates || {}).length > 1;
@@ -49,9 +79,19 @@ function Shop() {
   const isSoldOutItem = (item) =>
     getStatusValue(item) === "unavailable" || getQuantity(item) === 0;
 
+  const hasRealImage = (item) => {
+    const src = item?.image || item?.imageUrl || "";
+    if (!src) return false;
+    return !src.includes("placeholder");
+  };
+
   const applyAvailabilitySort = (list) => {
     const filtered = inStockOnly ? list.filter((item) => !isSoldOutItem(item)) : list;
     return [...filtered].sort((a, b) => {
+      const aHasImage = hasRealImage(a);
+      const bHasImage = hasRealImage(b);
+      if (aHasImage !== bHasImage) return aHasImage ? -1 : 1;
+
       const aSold = isSoldOutItem(a);
       const bSold = isSoldOutItem(b);
       if (aSold === bSold) return 0;
@@ -61,7 +101,28 @@ function Shop() {
 
   // --- Fetch Inventory ---
   useEffect(() => {
-    fetch("/.netlify/functions/inventory")
+    let isMounted = true;
+    if (!authReady) return () => {
+      isMounted = false;
+    };
+    if (!isAuthenticated) {
+      if (isMounted) {
+        setInventory([]);
+        setLoading(false);
+      }
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const cached = readShopCache();
+    if (cached?.length) {
+      setInventory(cached);
+    }
+    setLoading(!cached);
+
+    const controller = new AbortController();
+    fetch("/.netlify/functions/inventory", { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => {
         const productsOnly = (Array.isArray(data) ? data : []).filter((item) => {
@@ -69,14 +130,22 @@ function Shop() {
           if (!source) return true;
           return source !== "rental";
         });
+        if (!isMounted) return;
         setInventory(productsOnly);
+        writeShopCache(productsOnly);
         setLoading(false);
       })
       .catch((err) => {
+        if (err?.name === "AbortError") return;
         console.error("❌ Error fetching inventory:", err);
-        setLoading(false);
+        if (isMounted) setLoading(false);
       });
-  }, []);
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [authReady, isAuthenticated]);
 
   // Apply shop theme on mount
   useEffect(() => {
@@ -90,7 +159,6 @@ function Shop() {
     return () => clearTimeout(id);
   }, [searchQuery]);
 
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const popularItems = React.useMemo(() => {
     const popular = [...inventory]
       .filter((item) => getQuantity(item) > 0)
@@ -107,6 +175,32 @@ function Shop() {
   useEffect(() => {
     setPage(0);
   }, [debouncedQuery, categoryFilter, inStockOnly, inventory.length]);
+
+  const filteredProducts = React.useMemo(() => {
+    const baseFiltered = inventory.filter(
+      (item) => categoryFilter === "All" || getCategoryLabel(item) === categoryFilter
+    );
+
+    const normalizedQuery = debouncedQuery.trim().toLowerCase();
+    const localMatches = (list) =>
+      list.filter((item) => {
+        const name = (item?.name || "").toString().toLowerCase();
+        const description = (item?.description || "").toString().toLowerCase();
+        const category = getCategoryLabel(item).toString().toLowerCase();
+        return (
+          name.includes(normalizedQuery) ||
+          description.includes(normalizedQuery) ||
+          category.includes(normalizedQuery)
+        );
+      });
+
+    if (!normalizedQuery) {
+      return applyAvailabilitySort(baseFiltered);
+    }
+
+    const fallbackMatches = localMatches(baseFiltered);
+    return applyAvailabilitySort(fallbackMatches);
+  }, [debouncedQuery, categoryFilter, inventory, inStockOnly]);
 
   const pageCount = React.useMemo(
     () => Math.max(1, Math.ceil(filteredProducts.length / pageSize)),
@@ -132,52 +226,6 @@ function Shop() {
     }, 4500);
     return () => clearInterval(id);
   }, [popularItems]);
-
-  useEffect(() => {
-    const baseFiltered = inventory.filter(
-      (item) =>
-        categoryFilter === "All" ||
-        item.specificCategory === categoryFilter ||
-        item.specificcategory === categoryFilter
-    );
-
-    if (debouncedQuery.trim() === "") {
-      setFilteredProducts(applyAvailabilitySort(baseFiltered));
-      setAiSearching(false);
-      return;
-    }
-    if (!aiEnabled) {
-      const result = baseFiltered.filter((item) => {
-        const matchesSearch = item.name
-          .toLowerCase()
-          .includes(debouncedQuery.toLowerCase());
-        return matchesSearch;
-      });
-      setFilteredProducts(applyAvailabilitySort(result));
-    } else if (debouncedQuery.trim().length > 3) {
-      setAiSearching(true);
-      fetch("/.netlify/functions/aiSearch", {
-        method: "POST",
-        body: JSON.stringify({ query: debouncedQuery, inventory }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          const aiMatches = inventory.filter((item) =>
-            data.matches?.includes(item.id)
-          );
-          const aiScoped =
-            categoryFilter === "All"
-              ? aiMatches
-              : aiMatches.filter((item) => item.specificCategory === categoryFilter);
-          setFilteredProducts(applyAvailabilitySort(aiScoped));
-        })
-        .catch((err) => console.error("AI search failed:", err))
-        .finally(() => setAiSearching(false));
-    } else {
-      setFilteredProducts(applyAvailabilitySort(baseFiltered));
-      setAiSearching(false);
-    }
-  }, [debouncedQuery, categoryFilter, inventory, aiEnabled, inStockOnly]);
 
   if (loading) return (
     <div className="shop-skeleton">
@@ -206,13 +254,6 @@ function Shop() {
               Party supplies, stationary, house supplieess, toys, decor, and all the little delights that make
               celebrations feel magical.
             </p>
-            {/*<div className="shop-hero-meta">
-              <span>{inventory.length} items</span>
-              <span>{categories.length || 0} categories</span>
-              <span className="ai-chip">
-                {aiSearching ? "AI is looking…" : "✨ AI-assisted search"}
-              </span>
-            </div>*/}
             <div className="shop-hero-actions">
               {isAuthenticated ? (
                 <button
@@ -276,30 +317,10 @@ function Shop() {
                         placeholder="Search bubbles, balloons, pinatas..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="search-bar ai-enabled"
+                        className="search-bar"
                         aria-label="Search products"
                       />
-                      <span
-                        className={`ai-icon ${aiSearching ? "ai-loading" : ""}`}
-                        title="Powered by AI"
-                      >
-                        {aiSearching ? "🤖..." : "✨AI"}
-                      </span>
                     </div>
-                    <select
-                      value={categoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="category-filter"
-                      aria-label="Filter by category"
-                    >
-                      <option value="All">All categories</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
@@ -329,7 +350,7 @@ function Shop() {
                     >
                       All
                     </button>
-                    {categories.slice(0, 5).map((cat) => (
+                    {categories.map((cat) => (
                       <button
                         key={cat}
                         className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
@@ -403,6 +424,8 @@ function Shop() {
                           <img
                             src={item.image || item.imageUrl || "/imgs/placeholder.png"}
                             alt={item.name}
+                            loading="lazy"
+                            decoding="async"
                           />
                           {isSoldOut && (
                             <span className="shop-out-banner">Out of stock</span>
@@ -522,6 +545,8 @@ function Shop() {
                             "/imgs/placeholder.png"
                           }
                           alt={popularItems[popularIndex].name}
+                          loading="lazy"
+                          decoding="async"
                         />
                         {getQuantity(popularItems[popularIndex]) === 0 && (
                           <span className="shop-ribbon">Sold out</span>

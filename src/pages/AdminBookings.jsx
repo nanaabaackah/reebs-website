@@ -11,8 +11,7 @@ import {
   faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
 
 const formatDate = (value) => {
@@ -60,11 +59,36 @@ const formatDateTime = (value) => {
   });
 };
 
+const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+
+const getIsMobileView = () =>
+  typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
+
 const formatUser = (name) => name || "Admin";
 
 const toNumber = (value, fallback = 0) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+};
+
+const formatAttendantsNeeded = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return "Attendants: -";
+  return `Attendants: ${parsed}`;
+};
+
+const normalizeStatus = (status) => {
+  if (typeof status !== "string") return "";
+  const normalized = status.trim().toLowerCase();
+  return normalized === "canceled" ? "cancelled" : normalized;
+};
+
+const getBookingStage = (booking) => {
+  const status = normalizeStatus(booking?.status);
+  if (status === "cancelled") return "cancelled";
+  if (status === "completed") return "completed";
+  if (status === "confirmed") return "confirmed";
+  return "received";
 };
 
 const buildMapUrl = (address) => {
@@ -76,12 +100,14 @@ function AdminBookings() {
   const [bookings, setBookings] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [viewMode, setViewMode] = useState("table"); // table | cards
   const [statusFilter, setStatusFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
+  const [isMobileView, setIsMobileView] = useState(getIsMobileView);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const pageSize = 10;
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
 
@@ -90,6 +116,8 @@ function AdminBookings() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [detailBooking, setDetailBooking] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState(null);
 
   const [productQuery, setProductQuery] = useState("");
   const [form, setForm] = useState({
@@ -99,32 +127,69 @@ function AdminBookings() {
     endTime: "",
     venueAddress: "",
     status: "pending",
+    assignedUserId: "",
     items: [],
     discount: "",
     discountType: "amount",
   });
-  const [invoiceError, setInvoiceError] = useState("");
+  const [bouncyCastles, setBouncyCastles] = useState([]);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mediaQuery = window.matchMedia(MOBILE_VIEW_QUERY);
+    const handleChange = () => {
+      const matches = mediaQuery.matches;
+      setIsMobileView(matches);
+      if (matches) {
+        setModalOpen(false);
+        setEditing(null);
+      }
+    };
+    handleChange();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
+    const handleClickAway = (event) => {
+      if (!event.target.closest(".bookings-menu")) {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
+  }, []);
+
   const fetchAll = async () => {
     setLoading(true);
     setError("");
     try {
-      const [bookingsRes, inventoryRes, customersRes] = await Promise.all([
+      const [bookingsRes, inventoryRes, customersRes, usersRes, bouncyRes] = await Promise.all([
         fetch("/.netlify/functions/bookings"),
         fetch("/.netlify/functions/inventory"),
         fetch("/.netlify/functions/customers"),
+        fetch("/.netlify/functions/users"),
+        fetch("/.netlify/functions/bouncy_castles"),
       ]);
 
-      const [bookingsText, inventoryText, customersText] = await Promise.all([
+      const [bookingsText, inventoryText, customersText, usersText, bouncyText] = await Promise.all([
         bookingsRes.text(),
         inventoryRes.text(),
         customersRes.text(),
+        usersRes.text(),
+        bouncyRes.text(),
       ]);
 
       const tryJson = (text) => {
@@ -138,6 +203,8 @@ function AdminBookings() {
       const bookingsPayload = tryJson(bookingsText);
       const inventoryPayload = tryJson(inventoryText);
       const customersPayload = tryJson(customersText);
+      const usersPayload = tryJson(usersText);
+      const bouncyPayload = tryJson(bouncyText);
 
       if (!bookingsRes.ok) {
         throw new Error(bookingsPayload?.error || `Failed to fetch bookings (${bookingsRes.status}).`);
@@ -148,14 +215,25 @@ function AdminBookings() {
       if (!customersRes.ok) {
         throw new Error(customersPayload?.error || `Failed to fetch customers (${customersRes.status}).`);
       }
+      if (!usersRes.ok) {
+        throw new Error(usersPayload?.error || `Failed to fetch team members (${usersRes.status}).`);
+      }
 
       setBookings(Array.isArray(bookingsPayload) ? bookingsPayload : []);
       setCustomers(Array.isArray(customersPayload) ? customersPayload : []);
+      setUsers(Array.isArray(usersPayload) ? usersPayload : []);
+      if (bouncyRes.ok) {
+        setBouncyCastles(Array.isArray(bouncyPayload) ? bouncyPayload : []);
+      } else {
+        setBouncyCastles([]);
+      }
 
       const rentalProducts = (Array.isArray(inventoryPayload) ? inventoryPayload : []).filter((item) => {
         const sku = (item.sku || "").toString().toUpperCase();
         const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toUpperCase();
-        return source === "RENTAL" || sku.startsWith("RENT");
+        const name = (item.name || "").toString().toLowerCase();
+        const isPump = sku.startsWith("PUM") || name.includes("motor pump");
+        return (source === "RENTAL" || sku.startsWith("RENT")) && !isPump;
       });
 
       setProducts(rentalProducts);
@@ -174,7 +252,7 @@ function AdminBookings() {
 
   useEffect(() => {
     setPage(0);
-  }, [statusFilter, query, viewMode, bookings.length]);
+  }, [statusFilter, query, bookings.length]);
 
   const productMap = useMemo(() => {
     const map = new Map();
@@ -183,6 +261,51 @@ function AdminBookings() {
     }
     return map;
   }, [products]);
+
+  const bouncyMap = useMemo(() => {
+    const map = new Map();
+    for (const castle of bouncyCastles) {
+      const productId = Number(castle?.productId);
+      if (!Number.isFinite(productId)) continue;
+      const motors = toNumber(castle?.motorsToPump, 0);
+      map.set(productId, motors);
+    }
+    return map;
+  }, [bouncyCastles]);
+
+  const detailItems = useMemo(() => {
+    if (!detailBooking || !Array.isArray(detailBooking.items)) return [];
+    const baseItems = detailBooking.items.map((item, index) => ({
+      ...item,
+      _key: `item-${item.id || item.productId || index}`,
+    }));
+
+    const hasPump = baseItems.some((item) => {
+      const product = productMap.get(Number(item.productId));
+      const name = String(item.productName || product?.name || "").toLowerCase();
+      const sku = String(product?.sku || "").toUpperCase();
+      return name.includes("pump") || sku.startsWith("PUM");
+    });
+
+    const pumpQuantity = baseItems.reduce((sum, item) => {
+      const motors = bouncyMap.get(Number(item.productId)) || 0;
+      if (!motors) return sum;
+      const qty = Math.max(1, parseInt(item.quantity, 10) || 1);
+      return sum + motors * qty;
+    }, 0);
+
+    if (pumpQuantity > 0 && !hasPump) {
+      baseItems.push({
+        productId: "motor-pump",
+        quantity: pumpQuantity,
+        productName: "Motor Pump",
+        productImage: "",
+        _key: `pump-${detailBooking.id || "detail"}`,
+      });
+    }
+
+    return baseItems;
+  }, [detailBooking, productMap, bouncyMap]);
 
   const filteredBookings = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -236,6 +359,39 @@ function AdminBookings() {
     });
     return list;
   }, [filteredBookings, sortConfig]);
+
+  const kanbanColumns = useMemo(() => {
+    const columns = [
+      { id: "received", label: "Booking received", items: [] },
+      { id: "confirmed", label: "Confirmed", items: [] },
+      { id: "event", label: "Event date", items: [] },
+      { id: "completed", label: "Completed", items: [] },
+      { id: "cancelled", label: "Cancelled", items: [] },
+    ];
+    const columnMap = new Map(columns.map((col) => [col.id, col]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    sortedBookings.forEach((booking) => {
+      const stage = getBookingStage(booking);
+      if (stage === "confirmed" && booking?.eventDate) {
+        const eventDate = new Date(booking.eventDate);
+        if (!Number.isNaN(eventDate.getTime()) && eventDate >= today) {
+          columnMap.get("event")?.items.push(booking);
+          return;
+        }
+      }
+      columnMap.get(stage)?.items.push(booking);
+    });
+
+    columns.forEach((col) => {
+      col.items.sort(
+        (a, b) => new Date(b.eventDate || 0).getTime() - new Date(a.eventDate || 0).getTime()
+      );
+    });
+
+    return columns;
+  }, [sortedBookings]);
 
   const detailIndex = useMemo(() => {
     if (!detailBooking) return -1;
@@ -326,54 +482,9 @@ function AdminBookings() {
     return Math.max(0, subtotal - discountCents);
   }, [form.items, form.discount, form.discountType, productMap]);
 
-  const formatDate = (value) => {
-    if (!value) return "-";
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  };
-
-  const generateInvoice = async (booking) => {
-    setInvoiceError("");
-    try {
-      const res = await fetch(`/.netlify/functions/getInvoiceDetails?id=${booking.id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Invoice data not found");
-
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text("Reebs Rentals", 14, 18);
-      doc.setFontSize(11);
-      doc.text(`Invoice for Booking #${data.id}`, 14, 26);
-      doc.text(`Customer: ${data.customerName || "-"}`, 14, 34);
-      if (data.customerEmail) doc.text(`Email: ${data.customerEmail}`, 14, 40);
-      if (data.customerPhone) doc.text(`Phone: ${data.customerPhone}`, 14, 46);
-      doc.text(`Event: ${formatDate(data.eventDate)} ${data.startTime || ""}${data.endTime ? ` – ${data.endTime}` : ""}`, 14, 54);
-      doc.text(`Venue: ${data.venueAddress || "-"}`, 14, 60);
-
-      const rows = (data.items || []).map((item) => [
-        item.productName || `Item ${item.productId}`,
-        item.quantity,
-        formatMoney((item.price || 0) / 100, "GHS"),
-        formatMoney(((item.price || 0) * (item.quantity || 1)) / 100, "GHS"),
-      ]);
-
-      doc.autoTable({
-        head: [["Item", "Qty", "Unit price", "Line total"]],
-        body: rows,
-        startY: 70,
-        styles: { fontSize: 10 },
-      });
-
-      const totalY = doc.lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
-      doc.text(`Total: ${formatMoney((data.totalAmount || 0) / 100, "GHS")}`, 14, totalY);
-
-      doc.save(`invoice-booking-${data.id}.pdf`);
-    } catch (err) {
-      console.error("Invoice generation failed", err);
-      setInvoiceError(err.message || "Failed to generate invoice");
-    }
+  const viewInvoice = (booking) => {
+    if (!booking?.id) return;
+    navigate(`/admin/invoicing?type=bookings&id=${booking.id}`);
   };
 
   const addItem = (product) => {
@@ -431,7 +542,46 @@ function AdminBookings() {
     }));
   };
 
+  const buildMenuPosition = (rect) => {
+    const width = 320;
+    const gutter = 12;
+    const initialTop = rect.bottom + 8;
+    const maxBelow = window.innerHeight - initialTop - gutter;
+    const maxAbove = rect.top - gutter - 8;
+    let maxHeight = Math.min(420, Math.max(160, maxBelow));
+    let top = initialTop;
+    if (maxBelow < 160 && maxAbove > maxBelow) {
+      maxHeight = Math.min(420, Math.max(160, maxAbove));
+      top = Math.max(gutter, rect.top - maxHeight - 8);
+    }
+    let left = rect.left;
+    if (left + width > window.innerWidth - gutter) {
+      left = rect.right - width;
+    }
+    left = Math.min(Math.max(gutter, left), window.innerWidth - width - gutter);
+    return { top, left, maxHeight };
+  };
+
+  const toggleBookingMenu = (bookingId, event) => {
+    const rect = event?.currentTarget?.getBoundingClientRect();
+    setOpenMenuId((prev) => {
+      const next = prev === bookingId ? null : bookingId;
+      if (next && rect) {
+        setMenuPosition(buildMenuPosition(rect));
+      } else {
+        setMenuPosition(null);
+      }
+      return next;
+    });
+  };
+
+  const closeMenu = () => {
+    setOpenMenuId(null);
+    setMenuPosition(null);
+  };
+
   const openCreate = () => {
+    if (isMobileView) return;
     setEditing(null);
     setSaveError("");
     setProductQuery("");
@@ -442,6 +592,7 @@ function AdminBookings() {
       endTime: "",
       venueAddress: "",
       status: "pending",
+      assignedUserId: user?.id ? String(user.id) : "",
       items: [],
       discount: "",
       discountType: "amount",
@@ -450,6 +601,7 @@ function AdminBookings() {
   };
 
   const openEdit = (booking) => {
+    if (isMobileView) return;
     setEditing(booking);
     setSaveError("");
     setProductQuery("");
@@ -461,6 +613,7 @@ function AdminBookings() {
       endTime: booking.endTime || "",
       venueAddress: booking.venueAddress || "",
       status: booking.status || "pending",
+      assignedUserId: booking.assignedUserId ? String(booking.assignedUserId) : "",
       items: Array.isArray(booking.items)
         ? booking.items.map((item) => ({
             productId: item.productId,
@@ -490,31 +643,31 @@ function AdminBookings() {
     if (!form.venueAddress.trim()) return setSaveError("Venue address is required.");
     if (!form.items.length) return setSaveError("Add at least one item to the booking.");
 
-      setSaving(true);
-      try {
-        const isEdit = Boolean(editing?.id);
-        const response = await fetch("/.netlify/functions/bookings", {
-          method: isEdit ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: isEdit ? editing.id : undefined,
-            customerId: Number(form.customerId),
-            eventDate: form.eventDate,
-            startTime: form.startTime || null,
-            endTime: form.endTime || null,
-            venueAddress: form.venueAddress,
-            status: form.status,
-            discount: Number(form.discount) || 0,
-            discount: bookingDiscountAmount,
-            items: form.items.map((item) => ({
-              ...item,
-              price: Number(item.price) || undefined,
-            })),
-            userId: user?.id,
-            userName: user?.fullName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || undefined,
-            userEmail: user?.email,
-          }),
-        });
+    setSaving(true);
+    try {
+      const isEdit = Boolean(editing?.id);
+      const response = await fetch("/.netlify/functions/bookings", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: isEdit ? editing.id : undefined,
+          customerId: Number(form.customerId),
+          eventDate: form.eventDate,
+          startTime: form.startTime || null,
+          endTime: form.endTime || null,
+          venueAddress: form.venueAddress,
+          status: form.status,
+          assignedUserId: form.assignedUserId ? Number(form.assignedUserId) : null,
+          discount: bookingDiscountAmount,
+          items: form.items.map((item) => ({
+            ...item,
+            price: Number(item.price) || undefined,
+          })),
+          userId: user?.id,
+          userName: user?.fullName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || undefined,
+          userEmail: user?.email,
+        }),
+      });
 
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error || "Save failed.");
@@ -534,6 +687,55 @@ function AdminBookings() {
     }
   };
 
+  const updateBookingStatus = async (booking, nextStatus) => {
+    if (!booking?.id) return;
+    setStatusUpdatingId(booking.id);
+    setError("");
+    try {
+      const response = await fetch("/.netlify/functions/bookings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: booking.id,
+          customerId: booking.customerId,
+          eventDate: booking.eventDate,
+          startTime: booking.startTime || null,
+          endTime: booking.endTime || null,
+          venueAddress: booking.venueAddress || "",
+          status: nextStatus,
+          assignedUserId: booking.assignedUserId ?? null,
+          discount: 0,
+          items: Array.isArray(booking.items)
+            ? booking.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: Number.isFinite(item.price) ? item.price / 100 : undefined,
+              }))
+            : [],
+          userId: user?.id,
+          userName:
+            user?.fullName ||
+            user?.name ||
+            [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+            undefined,
+          userEmail: user?.email,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error || "Failed to update booking.");
+      setBookings((prev) =>
+        prev.map((row) => (row.id === payload.id ? payload : row))
+      );
+      setDetailBooking((prev) => (prev && prev.id === payload.id ? payload : prev));
+    } catch (err) {
+      console.error("Booking status update failed", err);
+      setError(err.message || "Failed to update booking.");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
+
   return (
     <div className="bookings-page">
       <div className="bookings-shell">
@@ -545,16 +747,18 @@ function AdminBookings() {
             <h1>Rental bookings</h1>
             <p className="bookings-subtitle">Review upcoming events, track statuses, and create bookings.</p>
           </div>
-          <div className="bookings-actions">
-            <button type="button" className="bookings-secondary" onClick={fetchAll}>
-              <FontAwesomeIcon icon={faRotateRight} />
-              Refresh
-            </button>
-            <button type="button" className="bookings-primary" onClick={openCreate}>
-              <FontAwesomeIcon icon={faPlus} />
-              Add booking
-            </button>
-          </div>
+          {!isMobileView && (
+            <div className="bookings-actions">
+              <button type="button" className="bookings-secondary" onClick={fetchAll}>
+                <FontAwesomeIcon icon={faRotateRight} />
+                Refresh
+              </button>
+              <button type="button" className="bookings-primary" onClick={openCreate}>
+                <FontAwesomeIcon icon={faPlus} />
+                Add booking
+              </button>
+            </div>
+          )}
         </header>
 
         <section className="bookings-panel">
@@ -564,26 +768,6 @@ function AdminBookings() {
               <span>{bookings.length} total</span>
             </div>
             <div className="bookings-view">
-              <div className="bookings-seg" role="tablist" aria-label="Booking view">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === "table"}
-                  className={viewMode === "table" ? "is-active" : ""}
-                  onClick={() => setViewMode("table")}
-                >
-                  Table
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === "cards"}
-                  className={viewMode === "cards" ? "is-active" : ""}
-                  onClick={() => setViewMode("cards")}
-                >
-                  Cards
-                </button>
-              </div>
               <label className="bookings-filter">
                 Status
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -616,26 +800,8 @@ function AdminBookings() {
             </div>
           )}
 
-          {!loading && !error && viewMode === "table" && (
+          {!loading && !error && false && (
             <div className="bookings-table-wrapper">
-              <div className="table-pagination">
-                <span>
-                  Showing {sortedBookings.length === 0 ? 0 : clampedPage * pageSize + 1}-
-                  {Math.min(sortedBookings.length, (clampedPage + 1) * pageSize)} of {sortedBookings.length}
-                </span>
-                <div className="table-pagination-controls">
-                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={clampedPage >= pageCount - 1}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
               <table className="bookings-table">
                 <thead>
                   <tr>
@@ -704,29 +870,48 @@ function AdminBookings() {
                           </span>
                         </td>
                         <td>
-                          <div className="bookings-actions-col" onClick={(e) => e.stopPropagation()}>
-                            <div className="bookings-menu">
-                              <button
-                                type="button"
-                                className="bookings-edit"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const menu = e.currentTarget.nextSibling;
-                                  if (menu) menu.classList.toggle("open");
-                                }}
-                              >
-                                ⋮
-                              </button>
-                              <div className="bookings-menu-list">
-                                <button type="button" onClick={() => generateInvoice(booking)}>
-                                  Invoice
+                          {!isMobileView && (
+                            <div className="bookings-actions-col" onClick={(e) => e.stopPropagation()}>
+                              <div className="bookings-menu">
+                                <button
+                                  type="button"
+                                  className="bookings-edit"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleBookingMenu(booking.id, e);
+                                  }}
+                                >
+                                  ⋮
                                 </button>
-                                <button type="button" onClick={() => openEdit(booking)}>
-                                  Edit
-                                </button>
+                                <div
+                                  className={`bookings-menu-list ${openMenuId === booking.id ? "open" : ""}`}
+                                  style={openMenuId === booking.id ? menuPosition : undefined}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="bookings-menu-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        closeMenu();
+                                        viewInvoice(booking);
+                                      }}
+                                    >
+                                      Generate invoice
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        closeMenu();
+                                        openEdit(booking);
+                                      }}
+                                    >
+                                      Edit details
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -741,11 +926,6 @@ function AdminBookings() {
                   )}
                 </tbody>
               </table>
-            </div>
-          )}
-
-          {!loading && !error && viewMode === "cards" && (
-            <>
               <div className="table-pagination">
                 <span>
                   Showing {sortedBookings.length === 0 ? 0 : clampedPage * pageSize + 1}-
@@ -764,6 +944,11 @@ function AdminBookings() {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <>
               <div className="bookings-card-grid">
                 {paginatedBookings.map((booking) => {
                   const timeWindow = booking.startTime || booking.endTime
@@ -791,42 +976,112 @@ function AdminBookings() {
                     <p className="bookings-card-meta">
                       Assigned to: {formatUser(booking.assignedUserName)}
                     </p>
-                    <div className="bookings-card-actions">
-                      <div className="bookings-menu">
-                        <button
-                          type="button"
-                          className="bookings-edit"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const menu = e.currentTarget.nextSibling;
-                            if (menu) menu.classList.toggle("open");
-                          }}
-                        >
-                          ⋮
-                        </button>
-                        <div className="bookings-menu-list">
+                    {!isMobileView && (
+                      <div className="bookings-card-actions">
+                        <div className="bookings-menu">
                           <button
                             type="button"
-                            onClick={() => {
-                              generateInvoice(booking);
+                            className="bookings-edit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBookingMenu(booking.id, e);
                             }}
                           >
-                            <FontAwesomeIcon icon={faFileInvoice} />
-                            Invoice
+                            ⋮
                           </button>
-                          <button type="button" onClick={() => openEdit(booking)}>
-                            <FontAwesomeIcon icon={faPen} />
-                            Edit
-                          </button>
+                          <div
+                            className={`bookings-menu-list ${openMenuId === booking.id ? "open" : ""}`}
+                            style={openMenuId === booking.id ? menuPosition : undefined}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="bookings-menu-actions">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  closeMenu();
+                                  viewInvoice(booking);
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faFileInvoice} />
+                                Generate invoice
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  closeMenu();
+                                  openEdit(booking);
+                                }}
+                              >
+                                <FontAwesomeIcon icon={faPen} />
+                                Edit details
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                   </button>
                 );
               })}
               {!sortedBookings.length && <p className="bookings-muted">No bookings found.</p>}
               </div>
+              <div className="table-pagination">
+                <span>
+                  Showing {sortedBookings.length === 0 ? 0 : clampedPage * pageSize + 1}-
+                  {Math.min(sortedBookings.length, (clampedPage + 1) * pageSize)} of {sortedBookings.length}
+                </span>
+                <div className="table-pagination-controls">
+                  <button type="button" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={clampedPage === 0}>
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={clampedPage >= pageCount - 1}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </>
+          )}
+
+          {!loading && !error && false && (
+            <div className="bookings-kanban">
+              {kanbanColumns.map((column) => (
+                <div key={column.id} className="bookings-kanban-column">
+                  <div className="bookings-kanban-header">
+                    <h4>{column.label}</h4>
+                    <span>{column.items.length}</span>
+                  </div>
+                  {column.items.length ? (
+                    column.items.map((booking) => {
+                      const totalValue = toNumber(booking.totalAmount, 0) / 100;
+                      return (
+                        <button
+                          type="button"
+                          key={booking.id}
+                          className="bookings-kanban-card"
+                          onClick={() => setDetailBooking(booking)}
+                        >
+                          <div className="bookings-kanban-card-head">
+                            <span className={`bookings-pill ${booking.status || "pending"}`}>
+                              {booking.status || "pending"}
+                            </span>
+                            <span className="bookings-kanban-amount">{formatMoney(totalValue, "GHS")}</span>
+                          </div>
+                          <h5>#{booking.id} · {booking.customerName || "-"}</h5>
+                          <p className="bookings-kanban-meta">{formatDate(booking.eventDate)}</p>
+                          <p className="bookings-kanban-meta">{booking.venueAddress || "-"}</p>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="bookings-muted">No bookings here.</p>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </section>
       </div>
@@ -912,6 +1167,21 @@ function AdminBookings() {
                   <option value="confirmed">Confirmed</option>
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
+                </select>
+              </label>
+
+              <label>
+                Assigned to
+                <select
+                  value={form.assignedUserId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, assignedUserId: event.target.value }))}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.fullName || [member.firstName, member.lastName].filter(Boolean).join(" ")}
+                    </option>
+                  ))}
                 </select>
               </label>
 
@@ -1051,17 +1321,19 @@ function AdminBookings() {
                     <FontAwesomeIcon icon={faChevronRight} />
                   </button>
                 </div>
-                <button
-                  type="button"
-                  className="bookings-edit"
-                  onClick={() => {
-                    openEdit(detailBooking);
-                    setDetailBooking(null);
-                  }}
-                >
-                  <FontAwesomeIcon icon={faPen} />
-                  Edit
-                </button>
+                {!isMobileView && (
+                  <button
+                    type="button"
+                    className="bookings-edit"
+                    onClick={() => {
+                      openEdit(detailBooking);
+                      setDetailBooking(null);
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faPen} />
+                    Edit
+                  </button>
+                )}
                 <button
                   type="button"
                   className="customers-modal-close"
@@ -1080,6 +1352,32 @@ function AdminBookings() {
                   {detailBooking.status || "pending"}
                 </span>
               </div>
+              {isMobileView && (
+                <div className="bookings-detail-mobile-actions">
+                  <button
+                    type="button"
+                    className="bookings-action"
+                    onClick={() => updateBookingStatus(detailBooking, "confirmed")}
+                    disabled={
+                      statusUpdatingId === detailBooking.id ||
+                      normalizeStatus(detailBooking.status) !== "pending"
+                    }
+                  >
+                    {statusUpdatingId === detailBooking.id ? "Updating..." : "Accept"}
+                  </button>
+                  <button
+                    type="button"
+                    className="bookings-action bookings-action-primary"
+                    onClick={() => updateBookingStatus(detailBooking, "completed")}
+                    disabled={
+                      statusUpdatingId === detailBooking.id ||
+                      normalizeStatus(detailBooking.status) !== "confirmed"
+                    }
+                  >
+                    {statusUpdatingId === detailBooking.id ? "Updating..." : "Confirm"}
+                  </button>
+                </div>
+              )}
               <div className="booking-detail-row">
                 <span>Assigned To</span>
                 <span>{formatUser(detailBooking.assignedUserName)}</span>
@@ -1117,15 +1415,16 @@ function AdminBookings() {
               </div>
               <div className="booking-detail-items">
                 <h4>Items</h4>
-                {Array.isArray(detailBooking.items) && detailBooking.items.length > 0 ? (
+                {detailItems.length > 0 ? (
                   <ul>
-                    {detailBooking.items.map((item) => {
+                    {detailItems.map((item) => {
                       const product = productMap.get(Number(item.productId));
                       const productName = item.productName || product?.name || `Product ${item.productId}`;
                       const imageSrc = item.productImage || product?.imageUrl || product?.image || "";
                       const fallbackLabel = productName.slice(0, 1).toUpperCase();
+                      const attendantsLabel = formatAttendantsNeeded(product?.attendantsNeeded);
                       return (
-                        <li key={`${detailBooking.id}-${item.productId}`}>
+                        <li key={item._key || `${detailBooking.id}-${item.productId}`}>
                           <div className="booking-detail-item">
                             {imageSrc ? (
                               <img
@@ -1143,7 +1442,10 @@ function AdminBookings() {
                               <strong>{productName}</strong>
                             </div>
                           </div>
-                          <span>x{item.quantity}</span>
+                          <div className="booking-detail-metrics">
+                            <span>x{item.quantity}</span>
+                            <span className="booking-detail-attendants">{attendantsLabel}</span>
+                          </div>
                         </li>
                       );
                     })}

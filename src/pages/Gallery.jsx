@@ -5,6 +5,7 @@ import galleryImages from '/src/data/galleryImages.json';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 import './master.css';
+import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 
 function Gallery() {
     const [activeIndex, setActiveIndex] = useState(-1);
@@ -48,37 +49,33 @@ function Gallery() {
 
     useEffect(() => {
         let isMounted = true;
+        const controller = new AbortController();
         const load = async () => {
             try {
-                const res = await fetch('/.netlify/functions/inventory');
-                if (!res.ok) throw new Error(`Bad response ${res.status}`);
+                const { items } = await fetchInventoryWithCache({ signal: controller.signal });
+                const { rentals, products } = splitInventory(items);
+                const rentalsOnly = rentals.filter(
+                    (item) => (item.status ?? item.isActive) !== false
+                );
+                const inventoryOnly = products.filter(
+                    (item) => (item.status ?? item.isActive) !== false
+                );
 
-                const data = await res.json();
-                const records = Array.isArray(data) ? data : [];
-                const rentalsOnly = records.filter((item) => {
-                    const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
-                    const isRental = source ? source === 'rental' : (item.sku || '').toString().toUpperCase().startsWith('REN');
-                    const active = (item.status ?? item.isActive) !== false;
-                    return isRental && active;
-                });
-                const inventoryOnly = records.filter((item) => {
-                    const source = (item.sourceCategoryCode || item.sourcecategorycode || '').toLowerCase();
-                    const isInventory = source ? source !== 'rental' : true;
-                    const active = (item.status ?? item.isActive) !== false;
-                    return isInventory && active;
-                });
-
-                if (isMounted) {
-                    setRentals(rentalsOnly || []);
-                    setShopItems(inventoryOnly || []);
-                }
+                if (!isMounted) return;
+                setRentals(rentalsOnly || []);
+                setShopItems(inventoryOnly || []);
             } catch (err) {
-                console.error('Error loading rental/shop items:', err);
+                if (err?.name !== "AbortError") {
+                    console.error('Error loading rental/shop items:', err);
+                }
             }
         };
 
         load();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
     }, []);
 
     const scrollCarousel = (delta) => {
