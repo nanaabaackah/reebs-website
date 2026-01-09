@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -49,6 +50,8 @@ export async function handler(event = {}) {
          o."total_amount",
          o.status,
          o."customerName",
+         o."deliveryMethod",
+         o."deliveryDetails",
          c.id AS customer_id,
          c.name AS customer_name,
          c.email AS customer_email,
@@ -98,6 +101,43 @@ export async function handler(event = {}) {
       total: Number(row.total_amount || 0) / 100,
     }));
 
+    const itemsSubtotalCents = itemsRes.rows.reduce(
+      (acc, row) => acc + Number(row.total_amount || 0),
+      0
+    );
+    const orderSubtotalCentsRaw = order.total_amount == null ? null : Number(order.total_amount);
+    const orderSubtotalCents = Number.isFinite(orderSubtotalCentsRaw) ? orderSubtotalCentsRaw : null;
+    const adjustmentCents = orderSubtotalCents == null ? 0 : orderSubtotalCents - itemsSubtotalCents;
+    if (adjustmentCents !== 0) {
+      items.push({
+        id: "order-adjustment",
+        name: adjustmentCents < 0 ? "Discount" : "Adjustment",
+        sku: null,
+        quantity: 1,
+        unitPriceCents: adjustmentCents,
+        totalCents: adjustmentCents,
+        unitPrice: adjustmentCents / 100,
+        total: adjustmentCents / 100,
+      });
+    }
+
+    const { distanceKm, feeCents: deliveryFeeCents, rateCents: deliveryRateCents } =
+      getDeliveryFeeDetails(order.deliveryMethod, order.deliveryDetails);
+    const deliveryRate = deliveryRateCents / 100;
+
+    if (deliveryFeeCents > 0) {
+      items.push({
+        id: "delivery-fee",
+        name: `Delivery fee (${distanceKm} km @ GHS ${deliveryRate.toFixed(2)}/km)`,
+        sku: null,
+        quantity: distanceKm,
+        unitPriceCents: deliveryRateCents,
+        totalCents: deliveryFeeCents,
+        unitPrice: deliveryRate,
+        total: deliveryFeeCents / 100,
+      });
+    }
+
     const expenses = (expensesRes.rows || []).map((row) => ({
       id: row.id,
       category: row.category,
@@ -111,11 +151,11 @@ export async function handler(event = {}) {
       0
     );
 
-    const rawSubtotalCents = itemsRes.rows.reduce((acc, row) => acc + Number(row.total_amount || 0), 0);
-    const subtotalCents = rawSubtotalCents || Number(order.total_amount || 0);
-    const taxRate = 0.15;
-    const taxTotalCents = Math.round(subtotalCents * taxRate);
-    const grandTotalCents = subtotalCents + taxTotalCents;
+    const baseSubtotalCents = orderSubtotalCents ?? itemsSubtotalCents;
+    const subtotalCents = baseSubtotalCents + deliveryFeeCents;
+    const taxRate = 0;
+    const taxTotalCents = 0;
+    const grandTotalCents = subtotalCents;
 
     return json(200, {
       invoiceNumber: `REC-${order.orderNumber}`,

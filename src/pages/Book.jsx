@@ -28,6 +28,42 @@ const rentalSlug = (item) => {
   return pageSlug || nameSlug || item?.id || "";
 };
 
+const getCategory = (item) =>
+  (item?.specificCategory || item?.specificcategory || item?.category || "").toString().trim();
+
+const shouldExcludeFromBooking = (item) => {
+  const name = `${item?.name || ""}`.toLowerCase();
+  return (
+    name.includes("air blower") ||
+    name.includes("air-blower") ||
+    name.includes("airblower") ||
+    name.includes("blower pump")
+  );
+};
+
+const isBoardGameBundle = (item) =>
+  `${item?.name || ""}`.toLowerCase().includes("board game bundle");
+
+const isIndoorGameItem = (item) => {
+  const name = `${item?.name || ""}`.toLowerCase();
+  const category = getCategory(item).toLowerCase();
+  return category.includes("indoor game") || name.includes("indoor game");
+};
+
+const isTrampolineItem = (item) =>
+  `${item?.name || ""}`.toLowerCase().includes("trampoline");
+
+const isPerHeadRate = (rate) => {
+  const normalized = String(rate || "").toLowerCase();
+  return normalized.includes("per head") || normalized.includes("per person") || normalized.includes("per guest");
+};
+
+const getRateLabel = (item, fallback = "Per booking") => {
+  if (isIndoorGameItem(item) || isTrampolineItem(item)) return "per day";
+  if (item?.rate) return item.rate;
+  return fallback;
+};
+
 const isBouncyRental = (item) => {
   if (!item) return false;
   const name = item.name?.toLowerCase() || "";
@@ -56,25 +92,29 @@ const parseNumericPrice = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const formatRentalPrice = (item, convertPrice, formatCurrency) => {
+const formatRentalPrice = (item, convertPrice, formatCurrency, guestCount = 0) => {
   if (item?.id === 8) return "Contact for more info.";
   const priceValue = getItemPrice(item);
   if (priceValue === undefined || priceValue === null || priceValue === 0 || priceValue === "0") {
     return "Contact for price";
   }
+  const rateLabel = getRateLabel(item, "");
 
   if (typeof priceValue === "string" && priceValue.includes("-")) {
     const [min, max] = priceValue.split("-").map((part) => Number(part.trim()));
     if (!Number.isNaN(min) && !Number.isNaN(max)) {
       return `${formatCurrency(convertPrice(min))} - ${formatCurrency(
         convertPrice(max)
-      )} ${item.rate || ""}`.trim();
+      )} ${rateLabel || ""}`.trim();
     }
   }
 
   const numericPrice = Number(priceValue);
   if (Number.isNaN(numericPrice)) return "Contact for price";
-  return `${formatCurrency(convertPrice(numericPrice))} ${item.rate || ""}`.trim();
+  if (isPerHeadRate(item?.rate) && guestCount > 0) {
+    return `${formatCurrency(convertPrice(numericPrice * guestCount))} total`;
+  }
+  return `${formatCurrency(convertPrice(numericPrice))} ${rateLabel || ""}`.trim();
 };
 
 const formatStatus = (status, isActive) => {
@@ -98,6 +138,13 @@ const formatDateShort = (value) => {
 
 const BUNDLE_MIN_ITEMS = 3;
 const BUNDLE_DISCOUNT_RATE = 0.1;
+const EVENT_WINDOW_OPTIONS = [
+  { value: "Morning setup (7am - 11am)", label: "Morning setup (7am – 11am)", endMinutes: 11 * 60 },
+  { value: "Midday setup (11am - 2pm)", label: "Midday setup (11am – 2pm)", endMinutes: 14 * 60 },
+  { value: "Afternoon setup (2pm - 5pm)", label: "Afternoon setup (2pm – 5pm)", endMinutes: 17 * 60 },
+  { value: "Evening pickup", label: "Evening pickup" },
+  { value: "Flex / tell us", label: "I’ll share a specific time" },
+];
 
 function Book() {
   const { convertPrice, formatCurrency } = useCart();
@@ -123,9 +170,18 @@ function Book() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [bookingReceipt, setBookingReceipt] = useState(null);
+  const [now, setNow] = useState(() => new Date());
+  const [selectedIndoorGameIds, setSelectedIndoorGameIds] = useState([]);
   const [searchParams] = useSearchParams();
-  const today = new Date().toISOString().split("T")[0];
+  const today = now.toISOString().split("T")[0];
   const draftLoadedRef = React.useRef(false);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const guestCountValue = Number.parseInt(formValues.guestCount, 10) || 0;
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -147,6 +203,9 @@ function Book() {
       }
       if (typeof draft?.noteTouched === "boolean") {
         setNoteTouched(draft.noteTouched);
+      }
+      if (Array.isArray(draft?.selectedIndoorGameIds)) {
+        setSelectedIndoorGameIds(draft.selectedIndoorGameIds);
       }
     } catch {
       // ignore corrupted drafts
@@ -170,7 +229,7 @@ function Book() {
           const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toString().toLowerCase();
           const isRental = source ? source === "rental" : (item.sku || "").toString().toUpperCase().startsWith("REN");
           const isActive = (item.status ?? item.isActive) !== false;
-          return isRental && isActive;
+          return isRental && isActive && !shouldExcludeFromBooking(item);
         });
 
         setRentals(rentalsOnly);
@@ -267,10 +326,51 @@ function Book() {
     [bookingRentals, selectedIds]
   );
 
+  const indoorGameOptions = useMemo(
+    () => bookingRentals.filter((item) => isIndoorGameItem(item) && !isBoardGameBundle(item)),
+    [bookingRentals]
+  );
+
+  const selectedIndoorGames = useMemo(
+    () => indoorGameOptions.filter((item) => selectedIndoorGameIds.includes(item.id)),
+    [indoorGameOptions, selectedIndoorGameIds]
+  );
+
+  const bundleSelected = useMemo(
+    () => selectedRentals.some((item) => isBoardGameBundle(item)),
+    [selectedRentals]
+  );
+
+  useEffect(() => {
+    if (!bundleSelected) {
+      setSelectedIndoorGameIds([]);
+    }
+  }, [bundleSelected]);
+
+  useEffect(() => {
+    setSelectedIndoorGameIds((prev) =>
+      prev.filter((id) => indoorGameOptions.some((item) => item.id === id))
+    );
+  }, [indoorGameOptions]);
+
+  const toggleIndoorGame = (id) => {
+    setSelectedIndoorGameIds((prev) =>
+      prev.includes(id) ? prev.filter((gid) => gid !== id) : [...prev, id]
+    );
+  };
+
+  const getItemTotal = (item) => {
+    const unitPrice = parseNumericPrice(getItemPrice(item));
+    if (!Number.isFinite(unitPrice)) return 0;
+    if (isPerHeadRate(item?.rate) && guestCountValue > 0) {
+      return unitPrice * guestCountValue;
+    }
+    return unitPrice;
+  };
+
   const bundleEligible = selectedRentals.length >= BUNDLE_MIN_ITEMS;
   const subtotal = selectedRentals.reduce((sum, item) => {
-    const price = parseNumericPrice(getItemPrice(item));
-    return sum + (Number.isFinite(price) ? price : 0);
+    return sum + getItemTotal(item);
   }, 0);
   const bundleDiscount = bundleEligible ? subtotal * BUNDLE_DISCOUNT_RATE : 0;
   const totalAfterDiscount = Math.max(0, subtotal - bundleDiscount);
@@ -290,9 +390,10 @@ function Book() {
       selectedIds,
       itemsNote,
       noteTouched,
+      selectedIndoorGameIds,
     };
     window.localStorage.setItem("bookingDraft", JSON.stringify(draft));
-  }, [formValues, selectedIds, itemsNote, noteTouched]);
+  }, [formValues, selectedIds, itemsNote, noteTouched, selectedIndoorGameIds]);
 
   const toggleRental = (id) => {
     setSelectedIds((prev) =>
@@ -300,13 +401,51 @@ function Book() {
     );
   };
 
-  const updateFormValue = (field) => (event) => {
-    const value = event.target.value;
-    setFormValues((prev) => ({ ...prev, [field]: value }));
+  const isEventWindowDisabled = (selectedDate, option) => {
+    if (!selectedDate || selectedDate !== today) return false;
+    if (typeof option.endMinutes !== "number") return false;
+    return currentMinutes >= option.endMinutes;
   };
 
-  const itemsSummaryValue = selectedRentals
-    .map((item) => `${item.name} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`)
+  const pruneEventWindow = (selectedDate, selectedValue) => {
+    if (!selectedDate || selectedDate !== today) return selectedValue;
+    const match = EVENT_WINDOW_OPTIONS.find((option) => option.value === selectedValue);
+    if (!match || typeof match.endMinutes !== "number") return selectedValue;
+    return currentMinutes >= match.endMinutes ? "" : selectedValue;
+  };
+
+  const updateFormValue = (field) => (event) => {
+    const value = event.target.value;
+    setFormValues((prev) => {
+      if (field !== "eventDate") {
+        return { ...prev, [field]: value };
+      }
+      return {
+        ...prev,
+        eventDate: value,
+        eventWindow: pruneEventWindow(value, prev.eventWindow),
+      };
+    });
+  };
+
+  useEffect(() => {
+    setFormValues((prev) => {
+      if (!prev.eventDate || prev.eventDate !== today) return prev;
+      const pruned = pruneEventWindow(prev.eventDate, prev.eventWindow);
+      if (pruned === prev.eventWindow) return prev;
+      return { ...prev, eventWindow: pruned };
+    });
+  }, [today, currentMinutes]);
+
+  const itemsSummaryValue = [
+    ...selectedRentals.map(
+      (item) => `${item.name} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`
+    ),
+    bundleSelected && selectedIndoorGames.length
+      ? `Board game bundle picks: ${selectedIndoorGames.map((item) => item.name).join(", ")}`
+      : "",
+  ]
+    .filter(Boolean)
     .join(", ");
   const itemsSummaryDisplay = itemsSummaryValue || "Add rentals to your booking";
 
@@ -345,13 +484,28 @@ function Book() {
     return null;
   };
 
-  const buildBookingItems = () =>
-    selectedRentals
-      .map((item) => ({
-        productId: Number(item.productId ?? item.id),
-        quantity: 1,
-      }))
+  const buildBookingItems = () => {
+    const baseItems = selectedRentals
+      .map((item) => {
+        const quantity = isPerHeadRate(item?.rate) && guestCountValue > 0 ? guestCountValue : 1;
+        return {
+          productId: Number(item.productId ?? item.id),
+          quantity,
+        };
+      })
       .filter((item) => Number.isFinite(item.productId));
+
+    if (bundleSelected && selectedIndoorGames.length) {
+      const existing = new Set(baseItems.map((item) => item.productId));
+      selectedIndoorGames.forEach((item) => {
+        const productId = Number(item.productId ?? item.id);
+        if (!Number.isFinite(productId) || existing.has(productId)) return;
+        baseItems.push({ productId, quantity: 1, price: 0 });
+      });
+    }
+
+    return baseItems;
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -362,6 +516,14 @@ function Book() {
     }
     if (!selectedRentals.length) {
       setSubmitError("Select at least one rental item before booking.");
+      return;
+    }
+    if (bundleSelected && selectedIndoorGameIds.length < 3) {
+      setSubmitError("Select at least three indoor games for the board game bundle.");
+      return;
+    }
+    if (selectedRentals.some((item) => isPerHeadRate(item?.rate)) && guestCountValue <= 0) {
+      setSubmitError("Enter a guest count to price per-head rentals.");
       return;
     }
 
@@ -644,11 +806,15 @@ function Book() {
                       <option value="" disabled>
                         Choose a timing window
                       </option>
-                      <option value="Morning setup (7am - 11am)">Morning setup (7am – 11am)</option>
-                      <option value="Midday setup (11am - 2pm)">Midday setup (11am – 2pm)</option>
-                      <option value="Afternoon setup (2pm - 5pm)">Afternoon setup (2pm – 5pm)</option>
-                      <option value="Evening pickup">Evening pickup</option>
-                      <option value="Flex / tell us">I’ll share a specific time</option>
+                      {EVENT_WINDOW_OPTIONS.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                          disabled={isEventWindowDisabled(formValues.eventDate, option)}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-group">
@@ -798,6 +964,38 @@ function Book() {
                         </span>
                       ))}
                     </div>
+                    {bundleSelected && (
+                      <div className="booking-bundle-picker">
+                        <p className="rent-meta">Board game bundle picks (choose at least 3)</p>
+                        {indoorGameOptions.length ? (
+                          <div className="booking-bundle-list">
+                            {indoorGameOptions.map((item) => {
+                              const checked = selectedIndoorGameIds.includes(item.id);
+                              return (
+                                <label
+                                  key={item.id}
+                                  className={`booking-bundle-option ${checked ? "is-selected" : ""}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleIndoorGame(item.id)}
+                                  />
+                                  <span>{item.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="booking-empty">No indoor games available.</p>
+                        )}
+                        {selectedIndoorGameIds.length < 3 && (
+                          <p className="booking-bundle-hint">
+                            Select {3 - selectedIndoorGameIds.length} more to continue.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="booking-summary">
                       <div className="booking-summary-row">
                         <span>Subtotal</span>
@@ -833,11 +1031,11 @@ function Book() {
                         <div className="booking-rental-head">
                           <h4>{item.name}</h4>
                         <p className="price">
-                          {item.displayPrice || formatRentalPrice(item, convertPrice, formatCurrency)}
+                          {item.displayPrice || formatRentalPrice(item, convertPrice, formatCurrency, guestCountValue)}
                         </p>
                       </div>
                       <p className="rent-meta">
-                        {formatStatus(item.status, item.isActive)} · {item.rate || "Per booking"}
+                        {formatStatus(item.status, item.isActive)} · {getRateLabel(item)}
                       </p>
                         <div className="booking-rental-actions">
                           <button

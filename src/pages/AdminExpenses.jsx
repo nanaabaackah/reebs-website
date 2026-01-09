@@ -47,6 +47,8 @@ const formatExpenseLink = (expense) => {
 function AdminExpenses() {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -65,6 +67,25 @@ function AdminExpenses() {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
   }, []);
+
+  const fetchLinks = async () => {
+    try {
+      const [ordersRes, bookingsRes] = await Promise.all([
+        fetch("/.netlify/functions/orders"),
+        fetch("/.netlify/functions/bookings"),
+      ]);
+      const [ordersData, bookingsData] = await Promise.all([
+        ordersRes.ok ? ordersRes.json() : [],
+        bookingsRes.ok ? bookingsRes.json() : [],
+      ]);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+    } catch (err) {
+      console.warn("Expense link fetch failed", err);
+      setOrders([]);
+      setBookings([]);
+    }
+  };
 
   const fetchExpenses = async () => {
     setLoading(true);
@@ -110,6 +131,7 @@ function AdminExpenses() {
 
   useEffect(() => {
     fetchExpenses();
+    fetchLinks();
   }, []);
 
   const totalExpenses = useMemo(
@@ -241,24 +263,34 @@ function AdminExpenses() {
               </label>
               <div className="expenses-inline">
                 <label>
-                  Link order ID (optional)
-                  <input
-                    type="number"
-                    min="1"
+                  Link order (optional)
+                  <select
                     value={form.orderId}
                     onChange={(event) => setForm((prev) => ({ ...prev, orderId: event.target.value }))}
-                    placeholder="Order ID"
-                  />
+                  >
+                    <option value="">Select order</option>
+                    {orders.map((order) => (
+                      <option key={order.id} value={order.id}>
+                        {`${formatDate(order.orderDate)} - Order #${order.id} - ${order.customerName || "-"}`}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
-                  Link booking ID (optional)
-                  <input
-                    type="number"
-                    min="1"
+                  Link booking (optional)
+                  <select
                     value={form.bookingId}
                     onChange={(event) => setForm((prev) => ({ ...prev, bookingId: event.target.value }))}
-                    placeholder="Booking ID"
-                  />
+                  >
+                    <option value="">Select booking</option>
+                    {bookings.map((booking) => (
+                      <option key={booking.id} value={booking.id}>
+                        {`${formatDate(booking.eventDate)} - Booking #${booking.id} - ${
+                          booking.customerName || "-"
+                        }`}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <label>

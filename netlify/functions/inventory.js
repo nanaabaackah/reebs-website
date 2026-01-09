@@ -10,6 +10,7 @@ import {
   resolveActor,
   normalizeActor,
 } from "./auditHelpers.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const corsHeaders = {
   "Content-Type": "application/json",
@@ -85,10 +86,14 @@ const ensureProductStatusColumns = async (client) => {
   }
 };
 
-const isSystemAdmin = async (client, userId) => {
+const isSystemAdmin = async (client, userId, organizationId = null) => {
   const parsedId = Number(userId);
   if (!Number.isFinite(parsedId)) return false;
-  const result = await client.query(`SELECT role FROM "user" WHERE id = $1 LIMIT 1`, [parsedId]);
+  const hasOrg = Number.isFinite(Number(organizationId));
+  const result = await client.query(
+    `SELECT role FROM "user" WHERE id = $1${hasOrg ? ` AND "organizationId" = $2` : ""} LIMIT 1`,
+    hasOrg ? [parsedId, organizationId] : [parsedId]
+  );
   const role = result.rows[0]?.role || "";
   return role.toLowerCase() === "admin";
 };
@@ -124,23 +129,39 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    let payload = null;
+    if (["PATCH", "DELETE", "POST"].includes(method)) {
+      try {
+        payload = JSON.parse(event.body || "{}");
+      } catch {
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Invalid JSON body" }),
+        };
+      }
+    }
+    const organizationId = await resolveOrganizationId(client, event, payload);
     await ensureAuditColumns(client);
     await ensureProductStatusColumns(client);
     await ensureSourceCategoryValue(client, "WATER");
-    const admin = await findDefaultAdmin(client);
+    const admin = await findDefaultAdmin(client, organizationId);
     if (admin?.id) {
-      await backfillAuditDefaults(client, admin.id);
+      await backfillAuditDefaults(client, admin.id, organizationId);
     }
 
     if (method === "GET") {
       const view = (event.queryStringParameters?.view || "").toLowerCase();
-      let whereClause = `WHERE COALESCE(p."isDeleted", false) = false
+      let whereClause = `WHERE p."organizationId" = $1
+        AND COALESCE(p."isDeleted", false) = false
         AND COALESCE(p."isArchived", false) = false`;
       if (view === "archived") {
-        whereClause = `WHERE COALESCE(p."isArchived", false) = true
+        whereClause = `WHERE p."organizationId" = $1
+          AND COALESCE(p."isArchived", false) = true
           AND COALESCE(p."isDeleted", false) = false`;
       } else if (view === "deleted") {
-        whereClause = `WHERE COALESCE(p."isDeleted", false) = true`;
+        whereClause = `WHERE p."organizationId" = $1
+          AND COALESCE(p."isDeleted", false) = true`;
       }
       const result = await client.query(`
         SELECT 
@@ -176,7 +197,7 @@ export async function handler(event = {}) {
         LEFT JOIN "user" updater ON updater.id = p."lastUpdatedByUserId"
         ${whereClause}
         ORDER BY p.id ASC
-      `);
+      `, [organizationId]);
 
       return {
         statusCode: 200,
@@ -186,17 +207,6 @@ export async function handler(event = {}) {
     }
 
     if (method === "PATCH") {
-      let payload = {};
-      try {
-        payload = JSON.parse(event.body || "{}");
-      } catch {
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ error: "Invalid JSON body" }),
-        };
-      }
-
       const parsedId = Number(payload.id);
       if (!Number.isFinite(parsedId)) {
         return {
@@ -207,7 +217,7 @@ export async function handler(event = {}) {
       }
 
       const action = String(payload.action || "").toLowerCase();
-      const actor = await resolveActor(client, normalizeActor(payload));
+      const actor = await resolveActor(client, normalizeActor(payload), organizationId);
       if (action === "archive") {
         const result = await client.query(
           `UPDATE "product"
@@ -218,9 +228,9 @@ export async function handler(event = {}) {
                "lastUpdatedByUserId" = $2,
                "lastUpdatedAt" = NOW(),
                "updatedAt" = NOW()
-           WHERE id = $1
+           WHERE id = $1 AND "organizationId" = $3
            RETURNING id, sku, name, stock, "isArchived" AS "isArchived", "archivedAt" AS "archivedAt"`,
-          [parsedId, actor.userId]
+          [parsedId, actor.userId, organizationId]
         );
         return {
           statusCode: 200,
@@ -239,9 +249,9 @@ export async function handler(event = {}) {
                "lastUpdatedByUserId" = $2,
                "lastUpdatedAt" = NOW(),
                "updatedAt" = NOW()
-           WHERE id = $1
+           WHERE id = $1 AND "organizationId" = $3
            RETURNING id, sku, name, stock, "isArchived" AS "isArchived"`,
-          [parsedId, actor.userId]
+          [parsedId, actor.userId, organizationId]
         );
         return {
           statusCode: 200,
@@ -258,17 +268,6 @@ export async function handler(event = {}) {
     }
 
     if (method === "DELETE") {
-      let payload = {};
-      try {
-        payload = JSON.parse(event.body || "{}");
-      } catch {
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ error: "Invalid JSON body" }),
-        };
-      }
-
       const parsedId = Number(payload.id);
       if (!Number.isFinite(parsedId)) {
         return {
@@ -278,7 +277,7 @@ export async function handler(event = {}) {
         };
       }
 
-      const canDelete = await isSystemAdmin(client, payload.userId);
+      const canDelete = await isSystemAdmin(client, payload.userId, organizationId);
       if (!canDelete) {
         return {
           statusCode: 403,
@@ -287,7 +286,7 @@ export async function handler(event = {}) {
         };
       }
 
-      const actor = await resolveActor(client, normalizeActor(payload));
+      const actor = await resolveActor(client, normalizeActor(payload), organizationId);
       const result = await client.query(
         `UPDATE "product"
          SET "isDeleted" = true,
@@ -300,9 +299,9 @@ export async function handler(event = {}) {
              "lastUpdatedByUserId" = $2,
              "lastUpdatedAt" = NOW(),
              "updatedAt" = NOW()
-         WHERE id = $1
+         WHERE id = $1 AND "organizationId" = $3
          RETURNING id, sku, name, stock, "deletedAt" AS "deletedAt"`,
-        [parsedId, actor.userId]
+        [parsedId, actor.userId, organizationId]
       );
       return {
         statusCode: 200,
@@ -316,17 +315,6 @@ export async function handler(event = {}) {
         statusCode: 405,
         headers: corsHeaders,
         body: JSON.stringify({ error: "Method not allowed" }),
-      };
-    }
-
-    let payload = {};
-    try {
-      payload = JSON.parse(event.body || "{}");
-    } catch {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Invalid JSON body" }),
       };
     }
 
@@ -377,15 +365,15 @@ export async function handler(event = {}) {
     const saleValue = toCents(saleValueInput);
     const stockValue = priceCents * stock;
 
-    const actor = await resolveActor(client, normalizeActor(payload));
+    const actor = await resolveActor(client, normalizeActor(payload), organizationId);
 
     // If updating an existing product, retain its SKU; otherwise generate one
     const parsedId = Number(payload.id);
     let sku = null;
     if (Number.isFinite(parsedId) && parsedId > 0) {
       const existing = await client.query(
-        `SELECT id, sku FROM "product" WHERE id = $1 LIMIT 1`,
-        [parsedId]
+        `SELECT id, sku FROM "product" WHERE id = $1 AND "organizationId" = $2 LIMIT 1`,
+        [parsedId, organizationId]
       );
       if (existing.rowCount === 0) {
         return {
@@ -401,6 +389,7 @@ export async function handler(event = {}) {
 
     const insertQuery = `
       INSERT INTO "product" (
+        "organizationId",
         "sku",
         "name",
         "description",
@@ -422,8 +411,8 @@ export async function handler(event = {}) {
         "lastUpdatedAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true,$15,NOW(),NOW(),NOW())
-      ON CONFLICT ("sku") DO UPDATE
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,true,$18,NOW(),NOW(),NOW())
+      ON CONFLICT ("organizationId", "sku") DO UPDATE
       SET "name" = EXCLUDED."name",
           "description" = EXCLUDED."description",
           "sourceCategoryCode" = EXCLUDED."sourceCategoryCode",
@@ -468,6 +457,7 @@ export async function handler(event = {}) {
     `;
 
     const result = await client.query(insertQuery, [
+      organizationId,
       sku,
       name,
       description || null,

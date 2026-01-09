@@ -162,7 +162,9 @@ export async function handler(event = {}) {
                  'id', bi.id,
                  'productId', bi."productId",
                  'quantity', bi.quantity,
-                 'productName', p.name
+                 'productName', p.name,
+                 'attendantsNeeded', p."attendantsNeeded",
+                 'blowersNeeded', bc."motorsToPump"
                )
                ORDER BY bi.id
              ) FILTER (WHERE bi.id IS NOT NULL),
@@ -174,6 +176,7 @@ export async function handler(event = {}) {
          LEFT JOIN "delivery" d ON d."bookingId" = b.id
          LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id
          LEFT JOIN "product" p ON p.id = bi."productId"
+         LEFT JOIN "bouncy_castles" bc ON bc."productId" = bi."productId"
          WHERE COALESCE(b.status, '') NOT ILIKE 'cancelled'
          GROUP BY b.id, c.id, assignee.id, d.id
          ORDER BY b."eventDate" ASC,

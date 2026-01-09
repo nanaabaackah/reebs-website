@@ -6,6 +6,8 @@ import path from "path";
 import { parse } from "csv-parse";
 import { hashPassword } from "./utils/passwords.js";
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 const readCsv = (filePath) =>
   new Promise((resolve, reject) => {
     const fullPath = path.resolve(filePath);
@@ -134,7 +136,9 @@ async function importVendors() {
       updates.notes = record.notes;
     }
 
-    if (Object.keys(updates).length) {
+    if (!shouldReset) {
+      skipped += 1;
+    } else if (Object.keys(updates).length) {
       await prisma.vendor.update({ where: { id: existingVendor.id }, data: updates });
       updated += 1;
     } else {
@@ -150,6 +154,10 @@ async function importVendors() {
 }
 
 const assignVendorItems = async () => {
+  if (!shouldReset) {
+    console.log("ℹ️  IMPORT_RESET not set. Skipping vendor assignment updates.");
+    return;
+  }
   const vendors = await prisma.vendor.findMany({
     where: { name: { in: ["EventPro Logistics", "Castle World Rentals", "G-Water Supplies"] } },
     select: { id: true, name: true },
@@ -248,26 +256,40 @@ async function importUsers() {
     const existing = await prisma.user.findUnique({ where: { email } });
     let userId = existing?.id;
     if (existing) {
-      const updates = {};
-      if (existing.firstName !== firstName) updates.firstName = firstName;
-      if (existing.lastName !== lastName) updates.lastName = lastName;
-      if (existing.fullName !== fullName) updates.fullName = fullName;
-      if (existing.role !== role) updates.role = role;
+      if (shouldReset) {
+        const updates = {};
+        if (existing.firstName !== firstName) updates.firstName = firstName;
+        if (existing.lastName !== lastName) updates.lastName = lastName;
+        if (existing.fullName !== fullName) updates.fullName = fullName;
+        if (existing.role !== role) updates.role = role;
 
-      if (Object.keys(updates).length) {
-        const updatedUser = await prisma.user.update({ where: { email }, data: updates });
-        userId = updatedUser.id;
-        updated += 1;
+        if (Object.keys(updates).length) {
+          const updatedUser = await prisma.user.update({ where: { email }, data: updates });
+          userId = updatedUser.id;
+          updated += 1;
+        } else {
+          skipped += 1;
+        }
       } else {
         skipped += 1;
       }
       if (hasProfileData && userId) {
-        await prisma.employeeProfile.upsert({
-          where: { userId },
-          create: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
-          update: { jobTitle, phone, emergencyContactName, emergencyContactPhone },
-        });
-        profilesUpserted += 1;
+        if (shouldReset) {
+          await prisma.employeeProfile.upsert({
+            where: { userId },
+            create: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
+            update: { jobTitle, phone, emergencyContactName, emergencyContactPhone },
+          });
+          profilesUpserted += 1;
+        } else {
+          const existingProfile = await prisma.employeeProfile.findUnique({ where: { userId } });
+          if (!existingProfile) {
+            await prisma.employeeProfile.create({
+              data: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
+            });
+            profilesUpserted += 1;
+          }
+        }
       }
       continue;
     }
@@ -297,10 +319,8 @@ async function importUsers() {
     created += 1;
 
     if (hasProfileData && userId) {
-      await prisma.employeeProfile.upsert({
-        where: { userId },
-        create: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
-        update: { jobTitle, phone, emergencyContactName, emergencyContactPhone },
+      await prisma.employeeProfile.create({
+        data: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
       });
       profilesUpserted += 1;
     }

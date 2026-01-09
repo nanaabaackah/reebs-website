@@ -3,6 +3,8 @@
 // Filename: customers.js
 import "dotenv/config";
 import { Client } from "pg";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -24,10 +26,8 @@ export async function handler(event) {
 
   try {
     await client.connect();
-
-    // HANDLE POST: Add a new customer
-    if (event.httpMethod === "POST") {
-      let data;
+    let data = null;
+    if (event.httpMethod === "POST" || event.httpMethod === "PUT") {
       try {
         data = JSON.parse(event.body || "{}");
       } catch (err) {
@@ -37,7 +37,11 @@ export async function handler(event) {
           body: JSON.stringify({ error: "Invalid JSON body." }),
         };
       }
+    }
+    const organizationId = await resolveOrganizationId(client, event, data);
 
+    // HANDLE POST: Add a new customer
+    if (event.httpMethod === "POST") {
       const name = typeof data.name === "string" ? data.name.trim() : "";
       const email =
         typeof data.email === "string" && data.email.trim() ? data.email.trim() : null;
@@ -66,107 +70,80 @@ export async function handler(event) {
       };
       const phoneVariants = normalizePhoneVariants(phone);
 
+      const respondWith = (row) => ({
+        statusCode: 200,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify(row),
+      });
+
+      const insertCustomer = async () =>
+        email
+          ? client.query(
+            `INSERT INTO "customer" ("organizationId", "name", "email", "phone", "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, NOW(), NOW())
+             ON CONFLICT ("organizationId", "email") DO UPDATE
+             SET "name" = EXCLUDED."name",
+                 "phone" = COALESCE(EXCLUDED."phone", "customer"."phone"),
+                 "updatedAt" = NOW()
+             RETURNING id, name, email, phone, "createdAt", "updatedAt"`,
+            [organizationId, name, email, phone]
+          )
+          : client.query(
+            `INSERT INTO "customer" ("organizationId", "name", "email", "phone", "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, NOW(), NOW())
+             RETURNING id, name, email, phone, "createdAt", "updatedAt"`,
+            [organizationId, name, email, phone]
+          );
+
       try {
         if (email || phone || name) {
           const existingRes = await client.query(
             `SELECT id, name, email, phone, "createdAt", "updatedAt"
              FROM "customer"
-             WHERE (LOWER(TRIM(email)) = LOWER(TRIM($1)) AND $1 <> '')
-                OR (regexp_replace(phone, '[^0-9]+', '', 'g') = ANY($2))
-                OR (
-                  LOWER(regexp_replace(TRIM(name), '\\s+', ' ', 'g'))
-                  = LOWER(regexp_replace(TRIM($3), '\\s+', ' ', 'g'))
-                  AND $3 <> ''
-                )
+             WHERE "organizationId" = $1
+               AND (
+                 (LOWER(TRIM(email)) = LOWER(TRIM($2)) AND $2 <> '')
+                 OR (regexp_replace(phone, '[^0-9]+', '', 'g') = ANY($3))
+                 OR (
+                   LOWER(regexp_replace(TRIM(name), '\\s+', ' ', 'g'))
+                   = LOWER(regexp_replace(TRIM($4), '\\s+', ' ', 'g'))
+                   AND $4 <> ''
+                 )
+               )
              LIMIT 1`,
-            [email || "", phoneVariants, name || ""]
+            [organizationId, email || "", phoneVariants, name || ""]
           );
           if (existingRes.rowCount > 0) {
-            return {
-              statusCode: 200,
-              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-              body: JSON.stringify(existingRes.rows[0]),
-            };
+            return respondWith(existingRes.rows[0]);
           }
         }
 
-        const result = await client.query(
-          `INSERT INTO "customer" ("name", "email", "phone", "createdAt", "updatedAt")
-           VALUES ($1, $2, $3, NOW(), NOW())
-           RETURNING id, name, email, phone, "createdAt", "updatedAt"`,
-          [name, email, phone]
-        );
-
-        return {
-          statusCode: 201,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-          body: JSON.stringify(result.rows[0]),
-        };
+        const result = await insertCustomer();
+        return respondWith(result.rows[0]);
       } catch (err) {
-        if (err?.code === "23505") {
-          const lookupEmail = email
-            ? await client.query(
-              `SELECT id, name, email, phone, "createdAt", "updatedAt"
-               FROM "customer"
-               WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
-               LIMIT 1`,
-              [email]
-            )
-            : { rowCount: 0, rows: [] };
-          const lookupPhone = !lookupEmail.rowCount && phoneVariants.length
-            ? await client.query(
-              `SELECT id, name, email, phone, "createdAt", "updatedAt"
-               FROM "customer"
-               WHERE regexp_replace(phone, '[^0-9]+', '', 'g') = ANY($1)
-               LIMIT 1`,
-              [phoneVariants]
-            )
-            : { rowCount: 0, rows: [] };
-          const lookupName = !lookupEmail.rowCount && !lookupPhone.rowCount && name
-            ? await client.query(
-              `SELECT id, name, email, phone, "createdAt", "updatedAt"
-               FROM "customer"
-               WHERE LOWER(regexp_replace(TRIM(name), '\\s+', ' ', 'g'))
-                     = LOWER(regexp_replace(TRIM($1), '\\s+', ' ', 'g'))
-               LIMIT 1`,
-              [name]
-            )
-            : { rowCount: 0, rows: [] };
-          const existing =
-            lookupEmail.rowCount
-              ? lookupEmail.rows[0]
-              : lookupPhone.rowCount
-                ? lookupPhone.rows[0]
-                : lookupName.rows[0];
-          if (existing) {
-            return {
-              statusCode: 200,
-              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-              body: JSON.stringify(existing),
-            };
+        if (err?.code === "23505" && err?.constraint === "customer_pkey") {
+          const seqRes = await client.query(
+            `SELECT pg_get_serial_sequence('"customer"', 'id') AS seq`
+          );
+          const seqName = seqRes.rows?.[0]?.seq;
+          if (seqName) {
+            const nextRes = await client.query(
+              `SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM "customer"`
+            );
+            const nextId = Number(nextRes.rows?.[0]?.next_id) || 1;
+            await client.query(`SELECT setval($1::regclass, $2, false)`, [
+              seqName,
+              nextId,
+            ]);
+            const retry = await insertCustomer();
+            return respondWith(retry.rows[0]);
           }
-          return {
-            statusCode: 409,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-            body: JSON.stringify({ error: "Customer already exists." }),
-          };
         }
         throw err;
       }
     }
 
     if (event.httpMethod === "PUT") {
-      let data;
-      try {
-        data = JSON.parse(event.body || "{}");
-      } catch (err) {
-        return {
-          statusCode: 400,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-          body: JSON.stringify({ error: "Invalid JSON body." }),
-        };
-      }
-
       const id = Number(data.id);
       if (!Number.isFinite(id)) {
         return {
@@ -200,11 +177,12 @@ export async function handler(event) {
       updates.push(`"updatedAt" = NOW()`);
 
       values.push(id);
+      values.push(organizationId);
 
       try {
         const result = await client.query(
           `UPDATE "customer" SET ${updates.join(", ")}
-           WHERE id = $${index}
+           WHERE id = $${index} AND "organizationId" = $${index + 1}
            RETURNING id, name, email, phone, "createdAt", "updatedAt"`,
           values
         );
@@ -251,8 +229,8 @@ export async function handler(event) {
       const customerRes = await client.query(
         `SELECT id, name, email, phone, "createdAt", "updatedAt"
          FROM "customer"
-         WHERE id = $1`,
-        [id]
+         WHERE id = $1 AND "organizationId" = $2`,
+        [id, organizationId]
       );
       if (customerRes.rowCount === 0) {
         return {
@@ -264,22 +242,40 @@ export async function handler(event) {
 
       const [ordersRes, bookingsRes] = await Promise.all([
         client.query(
-          `SELECT id, "orderNumber", total_amount, "orderDate"
+          `SELECT id, "orderNumber", total_amount, "orderDate", "deliveryMethod", "deliveryDetails"
            FROM "order"
-           WHERE "customerId" = $1
+           WHERE "customerId" = $1 AND "organizationId" = $2
            ORDER BY "orderDate" DESC`,
-          [id]
+          [id, organizationId]
         ),
         client.query(
           `SELECT id, "eventDate", "totalAmount", status
            FROM "booking"
-           WHERE "customerId" = $1
+           WHERE "customerId" = $1 AND "organizationId" = $2
            ORDER BY "eventDate" DESC`,
-          [id]
+          [id, organizationId]
         ),
       ]);
 
-      const totalSpent = ordersRes.rows.reduce((sum, row) => sum + Number(row.total_amount || 0), 0);
+      const ordersWithDelivery = (ordersRes.rows || []).map((row) => {
+        const { distanceKm, feeCents } = getDeliveryFeeDetails(
+          row.deliveryMethod,
+          row.deliveryDetails
+        );
+        const baseCents = Number(row.total_amount || 0);
+        const totalWithDelivery = baseCents + feeCents;
+        return {
+          ...row,
+          total_with_delivery: totalWithDelivery,
+          delivery_fee: feeCents,
+          delivery_distance_km: distanceKm || 0,
+        };
+      });
+
+      const totalSpent = ordersWithDelivery.reduce(
+        (sum, row) => sum + Number(row.total_with_delivery || 0),
+        0
+      );
       const totalRented = bookingsRes.rows.reduce((sum, row) => sum + Number(row.totalAmount || 0), 0);
 
       return {
@@ -287,7 +283,7 @@ export async function handler(event) {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({
           customer: customerRes.rows[0],
-          orders: ordersRes.rows,
+          orders: ordersWithDelivery,
           bookings: bookingsRes.rows,
           totals: {
             orders: ordersRes.rows.length,
@@ -329,8 +325,9 @@ export async function handler(event) {
           `SELECT id, name, email, phone, "createdAt", "updatedAt"
            FROM "customer"
            WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+             AND "organizationId" = $2
            LIMIT 1`,
-          [lookupEmail]
+          [lookupEmail, organizationId]
         );
         match = res.rows[0] || null;
       }
@@ -339,8 +336,9 @@ export async function handler(event) {
           `SELECT id, name, email, phone, "createdAt", "updatedAt"
            FROM "customer"
            WHERE regexp_replace(phone, '[^0-9]+', '', 'g') = ANY($1)
+             AND "organizationId" = $2
            LIMIT 1`,
-          [lookupPhoneVariants]
+          [lookupPhoneVariants, organizationId]
         );
         match = res.rows[0] || null;
       }
@@ -350,8 +348,9 @@ export async function handler(event) {
            FROM "customer"
            WHERE LOWER(regexp_replace(TRIM(name), '\\s+', ' ', 'g'))
                  = LOWER(regexp_replace(TRIM($1), '\\s+', ' ', 'g'))
+              AND "organizationId" = $2
            LIMIT 1`,
-          [lookupName]
+          [lookupName, organizationId]
         );
         match = res.rows[0] || null;
       }
@@ -388,14 +387,18 @@ export async function handler(event) {
        LEFT JOIN (
          SELECT "customerId", COUNT(*) AS orders, COALESCE(SUM(total_amount), 0) AS total_spent
          FROM "order"
+         WHERE "organizationId" = $1
          GROUP BY "customerId"
        ) o ON o."customerId" = c.id
        LEFT JOIN (
          SELECT "customerId", COUNT(*) AS bookings, COALESCE(SUM("totalAmount"), 0) AS total_rented
          FROM "booking"
+         WHERE "organizationId" = $1
          GROUP BY "customerId"
        ) b ON b."customerId" = c.id
-       ORDER BY c.name ASC`
+       WHERE c."organizationId" = $1
+       ORDER BY c.name ASC`,
+      [organizationId]
     );
     return {
       statusCode: 200,

@@ -265,7 +265,8 @@ function AdminCustomers() {
                     <ul>
                       {detail.orders.slice(0, 6).map((order) => (
                         <li key={order.id}>
-                          {order.orderNumber} · {formatDate(order.orderDate)} · {formatMoney(order.total_amount)}
+                          {order.orderNumber} · {formatDate(order.orderDate)} ·{" "}
+                          {formatMoney(order.total_with_delivery ?? order.total_amount)}
                         </li>
                       ))}
                     </ul>

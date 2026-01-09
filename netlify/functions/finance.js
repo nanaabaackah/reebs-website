@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 const getWindowRange = (windowKey = "thisMonth") => {
   const now = new Date();
@@ -59,6 +60,20 @@ const getWindowRange = (windowKey = "thisMonth") => {
   }
 };
 
+const ensureOrderColumns = async (client) => {
+  const statements = [
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "deliveryDetails" JSONB`,
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "pickupDetails" JSONB`,
+  ];
+  for (const statement of statements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Order column check failed:", err?.message || err);
+    }
+  }
+};
+
 export async function handler(event) {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -71,24 +86,38 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    await ensureOrderColumns(client);
 
-    const [summaryRows, rentalRows, transactionRows, expenseRows] = await Promise.all([
+    const [
+      summaryRows,
+      rentalRows,
+      transactionRows,
+      expenseRows,
+      deliveryFeeRows,
+    ] = await Promise.all([
       client.query(
         `SELECT
-           COALESCE(SUM(oi.total_amount), 0) AS revenue_cents,
-           COALESCE(SUM(oi.quantity * COALESCE(p."purchasePriceGhs", 0)), 0) AS cost_cents
-         FROM "order" o
-         JOIN "orderItem" oi ON oi."orderId" = o.id
-         JOIN "product" p ON p.id = oi."productId"
-         WHERE o."orderDate" >= $1
-           AND o."orderDate" < $2`,
+           COALESCE((
+             SELECT SUM(o.total_amount)
+             FROM "order" o
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0) AS revenue_cents,
+           COALESCE((
+             SELECT SUM(oi.quantity * COALESCE(p."purchasePriceGhs", 0))
+             FROM "order" o
+             JOIN "orderItem" oi ON oi."orderId" = o.id
+             JOIN "product" p ON p.id = oi."productId"
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0) AS cost_cents`,
         params
       ),
       client.query(
         `SELECT
            COALESCE(SUM("totalAmount"), 0) AS rental_cents
          FROM "booking"
-         WHERE status ILIKE 'confirmed'
+         WHERE LOWER(COALESCE(status, '')) IN ('confirmed', 'completed')
            AND "eventDate" >= $1
            AND "eventDate" < $2`,
         params
@@ -118,9 +147,20 @@ export async function handler(event) {
            AND date < $2`,
         params
       ),
+      client.query(
+        `SELECT o."deliveryMethod", o."deliveryDetails"
+         FROM "order" o
+         WHERE o."orderDate" >= $1
+           AND o."orderDate" < $2`,
+        params
+      ),
     ]);
 
-    const revenueCents = Number(summaryRows.rows[0]?.revenue_cents || 0);
+    const deliveryFeeCents = (deliveryFeeRows.rows || []).reduce((sum, row) => {
+      const { feeCents } = getDeliveryFeeDetails(row.deliveryMethod, row.deliveryDetails);
+      return sum + feeCents;
+    }, 0);
+    const revenueCents = Number(summaryRows.rows[0]?.revenue_cents || 0) + deliveryFeeCents;
     const costCents = Number(summaryRows.rows[0]?.cost_cents || 0);
     const rentalCents = Number(rentalRows.rows[0]?.rental_cents || 0);
     const grossProfitCents = revenueCents - costCents + rentalCents;

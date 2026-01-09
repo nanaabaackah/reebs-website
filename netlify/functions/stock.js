@@ -33,7 +33,7 @@ export async function handler(event) {
   }
 
   // 3. Validate required fields
-  const { productId, type, quantity, notes, reference, userId, userName, userEmail } = data;
+  const { productId, type, quantity, notes, reference, userId, userName, userEmail, soldMonth } = data;
   if (!productId || !type || !quantity) {
     return {
       statusCode: 400,
@@ -50,6 +50,21 @@ export async function handler(event) {
           body: JSON.stringify({ error: "Quantity must be a positive number." }),
       };
   }
+
+  const normalizeSoldMonth = (value) => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/^\d{4}-\d{2}$/.test(trimmed)) {
+      return `${trimmed}-01`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+    return null;
+  };
+
+  const soldMonthValue = normalizeSoldMonth(soldMonth);
 
   // Determine the stock change based on the type
   const stockDelta = type.toLowerCase() === 'stockin' ? productQuantity : -productQuantity;
@@ -104,13 +119,14 @@ export async function handler(event) {
         "quantity", 
         "notes", 
         "reference",
+        "soldMonth",
         "date",
         "performedByUserId",
         "performedByName",
         "performedByEmail",
         "createdAt"
       )
-      VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, NOW())
     `;
     
     await client.query(insertMovementQuery, [
@@ -119,6 +135,7 @@ export async function handler(event) {
         productQuantity, 
         notes || null, 
         reference || null,
+        soldMonthValue,
         actor.userId,
         actor.userName,
         actor.userEmail,

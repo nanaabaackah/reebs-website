@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 const getWindowRange = (windowKey = "thisMonth") => {
   const now = new Date();
@@ -59,6 +60,20 @@ const getWindowRange = (windowKey = "thisMonth") => {
   }
 };
 
+const ensureOrderColumns = async (client) => {
+  const statements = [
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "deliveryDetails" JSONB`,
+    `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "pickupDetails" JSONB`,
+  ];
+  for (const statement of statements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Order column check failed:", err?.message || err);
+    }
+  }
+};
+
 export async function handler(event) {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -70,6 +85,7 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    await ensureOrderColumns(client);
 
     const params = [start.toISOString(), end.toISOString()];
 
@@ -78,6 +94,7 @@ export async function handler(event) {
       categoryRows,
       topRows,
       cashflowRows,
+      deliveryFeeRows,
       skuRows,
       bookingSummary,
       bookingDaily,
@@ -85,13 +102,25 @@ export async function handler(event) {
     ] = await Promise.all([
       client.query(
         `SELECT
-           COUNT(*)::int AS orders,
-           COALESCE(SUM(o.total_amount), 0) AS revenue_cents,
-           COALESCE(SUM(oi.quantity), 0)::int AS units
-         FROM "order" o
-         LEFT JOIN "orderItem" oi ON oi."orderId" = o.id
-         WHERE o."orderDate" >= $1
-           AND o."orderDate" < $2`,
+           COALESCE((
+             SELECT COUNT(*)
+             FROM "order" o
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0)::int AS orders,
+           COALESCE((
+             SELECT SUM(o.total_amount)
+             FROM "order" o
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0) AS revenue_cents,
+           COALESCE((
+             SELECT SUM(oi.quantity)
+             FROM "order" o
+             JOIN "orderItem" oi ON oi."orderId" = o.id
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0)::int AS units`,
         params
       ),
       client.query(
@@ -137,6 +166,16 @@ export async function handler(event) {
       ),
       client.query(
         `SELECT
+           o."deliveryMethod",
+           o."deliveryDetails",
+           o."orderDate"::date AS bucket
+         FROM "order" o
+         WHERE o."orderDate" >= $1
+           AND o."orderDate" < $2`,
+        params
+      ),
+      client.query(
+        `SELECT
            p.sku,
            p."sourceCategoryCode" AS category,
            COALESCE(SUM(oi.total_amount), 0) AS revenue_cents,
@@ -154,7 +193,7 @@ export async function handler(event) {
            COUNT(*)::int AS bookings,
            COALESCE(SUM("totalAmount"), 0) AS revenue_cents
          FROM "booking"
-         WHERE status ILIKE 'confirmed'
+         WHERE LOWER(COALESCE(status, '')) IN ('confirmed', 'completed')
            AND "eventDate" >= $1
            AND "eventDate" < $2`,
         params
@@ -164,7 +203,7 @@ export async function handler(event) {
            "eventDate"::date AS bucket,
            COALESCE(SUM("totalAmount"), 0) AS revenue_cents
          FROM "booking"
-         WHERE status ILIKE 'confirmed'
+         WHERE LOWER(COALESCE(status, '')) IN ('confirmed', 'completed')
            AND "eventDate" >= $1
            AND "eventDate" < $2
          GROUP BY "eventDate"::date
@@ -181,7 +220,7 @@ export async function handler(event) {
          FROM "booking" b
          JOIN "bookingItem" bi ON bi."bookingId" = b.id
          JOIN "product" p ON p.id = bi."productId"
-         WHERE b.status ILIKE 'confirmed'
+         WHERE LOWER(COALESCE(b.status, '')) IN ('confirmed', 'completed')
            AND b."eventDate" >= $1
            AND b."eventDate" < $2
          GROUP BY p.id, p.name, p.sku
@@ -196,9 +235,11 @@ export async function handler(event) {
     const normalizeSku = (sku) => (typeof sku === "string" ? sku.trim().toUpperCase() : "");
 
     const addToCategory = (cat, cents) => {
-      if (cat === "rental") categoryMap.rental += cents;
-      else if (cat === "retail") categoryMap.retail += cents;
-      else categoryMap.other += cents;
+      if (cat === "rental") {
+        categoryMap.rental += cents;
+      } else {
+        categoryMap.retail += cents;
+      }
     };
 
     // SKU-driven split: INV* -> retail, RENT* -> rental (though rentals will be driven by bookings below), otherwise fall back to category code
@@ -209,14 +250,24 @@ export async function handler(event) {
         addToCategory("retail", cents);
       } else {
         const cat = (row.category || "").toLowerCase();
-        if (cat === "retail") addToCategory("retail", cents);
-        else addToCategory("other", cents);
+        addToCategory(cat === "retail" ? "retail" : "other", cents);
       }
     }
 
     const bookingRevenueCents = Number(bookingSummary.rows[0]?.revenue_cents || 0);
     const bookingCount = bookingSummary.rows[0]?.bookings || 0;
     categoryMap.rental += bookingRevenueCents;
+    const deliveryFeeTotals = new Map();
+    let deliveryFeeCentsTotal = 0;
+    for (const row of deliveryFeeRows.rows || []) {
+      const { feeCents } = getDeliveryFeeDetails(row.deliveryMethod, row.deliveryDetails);
+      if (!feeCents) continue;
+      deliveryFeeCentsTotal += feeCents;
+      const key = row.bucket;
+      deliveryFeeTotals.set(key, (deliveryFeeTotals.get(key) || 0) + feeCents);
+    }
+    categoryMap.retail += deliveryFeeCentsTotal;
+    const orderRevenueCents = Number(summary.rows[0]?.revenue_cents || 0) + deliveryFeeCentsTotal;
 
     // Merge cashflow from orders and bookings by date
     const cashflowMap = new Map();
@@ -228,6 +279,10 @@ export async function handler(event) {
       const key = row.bucket;
       const existing = cashflowMap.get(key) || 0;
       cashflowMap.set(key, existing + Number(row.revenue_cents || 0));
+    }
+    for (const [key, cents] of deliveryFeeTotals.entries()) {
+      const existing = cashflowMap.get(key) || 0;
+      cashflowMap.set(key, existing + cents);
     }
 
     const cashflow = Array.from(cashflowMap.entries())
@@ -248,7 +303,7 @@ export async function handler(event) {
         orders: summary.rows[0]?.orders || 0,
         bookings: bookingCount,
         bookingRevenue: bookingRevenueCents / 100,
-        revenue: (Number(summary.rows[0]?.revenue_cents || 0) + bookingRevenueCents) / 100,
+        revenue: (orderRevenueCents + bookingRevenueCents) / 100,
         units: summary.rows[0]?.units || 0,
         revenueByCategory: {
           retail: categoryMap.retail / 100,

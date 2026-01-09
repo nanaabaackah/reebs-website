@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -9,6 +9,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useCart } from "../components/CartContext";
 import "./master.css";
+
+const TIME_WINDOW_OPTIONS = [
+  { value: "9am-11am", label: "9:00am – 11:00am", endMinutes: 11 * 60 },
+  { value: "11am-1pm", label: "11:00am – 1:00pm", endMinutes: 13 * 60 },
+  { value: "1pm-3pm", label: "1:00pm – 3:00pm", endMinutes: 15 * 60 },
+  { value: "3pm-5pm", label: "3:00pm – 5:00pm", endMinutes: 17 * 60 },
+  { value: "5pm-7pm", label: "5:00pm – 7:00pm", endMinutes: 19 * 60 },
+];
 
 const Checkout = () => {
   const { cart, convertPrice, formatCurrency, currency, clearCart } = useCart();
@@ -42,14 +50,18 @@ const Checkout = () => {
     momoNumber: "",
     transferRef: "",
   });
+  const [momoSameAsPhone, setMomoSameAsPhone] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const draftLoadedRef = useRef(false);
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.cartQuantity, 0);
   const formattedSubtotal = formatCurrency(convertPrice(subtotal));
   const itemLabel = itemCount === 1 ? "item" : "items";
-  const today = new Date().toISOString().split("T")[0];
+  const today = now.toISOString().split("T")[0];
   const amountCents = Math.round(convertPrice(subtotal) * 100);
   const modalAmount = confirmedAmount || formattedSubtotal;
   const draftKey = "checkoutPaymentDraft";
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const cartItems = useMemo(
     () =>
@@ -68,33 +80,63 @@ const Checkout = () => {
     item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
 
   useEffect(() => {
+    const intervalId = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (!momoSameAsPhone) return;
+    setPaymentDetails((prev) => {
+      if (prev.momoNumber === prev.phone) return prev;
+      return { ...prev, momoNumber: prev.phone };
+    });
+  }, [momoSameAsPhone, paymentDetails.phone]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(draftKey);
-    if (!stored) return;
+    if (!stored) {
+      draftLoadedRef.current = true;
+      return;
+    }
     try {
       const parsed = JSON.parse(stored);
       if (parsed.fulfillment) setFulfillment(parsed.fulfillment);
       if (parsed.deliveryDetails) setDeliveryDetails(parsed.deliveryDetails);
       if (parsed.pickupDetails) setPickupDetails(parsed.pickupDetails);
+      if (typeof parsed.momoSameAsPhone === "boolean") {
+        setMomoSameAsPhone(parsed.momoSameAsPhone);
+      }
       if (parsed.paymentDetails) {
         setPaymentDetails((prev) => ({
           ...prev,
           ...parsed.paymentDetails,
           cardCvc: "",
         }));
+        if (
+          parsed.paymentDetails.phone &&
+          parsed.paymentDetails.momoNumber &&
+          parsed.paymentDetails.phone === parsed.paymentDetails.momoNumber
+        ) {
+          setMomoSameAsPhone(true);
+        }
       }
     } catch {
       window.localStorage.removeItem(draftKey);
+    } finally {
+      draftLoadedRef.current = true;
     }
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!draftLoadedRef.current) return;
     if (paymentStatus.state === "success") return;
     const payload = {
       fulfillment,
       deliveryDetails,
       pickupDetails,
+      momoSameAsPhone,
       paymentDetails: {
         ...paymentDetails,
         cardCvc: "",
@@ -103,14 +145,44 @@ const Checkout = () => {
     window.localStorage.setItem(draftKey, JSON.stringify(payload));
   }, [fulfillment, deliveryDetails, pickupDetails, paymentDetails, paymentStatus.state]);
 
+  const isWindowDisabled = (selectedDate, option) => {
+    if (!selectedDate || selectedDate !== today) return false;
+    return currentMinutes >= option.endMinutes;
+  };
+
+  const pruneWindowSelection = (selectedDate, selectedValue) => {
+    if (!selectedDate || selectedDate !== today) return selectedValue;
+    const match = TIME_WINDOW_OPTIONS.find((option) => option.value === selectedValue);
+    if (!match) return selectedValue;
+    return currentMinutes >= match.endMinutes ? "" : selectedValue;
+  };
+
   const updateDelivery = (field) => (event) => {
     const value = event.target.value;
-    setDeliveryDetails((prev) => ({ ...prev, [field]: value }));
+    setDeliveryDetails((prev) => {
+      if (field !== "date") {
+        return { ...prev, [field]: value };
+      }
+      return {
+        ...prev,
+        date: value,
+        window: pruneWindowSelection(value, prev.window),
+      };
+    });
   };
 
   const updatePickup = (field) => (event) => {
     const value = event.target.value;
-    setPickupDetails((prev) => ({ ...prev, [field]: value }));
+    setPickupDetails((prev) => {
+      if (field !== "date") {
+        return { ...prev, [field]: value };
+      }
+      return {
+        ...prev,
+        date: value,
+        window: pruneWindowSelection(value, prev.window),
+      };
+    });
   };
 
   const updatePayment = (field) => (event) => {
@@ -118,7 +190,29 @@ const Checkout = () => {
     setPaymentDetails((prev) => ({ ...prev, [field]: value }));
   };
 
+  const toggleMomoSameAsPhone = (event) => {
+    const checked = event.target.checked;
+    setMomoSameAsPhone(checked);
+    if (!checked) return;
+    setPaymentDetails((prev) => ({ ...prev, momoNumber: prev.phone }));
+  };
+
   const resetPaymentStatus = () => setPaymentStatus({ state: "idle", message: "" });
+
+  useEffect(() => {
+    setDeliveryDetails((prev) => {
+      if (!prev.date || prev.date !== today) return prev;
+      const pruned = pruneWindowSelection(prev.date, prev.window);
+      if (pruned === prev.window) return prev;
+      return { ...prev, window: pruned };
+    });
+    setPickupDetails((prev) => {
+      if (!prev.date || prev.date !== today) return prev;
+      const pruned = pruneWindowSelection(prev.date, prev.window);
+      if (pruned === prev.window) return prev;
+      return { ...prev, window: pruned };
+    });
+  }, [today, currentMinutes]);
 
   const resolveCustomer = async () => {
     const name = paymentDetails.name.trim();
@@ -431,11 +525,15 @@ const Checkout = () => {
                     onChange={updateDelivery("window")}
                   >
                     <option value="" disabled>Select a window</option>
-                    <option value="9am-11am">9:00am – 11:00am</option>
-                    <option value="11am-1pm">11:00am – 1:00pm</option>
-                    <option value="1pm-3pm">1:00pm – 3:00pm</option>
-                    <option value="3pm-5pm">3:00pm – 5:00pm</option>
-                    <option value="5pm-7pm">5:00pm – 7:00pm</option>
+                    {TIME_WINDOW_OPTIONS.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                        disabled={isWindowDisabled(deliveryDetails.date, option)}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="checkout-field full-width">
@@ -472,11 +570,15 @@ const Checkout = () => {
                     onChange={updatePickup("window")}
                   >
                     <option value="" disabled>Select a window</option>
-                    <option value="9am-11am">9:00am – 11:00am</option>
-                    <option value="11am-1pm">11:00am – 1:00pm</option>
-                    <option value="1pm-3pm">1:00pm – 3:00pm</option>
-                    <option value="3pm-5pm">3:00pm – 5:00pm</option>
-                    <option value="5pm-7pm">5:00pm – 7:00pm</option>
+                    {TIME_WINDOW_OPTIONS.map((option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                        disabled={isWindowDisabled(pickupDetails.date, option)}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="checkout-field full-width">
@@ -690,8 +792,20 @@ const Checkout = () => {
                       type="tel"
                       value={paymentDetails.momoNumber}
                       onChange={updatePayment("momoNumber")}
+                      readOnly={momoSameAsPhone}
                       placeholder="+233 24 123 4567"
                     />
+                  </div>
+                  <div className="checkout-field checkout-checkbox full-width">
+                    <label className="checkout-checkbox-label" htmlFor="momo-same-phone">
+                      <input
+                        id="momo-same-phone"
+                        type="checkbox"
+                        checked={momoSameAsPhone}
+                        onChange={toggleMomoSameAsPhone}
+                      />
+                      <span>Same as phone number</span>
+                    </label>
                   </div>
                 </>
               )}

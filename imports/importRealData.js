@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse'; 
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 // --- 1. YOUR AGE GENERATOR (Kept from your previous file) ---
 const generateAge = (name, category) => {
     const n = String(name).toLowerCase();
@@ -136,6 +138,9 @@ async function importProductData() {
             });
 
             if (existing) {
+                if (!shouldReset) {
+                    continue;
+                }
                 await prisma.product.update({ where: { id: existing.id }, data: productData });
             } else {
                 await prisma.product.create({ data: productData });

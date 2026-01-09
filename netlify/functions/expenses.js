@@ -102,6 +102,8 @@ export async function handler(event = {}) {
     const hasUserId = columns.includes("userId");
     const hasOrderId = columns.includes("orderId");
     const hasBookingId = columns.includes("bookingId");
+    const hasCreatedAt = columns.includes("createdAt");
+    const hasUpdatedAt = columns.includes("updatedAt");
     const selectColumns = [
       "id",
       "category",
@@ -209,21 +211,29 @@ export async function handler(event = {}) {
         { category: "Logistics", amount: 9575, description: "Vehicle maintenance", date: daysAgo(18) },
       ];
 
+      const insertColumns = ["category", "amount", "description", "date"];
+      if (hasUserId) insertColumns.push("\"userId\"");
+      if (hasCreatedAt) insertColumns.push("\"createdAt\"");
+      if (hasUpdatedAt) insertColumns.push("\"updatedAt\"");
+
       const values = [];
       const placeholders = samples.map((row, index) => {
-        const base = index * 5;
+        const base = index * insertColumns.length;
         values.push(
           row.category,
           row.amount,
           row.description,
-          row.date.toISOString(),
-          null
+          row.date.toISOString()
         );
-        return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`;
+        if (hasUserId) values.push(null);
+        if (hasCreatedAt) values.push(new Date().toISOString());
+        if (hasUpdatedAt) values.push(new Date().toISOString());
+        const range = Array.from({ length: insertColumns.length }, (_, i) => `$${base + i + 1}`);
+        return `(${range.join(", ")})`;
       });
 
       await client.query(
-        `INSERT INTO ${table.queryRef} (category, amount, description, date, "userId")
+        `INSERT INTO ${table.queryRef} (${insertColumns.join(", ")})
          VALUES ${placeholders.join(", ")}`,
         values
       );
@@ -251,6 +261,24 @@ export async function handler(event = {}) {
     if (Number.isNaN(dateValue.getTime())) {
       return json(400, { error: "Invalid date." });
     }
+    if (orderId && !hasOrderId) {
+      return json(400, { error: "Order links are not supported in this expenses table." });
+    }
+    if (bookingId && !hasBookingId) {
+      return json(400, { error: "Booking links are not supported in this expenses table." });
+    }
+    if (orderId) {
+      const orderCheck = await client.query(`SELECT id FROM "order" WHERE id = $1`, [orderId]);
+      if (orderCheck.rowCount === 0) {
+        return json(400, { error: "Order not found." });
+      }
+    }
+    if (bookingId) {
+      const bookingCheck = await client.query(`SELECT id FROM "booking" WHERE id = $1`, [bookingId]);
+      if (bookingCheck.rowCount === 0) {
+        return json(400, { error: "Booking not found." });
+      }
+    }
 
     const amountCents = Math.round(amountValue * 100);
 
@@ -268,6 +296,14 @@ export async function handler(event = {}) {
       insertColumns.push("\"bookingId\"");
       insertValues.push(bookingId);
     }
+    if (hasCreatedAt) {
+      insertColumns.push("\"createdAt\"");
+      insertValues.push(new Date().toISOString());
+    }
+    if (hasUpdatedAt) {
+      insertColumns.push("\"updatedAt\"");
+      insertValues.push(new Date().toISOString());
+    }
 
     const placeholders = insertValues.map((_, idx) => `$${idx + 1}`).join(", ");
 
@@ -281,7 +317,7 @@ export async function handler(event = {}) {
     return json(200, insert.rows[0]);
   } catch (err) {
     console.error("❌ Expenses error:", err);
-    return json(500, { error: "Failed to process expenses" });
+    return json(500, { error: err.message || "Failed to process expenses" });
   } finally {
     await client.end().catch(() => {});
   }

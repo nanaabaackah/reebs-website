@@ -3,6 +3,8 @@ import fs from "fs";
 import Papa from "papaparse";
 import { prisma } from "../prismaClient.js";
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 async function generateNextInventoryId() {
   // Find the latest inventoryId
   const lastItem = await prisma.inventory.findFirst({
@@ -51,6 +53,10 @@ async function importData() {
       });
 
       if (existing) {
+        if (!shouldReset) {
+          console.log(`Skipping existing item: ${name} (${existing.inventoryId || "unassigned"})`);
+          continue;
+        }
         const inventoryId =
           existing.inventoryId || (await generateNextInventoryId());
 
@@ -90,7 +96,7 @@ async function importData() {
       console.log(`Inserted new item: ${name} (${nextInventoryId})`);
     }
 
-    console.log("✅ Inventory import finished with upserts and image URLs!");
+    console.log("✅ Inventory import finished.");
   } catch (err) {
     console.error("❌ Error importing inventory:", err);
   } finally {

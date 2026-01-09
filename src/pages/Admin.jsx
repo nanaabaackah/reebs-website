@@ -53,7 +53,7 @@ const getIsMobileView = () =>
   typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
 
 function getInitialViewMode() {
-  return getIsMobileView() ? "cards" : "table";
+  return "cards";
 }
 
 function Admin() {
@@ -75,6 +75,7 @@ function Admin() {
     quantity: "",
     notes: "",
     reference: "",
+    soldMonth: "",
   });
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState("");
@@ -442,11 +443,45 @@ function Admin() {
   const totalItems = inventory.length;
   const totalUnits = inventory.reduce((sum, item) => sum + getQuantity(item), 0);
   const lowStock = inventory.filter((item) => getQuantity(item) <= 2).length;
+  const detailIndex = useMemo(() => {
+    if (!detailItem) return -1;
+    return inventory.findIndex((item) => item.id === detailItem.id);
+  }, [inventory, detailItem]);
+  const detailHasPrev = detailIndex > 0;
+  const detailHasNext = detailIndex >= 0 && detailIndex < inventory.length - 1;
+
+  const navigateDetailItem = (direction) => {
+    if (detailIndex === -1) return;
+    const nextIndex = detailIndex + direction;
+    if (nextIndex < 0 || nextIndex >= inventory.length) return;
+    setDetailFromItem(inventory[nextIndex]);
+  };
+
+  const activeIndex = useMemo(() => {
+    if (!activeItem) return -1;
+    return inventory.findIndex((item) => item.id === activeItem.id);
+  }, [inventory, activeItem]);
+  const activeHasPrev = activeIndex > 0;
+  const activeHasNext = activeIndex >= 0 && activeIndex < inventory.length - 1;
+
+  const navigateActiveItem = (direction) => {
+    if (activeIndex === -1) return;
+    const nextIndex = activeIndex + direction;
+    if (nextIndex < 0 || nextIndex >= inventory.length) return;
+    openAdjustForm(inventory[nextIndex]);
+  };
 
   const openAdjustForm = (item) => {
     if (isMobileView) return;
+    const currentMonth = new Date().toISOString().slice(0, 7);
     setActiveItem(item);
-    setFormState({ type: "StockIn", quantity: "", notes: "", reference: "" });
+    setFormState({
+      type: "StockIn",
+      quantity: "",
+      notes: "",
+      reference: "",
+      soldMonth: currentMonth,
+    });
     setSubmitError("");
     setSuccess("");
   };
@@ -603,6 +638,23 @@ function Admin() {
     });
   }, [gbpRate]);
 
+  const detailPurchasePriceGbp = detailForm?.purchasePriceGbp;
+  useEffect(() => {
+    if (!detailForm) return;
+    if (detailPurchasePriceGbp === "" || detailPurchasePriceGbp == null) return;
+    if (!gbpRate) return;
+    const gbpValue = Number(detailPurchasePriceGbp);
+    if (!Number.isFinite(gbpValue) || gbpValue < 0) return;
+    const nextGhsValue = Math.round(gbpValue * gbpRate * 100) / 100;
+    const currentGhsValue = Number(detailForm.purchasePriceGhs);
+    if (Number.isFinite(currentGhsValue) && Math.abs(currentGhsValue - nextGhsValue) < 0.005) {
+      return;
+    }
+    setDetailForm((prev) =>
+      prev ? { ...prev, purchasePriceGhs: nextGhsValue.toFixed(2) } : prev
+    );
+  }, [detailPurchasePriceGbp, gbpRate]);
+
   const copyToClipboard = async (value) => {
     if (!value) return;
     try {
@@ -725,8 +777,8 @@ function Admin() {
     }
   };
 
-  const openItemDetails = (item) => {
-    if (isMobileView) return;
+  const setDetailFromItem = (item) => {
+    if (!item) return;
     setDetailItem(item);
     setDetailError("");
     setDetailForm({
@@ -749,6 +801,11 @@ function Admin() {
       rate: item.rate || "",
       description: item.description || "",
     });
+  };
+
+  const openItemDetails = (item) => {
+    if (isMobileView) return;
+    setDetailFromItem(item);
   };
 
   const closeItemDetails = () => {
@@ -919,6 +976,7 @@ function Admin() {
           productId: activeItem.id,
           type: formState.type,
           quantity: parsedQty,
+          soldMonth: formState.type === "StockOut" ? formState.soldMonth : null,
           notes: formState.notes.trim() || undefined,
           reference: formState.reference.trim() || undefined,
           userId: user?.id,
@@ -970,6 +1028,11 @@ function Admin() {
             <p className="admin-subtitle">
               Track live stock, spot low inventory, and adjust quantities in seconds.
             </p>
+            <div className="admin-simple-steps" aria-label="Quick stock entry steps">
+              <span>1. Search an item</span>
+              <span>2. Click it</span>
+              <span>3. Add or remove stock</span>
+            </div>
           </div>
           {!isMobileView && (
             <div className="admin-header-actions">
@@ -1171,10 +1234,11 @@ function Admin() {
                   {paginatedInventory.map((item) => {
                     const quantity = getQuantity(item);
                     const isLow = quantity <= 2;
+                    const isMenuOpen = openMenuId === item.id;
                     return (
                       <tr
                         key={item.id}
-                        className={isLow ? "is-low" : ""}
+                        className={[isLow ? "is-low" : "", isMenuOpen ? "menu-open" : ""].filter(Boolean).join(" ")}
                         onClick={() => openAdjustForm(item)}
                         role="button"
                         tabIndex={0}
@@ -1333,10 +1397,11 @@ function Admin() {
                 const quantity = getQuantity(item);
                 const isLow = quantity <= 2;
                 const isInteractive = !isMobileView;
+                const isMenuOpen = openMenuId === `card-${item.id}`;
                 return (
                   <div
                     key={item.id}
-                    className={`inventory-card ${isLow ? "is-low" : ""}`}
+                    className={`inventory-card ${isLow ? "is-low" : ""} ${isMenuOpen ? "menu-open" : ""}`}
                     role={isInteractive ? "button" : undefined}
                     tabIndex={isInteractive ? 0 : undefined}
                     onClick={isInteractive ? () => openAdjustForm(item) : undefined}
@@ -1767,14 +1832,39 @@ function Admin() {
                   ID {detailForm.id} · SKU {detailForm.sku || "-"}
                 </p>
               </div>
-              <button
-                type="button"
-                className="customers-modal-close"
-                onClick={closeItemDetails}
-                aria-label="Close"
-              >
-                ✕
-              </button>
+              <div className="admin-detail-actions">
+                {detailIndex !== -1 && inventory.length > 1 && (
+                  <div className="admin-detail-nav" aria-label="Inventory item navigation">
+                    <button
+                      type="button"
+                      onClick={() => navigateDetailItem(-1)}
+                      disabled={!detailHasPrev}
+                      aria-label="Previous item"
+                    >
+                      ‹
+                    </button>
+                    <span className="admin-detail-nav-count">
+                      {detailIndex + 1} / {inventory.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigateDetailItem(1)}
+                      disabled={!detailHasNext}
+                      aria-label="Next item"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="customers-modal-close"
+                  onClick={closeItemDetails}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
             </header>
 
             <form
@@ -1850,7 +1940,7 @@ function Admin() {
                     min="0"
                     step="0.01"
                     value={detailForm.purchasePriceGhs}
-                    onChange={(event) => updateDetailForm("purchasePriceGhs", event.target.value)}
+                    readOnly
                   />
                 </label>
                 <label>
@@ -1950,18 +2040,50 @@ function Admin() {
               </button>
             </header>
 
+            {activeIndex !== -1 && inventory.length > 1 && (
+              <div className="admin-modal-nav-row" aria-label="Inventory item navigation">
+                <div className="admin-detail-nav">
+                  <button
+                    type="button"
+                    onClick={() => navigateActiveItem(-1)}
+                    disabled={!activeHasPrev}
+                    aria-label="Previous item"
+                  >
+                    ‹
+                  </button>
+                  <span className="admin-detail-nav-count">
+                    {activeIndex + 1} / {inventory.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigateActiveItem(1)}
+                    disabled={!activeHasNext}
+                    aria-label="Next item"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={onSubmit} className="admin-form">
+              <p className="admin-form-tip">
+                Choose Add or Remove, enter the number of items, then confirm.
+              </p>
               <label>
-                Movement type
+                Stock change
                 <select
                   value={formState.type}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, type: event.target.value }))
                   }
                 >
-                  <option value="StockIn">Stock In</option>
-                  <option value="StockOut">Stock Out</option>
+                  <option value="StockIn">Add stock</option>
+                  <option value="StockOut">Remove stock</option>
                 </select>
+                <small className="admin-form-hint">
+                  Add for new deliveries, remove for sales or damage.
+                </small>
               </label>
 
               <label>
@@ -1973,34 +2095,53 @@ function Admin() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, quantity: event.target.value }))
                   }
-                  placeholder="Enter units"
+                  placeholder="e.g., 5"
                   required
                 />
+                <small className="admin-form-hint">Enter the number of items added or removed.</small>
               </label>
 
-              <label>
-                Reference (optional)
-                <input
-                  type="text"
-                  value={formState.reference}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, reference: event.target.value }))
-                  }
-                  placeholder="PO number, event, etc."
-                />
-              </label>
+              {formState.type === "StockOut" && (
+                <label>
+                  Month sold
+                  <input
+                    type="month"
+                    value={formState.soldMonth}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, soldMonth: event.target.value }))
+                    }
+                    required
+                  />
+                  <small className="admin-form-hint">Choose the month the item was sold.</small>
+                </label>
+              )}
 
-              <label>
-                Notes (optional)
-                <textarea
-                  rows="3"
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="Add any context..."
-                />
-              </label>
+              <details className="admin-form-optional">
+                <summary>Add notes (optional)</summary>
+                <label>
+                  Reference
+                  <input
+                    type="text"
+                    value={formState.reference}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, reference: event.target.value }))
+                    }
+                    placeholder="PO number, event, etc."
+                  />
+                </label>
+
+                <label>
+                  Notes
+                  <textarea
+                    rows="3"
+                    value={formState.notes}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                    }
+                    placeholder="Add any context..."
+                  />
+                </label>
+              </details>
 
               {submitError && <p className="admin-error">{submitError}</p>}
               {success && <p className="admin-success">{success}</p>}

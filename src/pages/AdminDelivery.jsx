@@ -424,12 +424,23 @@ function AdminDelivery() {
                   <h4>Rental items</h4>
                   {selectedItems.length ? (
                     <ul>
-                      {selectedItems.map((item) => (
-                        <li key={item.id || item.productId}>
-                          <span>{item.productName || "Item"}</span>
-                          <span>x{item.quantity}</span>
-                        </li>
-                      ))}
+                      {selectedItems.map((item) => {
+                        const attendants = Number(item.attendantsNeeded) || 0;
+                        const blowers = Number(item.blowersNeeded) || 0;
+                        const metaParts = [];
+                        if (attendants > 0) metaParts.push(`Attendants: ${attendants}`);
+                        if (blowers > 0) metaParts.push(`Blowers: ${blowers}`);
+                        const meta = metaParts.join(" · ");
+                        return (
+                          <li key={item.id || item.productId}>
+                            <div className="delivery-item-info">
+                              <span className="delivery-item-name">{item.productName || "Item"}</span>
+                              {meta && <span className="delivery-item-meta">{meta}</span>}
+                            </div>
+                            <span className="delivery-item-qty">x{item.quantity}</span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="delivery-muted">No rental items listed.</p>

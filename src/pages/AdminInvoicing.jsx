@@ -392,6 +392,7 @@ function AdminInvoicing() {
           unitPrice,
           total,
           attendantsNeeded: item.attendantsNeeded,
+          rate: item.rate,
         };
       }),
       summary: {
@@ -530,11 +531,20 @@ function AdminInvoicing() {
         items = [...items, transportLine];
       }
 
+      const isPerHeadRate = (rate) => {
+        const normalized = String(rate || "").toLowerCase();
+        return (
+          normalized.includes("per head") ||
+          normalized.includes("per person") ||
+          normalized.includes("per guest")
+        );
+      };
       const attendantsTotal = items.reduce((sum, item) => {
         const attendants = toNumber(item.attendantsNeeded, 0);
         if (!attendants) return sum;
         const quantity = Math.max(1, toNumber(item.quantity, 1));
-        return sum + attendants * quantity;
+        const multiplier = isPerHeadRate(item.rate) ? 1 : quantity;
+        return sum + attendants * multiplier;
       }, 0);
       const durationHours = calculateDurationHours(
         invoice.event?.startTime,

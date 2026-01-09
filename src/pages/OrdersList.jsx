@@ -139,6 +139,7 @@ function OrdersList() {
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
   const [detailOrder, setDetailOrder] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const itemsFetchAttempted = useRef(new Set());
   const navigate = useNavigate();
@@ -146,6 +147,17 @@ function OrdersList() {
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
+  }, []);
+
+  useEffect(() => {
+    const handleClickAway = (event) => {
+      if (!event.target.closest(".bookings-menu")) {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
   }, []);
 
   useEffect(() => {
@@ -350,6 +362,40 @@ function OrdersList() {
     setOpenMenuId(null);
   };
 
+  const buildMenuPosition = (rect) => {
+    if (!rect || typeof window === "undefined") return null;
+    const width = 320;
+    const gutter = 12;
+    const initialTop = rect.bottom + 8;
+    const maxBelow = window.innerHeight - initialTop - gutter;
+    const maxAbove = rect.top - gutter - 8;
+    let maxHeight = Math.min(420, Math.max(160, maxBelow));
+    let top = initialTop;
+    if (maxBelow < 160 && maxAbove > maxBelow) {
+      maxHeight = Math.min(420, Math.max(160, maxAbove));
+      top = Math.max(gutter, rect.top - maxHeight - 8);
+    }
+    let left = rect.left;
+    if (left + width > window.innerWidth - gutter) {
+      left = rect.right - width;
+    }
+    left = Math.min(Math.max(gutter, left), window.innerWidth - width - gutter);
+    return { top, left, maxHeight };
+  };
+
+  const toggleOrderMenu = (menuId, event) => {
+    const rect = event?.currentTarget?.getBoundingClientRect();
+    setOpenMenuId((prev) => {
+      const next = prev === menuId ? null : menuId;
+      if (next && rect) {
+        setMenuPosition(buildMenuPosition(rect));
+      } else {
+        setMenuPosition(null);
+      }
+      return next;
+    });
+  };
+
   const updateOrderStatus = async (order, nextStatus) => {
     if (!order?.id) return;
     setStatusUpdatingId(order.id);
@@ -520,23 +566,27 @@ function OrdersList() {
                             className="bookings-menu inventory-menu"
                             onClick={(e) => e.stopPropagation()}
                           >
+                          <button
+                            type="button"
+                            className="bookings-edit"
+                            aria-haspopup="true"
+                            aria-expanded={openMenuId === `table-${order.id}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleOrderMenu(`table-${order.id}`, event);
+                            }}
+                          >
+                            ⋮
+                          </button>
+                          <div
+                            className={`bookings-menu-list ${openMenuId === `table-${order.id}` ? "open" : ""}`}
+                            style={openMenuId === `table-${order.id}` ? menuPosition : undefined}
+                          >
                             <button
                               type="button"
-                              className="bookings-edit"
-                              aria-haspopup="true"
-                              aria-expanded={openMenuId === `table-${order.id}`}
-                              onClick={() =>
-                                setOpenMenuId((prev) => (prev === `table-${order.id}` ? null : `table-${order.id}`))
-                              }
+                              onClick={() => viewReceipt(order)}
                             >
-                              ⋮
-                            </button>
-                            <div className={`bookings-menu-list ${openMenuId === `table-${order.id}` ? "open" : ""}`}>
-                              <button
-                                type="button"
-                                onClick={() => viewReceipt(order)}
-                              >
-                                Generate invoice
+                              Generate invoice
                               </button>
                               <button type="button">Edit</button>
                               <button type="button">Mark fulfilled</button>
@@ -615,13 +665,17 @@ function OrdersList() {
                             className="bookings-edit"
                             aria-haspopup="true"
                             aria-expanded={openMenuId === `card-${order.id}`}
-                            onClick={() =>
-                              setOpenMenuId((prev) => (prev === `card-${order.id}` ? null : `card-${order.id}`))
-                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleOrderMenu(`card-${order.id}`, event);
+                            }}
                           >
                             ⋮
                           </button>
-                          <div className={`bookings-menu-list ${openMenuId === `card-${order.id}` ? "open" : ""}`}>
+                          <div
+                            className={`bookings-menu-list ${openMenuId === `card-${order.id}` ? "open" : ""}`}
+                            style={openMenuId === `card-${order.id}` ? menuPosition : undefined}
+                          >
                             <button
                               type="button"
                               onClick={() => viewReceipt(order)}
@@ -752,6 +806,36 @@ function OrdersList() {
                       ▶
                     </button>
                   </div>
+                  {!isMobileView && (
+                    <>
+                      <button
+                        type="button"
+                        className="orders-action"
+                        onClick={() => updateOrderStatus(detailOrder, "paid")}
+                        disabled={
+                          statusUpdatingId === detailOrder.id ||
+                          ["paid", "fulfilled", "delivered", "completed", "cancelled", "canceled"].includes(
+                            normalizeStatus(detailOrder.status)
+                          )
+                        }
+                      >
+                        {statusUpdatingId === detailOrder.id ? "Updating..." : "Accept"}
+                      </button>
+                      <button
+                        type="button"
+                        className="orders-action orders-action-primary"
+                        onClick={() => updateOrderStatus(detailOrder, "fulfilled")}
+                        disabled={
+                          statusUpdatingId === detailOrder.id ||
+                          ["fulfilled", "delivered", "completed", "cancelled", "canceled"].includes(
+                            normalizeStatus(detailOrder.status)
+                          )
+                        }
+                      >
+                        {statusUpdatingId === detailOrder.id ? "Updating..." : "Confirm"}
+                      </button>
+                    </>
+                  )}
                   <button className="admin-close" onClick={() => setDetailOrder(null)} aria-label="Close detail">
                     Close
                   </button>
@@ -808,7 +892,7 @@ function OrdersList() {
                     </>
                   );
                 })()}
-                <p>Assigned: {formatUser(detailOrder.assignedUserName)}</p>
+                <p>Assigned To: {formatUser(detailOrder.assignedUserName)}</p>
                 <p>Last updated: {formatDateTime(detailOrder.lastModifiedAt)}</p>
                 <div className="orders-detail-items">
                   <p className="orders-detail-items-title">Items</p>

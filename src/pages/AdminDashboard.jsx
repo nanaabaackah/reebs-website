@@ -532,8 +532,8 @@ function AdminDashboard() {
                   </Link>
                   <Link to="/admin/accounting" className="admin-kpi-card admin-kpi-link-card">
                     <p className="admin-kpi-label">Revenue</p>
-                    <h3 className="admin-kpi-value">{formatCurrency(stats?.revenue ?? 0)}</h3>
-                    <span className="admin-kpi-sub">Gross sales</span>
+                    <h3 className="admin-kpi-value">{formatCurrency(totalRevenue)}</h3>
+                    <span className="admin-kpi-sub">Orders + bookings</span>
                   </Link>
                   <Link to="/admin/orders" className="admin-kpi-card admin-kpi-link-card">
                     <p className="admin-kpi-label">Units sold</p>

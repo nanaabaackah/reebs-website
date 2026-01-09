@@ -1322,6 +1322,32 @@ function AdminBookings() {
                   </button>
                 </div>
                 {!isMobileView && (
+                  <>
+                    <button
+                      type="button"
+                      className="bookings-action"
+                      onClick={() => updateBookingStatus(detailBooking, "confirmed")}
+                      disabled={
+                        statusUpdatingId === detailBooking.id ||
+                        normalizeStatus(detailBooking.status) !== "pending"
+                      }
+                    >
+                      {statusUpdatingId === detailBooking.id ? "Updating..." : "Accept"}
+                    </button>
+                    <button
+                      type="button"
+                      className="bookings-action bookings-action-primary"
+                      onClick={() => updateBookingStatus(detailBooking, "completed")}
+                      disabled={
+                        statusUpdatingId === detailBooking.id ||
+                        normalizeStatus(detailBooking.status) !== "confirmed"
+                      }
+                    >
+                      {statusUpdatingId === detailBooking.id ? "Updating..." : "Confirm"}
+                    </button>
+                  </>
+                )}
+                {!isMobileView && (
                   <button
                     type="button"
                     className="bookings-edit"

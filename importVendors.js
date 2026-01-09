@@ -5,6 +5,7 @@ import Papa from "papaparse";
 import { prisma } from "./prismaClient.js";
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
+const shouldReset = process.env.IMPORT_RESET === "true";
 
 async function importVendors() {
   const file = fs.readFileSync("data/vendors.csv", "utf8");
@@ -93,7 +94,9 @@ async function importVendors() {
       updates.notes = record.notes;
     }
 
-    if (Object.keys(updates).length) {
+    if (!shouldReset) {
+      skipped += 1;
+    } else if (Object.keys(updates).length) {
       await prisma.vendor.update({ where: { id: existingVendor.id }, data: updates });
       updated += 1;
     } else {

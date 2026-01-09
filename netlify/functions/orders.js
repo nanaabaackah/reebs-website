@@ -9,6 +9,8 @@ import {
   resolveActor,
   normalizeActor,
 } from "./auditHelpers.js";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -25,6 +27,23 @@ const normalizeStatus = (status) =>
 
 const isCancelledStatus = (status) =>
   ["cancelled", "canceled"].includes(normalizeStatus(status));
+
+const withDeliveryTotals = (order) => {
+  const baseTotal = Number(order?.total || 0);
+  const { distanceKm, feeCents } = getDeliveryFeeDetails(
+    order?.deliveryMethod,
+    order?.deliveryDetails
+  );
+  const deliveryFee = feeCents / 100;
+  return {
+    ...order,
+    itemsTotal: baseTotal,
+    deliveryFee,
+    deliveryFeeCents: feeCents,
+    deliveryDistanceKm: distanceKm || 0,
+    total: baseTotal + deliveryFee,
+  };
+};
 
 const ensureOrderColumns = async (client) => {
   const statements = [
@@ -62,15 +81,25 @@ export async function handler(event = {}) {
     await client.connect();
     await ensureAuditColumns(client);
     await ensureOrderColumns(client);
-    const admin = await findDefaultAdmin(client);
+    let payload = null;
+    if (event.httpMethod === "PUT") {
+      try {
+        payload = JSON.parse(event.body || "{}");
+      } catch {
+        return json(400, { error: "Invalid JSON body." });
+      }
+    }
+    const organizationId = await resolveOrganizationId(client, event, payload);
+    const admin = await findDefaultAdmin(client, organizationId);
     if (admin?.id) {
-      await backfillAuditDefaults(client, admin.id);
+      await backfillAuditDefaults(client, admin.id, organizationId);
     }
 
     if (event.httpMethod === "GET") {
       const orderId = Number(event.queryStringParameters?.orderId);
       const hasOrderId = Number.isFinite(orderId) && orderId > 0;
-      const params = hasOrderId ? [orderId] : [];
+      const params = [organizationId];
+      if (hasOrderId) params.push(orderId);
       const result = await client.query(
         `SELECT
            o.id,
@@ -100,13 +129,15 @@ export async function handler(event = {}) {
                'imageUrl', p."imageUrl"
              )), '[]'::json)
              FROM "orderItem" oi
-             LEFT JOIN "product" p ON p.id = oi."productId"
+             LEFT JOIN "product" p ON p.id = oi."productId" AND p."organizationId" = o."organizationId"
              WHERE oi."orderId" = o.id
+               AND oi."organizationId" = o."organizationId"
            ) AS items
          FROM "order" o
          LEFT JOIN "user" assignee ON assignee.id = o."assignedUserId"
          LEFT JOIN "user" updater ON updater.id = o."updatedByUserId"
-         ${hasOrderId ? `WHERE o.id = $1` : ""}
+         WHERE o."organizationId" = $1
+         ${hasOrderId ? `AND o.id = $2` : ""}
          ORDER BY o."orderDate" DESC, o."id" DESC`
       ,
         params
@@ -116,21 +147,14 @@ export async function handler(event = {}) {
         if (result.rowCount === 0) {
           return json(404, { error: "Order not found." });
         }
-        return json(200, result.rows[0]);
+        return json(200, withDeliveryTotals(result.rows[0]));
       }
 
-      return json(200, result.rows);
+      return json(200, (result.rows || []).map(withDeliveryTotals));
     }
 
     if (event.httpMethod !== "PUT") {
       return json(405, { error: "Method Not Allowed" }, { "Access-Control-Allow-Methods": "GET,PUT,OPTIONS" });
-    }
-
-    let payload = {};
-    try {
-      payload = JSON.parse(event.body || "{}");
-    } catch {
-      return json(400, { error: "Invalid JSON body." });
     }
 
     const orderId = Number(payload.id);
@@ -143,8 +167,8 @@ export async function handler(event = {}) {
     }
 
     const orderRes = await client.query(
-      `SELECT id, status, "orderNumber" FROM "order" WHERE id = $1`,
-      [orderId]
+      `SELECT id, status, "orderNumber" FROM "order" WHERE id = $1 AND "organizationId" = $2`,
+      [orderId, organizationId]
     );
     if (orderRes.rowCount === 0) {
       return json(404, { error: "Order not found." });
@@ -159,7 +183,7 @@ export async function handler(event = {}) {
       return json(400, { error: "Cannot reopen a cancelled order. Create a new order instead." });
     }
 
-    const actor = await resolveActor(client, normalizeActor(payload));
+    const actor = await resolveActor(client, normalizeActor(payload), organizationId);
 
     await client.query("BEGIN");
     try {
@@ -169,14 +193,15 @@ export async function handler(event = {}) {
              "updatedByUserId" = $2,
              "lastModifiedAt" = NOW(),
              "updatedAt" = NOW()
-         WHERE id = $3`,
-        [nextStatus, actor.userId, orderId]
+         WHERE id = $3 AND "organizationId" = $4`,
+        [nextStatus, actor.userId, orderId, organizationId]
       );
 
       if (cancelling && !alreadyCancelled) {
         const itemsRes = await client.query(
-          `SELECT "productId", quantity FROM "orderItem" WHERE "orderId" = $1`,
-          [orderId]
+          `SELECT "productId", quantity FROM "orderItem"
+           WHERE "orderId" = $1 AND "organizationId" = $2`,
+          [orderId, organizationId]
         );
 
         for (const item of itemsRes.rows) {
@@ -186,12 +211,13 @@ export async function handler(event = {}) {
                  "lastUpdatedByUserId" = COALESCE($3, "lastUpdatedByUserId"),
                  "lastUpdatedAt" = NOW(),
                  "updatedAt" = NOW()
-             WHERE id = $2`,
-            [item.quantity, item.productId, actor.userId]
+             WHERE id = $2 AND "organizationId" = $4`,
+            [item.quantity, item.productId, actor.userId, organizationId]
           );
 
           await client.query(
             `INSERT INTO "stockMovement" (
+               "organizationId",
                "productId",
                "type",
                "quantity",
@@ -203,8 +229,9 @@ export async function handler(event = {}) {
                "performedByEmail",
                "createdAt"
              )
-             VALUES ($1, 'StockIn', $2, $3, $4, NOW(), $5, $6, $7, NOW())`,
+             VALUES ($1, $2, 'StockIn', $3, $4, $5, NOW(), $6, $7, $8, NOW())`,
             [
+              organizationId,
               item.productId,
               item.quantity,
               `Order #${orderNumber} cancelled`,

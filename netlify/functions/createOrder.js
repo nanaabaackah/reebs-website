@@ -10,6 +10,7 @@ import {
 } from "./auditHelpers.js";
 import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const formatAmount = (cents) => {
   const value = Number(cents);
@@ -192,6 +193,7 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    const organizationId = await resolveOrganizationId(client, event, payload);
     await ensureAuditColumns(client);
     await ensureOrderColumns(client);
 
@@ -199,11 +201,11 @@ export async function handler(event) {
     const actor =
       source === "checkout"
         ? { userId: null, userName: userName || "Checkout", userEmail: userEmail || null }
-        : await resolveActor(client, actorInput);
+        : await resolveActor(client, actorInput, organizationId);
     if (actor.userId) {
       const userRes = await client.query(
-        `SELECT id FROM "user" WHERE id = $1`,
-        [actor.userId]
+        `SELECT id FROM "user" WHERE id = $1 AND "organizationId" = $2`,
+        [actor.userId, organizationId]
       );
       if (userRes.rowCount === 0) {
         actor.userId = null;
@@ -213,7 +215,7 @@ export async function handler(event) {
       actor.userName = actor.userName || "Guest";
     }
     if (actor.userId) {
-      await backfillAuditDefaults(client, actor.userId);
+      await backfillAuditDefaults(client, actor.userId, organizationId);
     }
 
     await client.query('BEGIN'); // Start transaction
@@ -223,8 +225,8 @@ export async function handler(event) {
     );
 
     const customerRes = await client.query(
-      `SELECT name, phone FROM "customer" WHERE id = $1`,
-      [customerId]
+      `SELECT name, phone FROM "customer" WHERE id = $1 AND "organizationId" = $2`,
+      [customerId, organizationId]
     );
     if (customerRes.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -240,7 +242,9 @@ export async function handler(event) {
     const sequenceRes = await client.query(
       `SELECT COUNT(*)::int + 1 AS next_number
        FROM "order"
-       WHERE "orderDate"::date = CURRENT_DATE`
+       WHERE "orderDate"::date = CURRENT_DATE
+         AND "organizationId" = $1`,
+      [organizationId]
     );
     const nextNumber = sequenceRes.rows[0]?.next_number || 1;
     const orderNumber = `ORD-${dateStamp}-${String(nextNumber).padStart(3, "0")}`;
@@ -248,6 +252,7 @@ export async function handler(event) {
     // 2. Create the Order
     const orderRes = await client.query(
       `INSERT INTO "order" (
+         "organizationId",
          "orderNumber",
          "customerId",
          "customerName",
@@ -264,8 +269,9 @@ export async function handler(event) {
          "updatedByUserId",
          "lastModifiedAt"
        ) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), NOW(), $9, $10, $11, NOW()) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), NOW(), $10, $11, $12, NOW()) RETURNING id`,
       [
+        organizationId,
         orderNumber,
         customerId,
         customerName,
@@ -289,9 +295,9 @@ export async function handler(event) {
 
       // Add to orderItem table
       await client.query(
-        `INSERT INTO "orderItem" ("orderId", "productId", "quantity", "unit_price", "total_amount") 
-         VALUES ($1, $2, $3, $4, $5)`,
-        [orderId, item.productId, quantity, unitPriceCents, lineTotal]
+        `INSERT INTO "orderItem" ("organizationId", "orderId", "productId", "quantity", "unit_price", "total_amount") 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [organizationId, orderId, item.productId, quantity, unitPriceCents, lineTotal]
       );
 
       // Deduct stock from Product table
@@ -301,13 +307,14 @@ export async function handler(event) {
                "lastUpdatedByUserId" = COALESCE($3, "lastUpdatedByUserId"),
                "lastUpdatedAt" = NOW(),
                "updatedAt" = NOW()
-         WHERE id = $2`,
-        [quantity, item.productId, actor.userId]
+         WHERE id = $2 AND "organizationId" = $4`,
+        [quantity, item.productId, actor.userId, organizationId]
       );
 
       // Record StockMovement (StockOut)
       await client.query(
         `INSERT INTO "stockMovement" (
+           "organizationId",
            "productId",
            "type",
            "quantity",
@@ -319,8 +326,9 @@ export async function handler(event) {
            "performedByEmail",
            "createdAt"
          ) 
-         VALUES ($1, 'StockOut', $2, $3, $4, NOW(), $5, $6, $7, NOW())`,
+         VALUES ($1, $2, 'StockOut', $3, $4, $5, NOW(), $6, $7, $8, NOW())`,
         [
+          organizationId,
           item.productId,
           quantity,
           `Sold in Order #${orderId}`,

@@ -60,7 +60,8 @@ export async function handler(event) {
                  'quantity', bi.quantity,
                  'price', bi.price,
                  'productName', p.name,
-                 'attendantsNeeded', p."attendantsNeeded"
+                 'attendantsNeeded', p."attendantsNeeded",
+                 'rate', p.rate
                )
              ORDER BY bi.id
            ) FILTER (WHERE bi.id IS NOT NULL),

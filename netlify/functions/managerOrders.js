@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Client } from "pg";
 import { getManagerFromEvent } from "./_shared/managerAuth.js";
 import { ensureManagerDeviceTable } from "./_shared/managerPush.js";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -13,6 +14,23 @@ const json = (statusCode, body, extraHeaders = {}) => ({
   },
   body: JSON.stringify(body),
 });
+
+const withDeliveryTotals = (order) => {
+  const baseTotal = Number(order?.total || 0);
+  const { distanceKm, feeCents } = getDeliveryFeeDetails(
+    order?.deliveryMethod,
+    order?.deliveryDetails
+  );
+  const deliveryFee = feeCents / 100;
+  return {
+    ...order,
+    itemsTotal: baseTotal,
+    deliveryFee,
+    deliveryFeeCents: feeCents,
+    deliveryDistanceKm: distanceKm || 0,
+    total: baseTotal + deliveryFee,
+  };
+};
 
 export async function handler(event = {}) {
   if (event.httpMethod === "OPTIONS") {
@@ -78,7 +96,7 @@ export async function handler(event = {}) {
        ORDER BY o."orderDate" DESC, o.id DESC
        LIMIT 200`
     );
-    return json(200, result.rows);
+    return json(200, (result.rows || []).map(withDeliveryTotals));
   } catch (err) {
     console.error("Manager orders error", err);
     return json(500, { error: "Failed to load orders." });

@@ -12,6 +12,7 @@ import {
 } from "./auditHelpers.js";
 import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const formatAmount = (value) => {
   const parsed = Number(value);
@@ -104,10 +105,14 @@ const ensureBookingSequence = async (client) => {
   }
 };
 
-const ensureValidUserId = async (client, userId) => {
+const ensureValidUserId = async (client, userId, organizationId = null) => {
   const parsedId = Number(userId);
   if (!Number.isFinite(parsedId)) return null;
-  const res = await client.query(`SELECT id FROM "user" WHERE id = $1`, [parsedId]);
+  const hasOrg = Number.isFinite(Number(organizationId));
+  const res = await client.query(
+    `SELECT id FROM "user" WHERE id = $1${hasOrg ? ` AND "organizationId" = $2` : ""}`,
+    hasOrg ? [parsedId, organizationId] : [parsedId]
+  );
   return res.rowCount > 0 ? parsedId : null;
 };
 
@@ -131,10 +136,19 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    let data = null;
+    if (event.httpMethod === "POST" || event.httpMethod === "PUT") {
+      try {
+        data = JSON.parse(event.body || "{}");
+      } catch {
+        return json(400, { error: "Invalid JSON body." });
+      }
+    }
+    const organizationId = await resolveOrganizationId(client, event, data);
     await ensureAuditColumns(client);
-    const defaultActor = await resolveActor(client, normalizeActor({}));
+    const defaultActor = await resolveActor(client, normalizeActor({}), organizationId);
     if (defaultActor.userId) {
-      await backfillAuditDefaults(client, defaultActor.userId);
+      await backfillAuditDefaults(client, defaultActor.userId, organizationId);
     }
 
     if (event.httpMethod === "GET") {
@@ -175,14 +189,16 @@ export async function handler(event) {
              '[]'::json
            ) AS items
          FROM "booking" b
-         JOIN "customer" c ON c.id = b."customerId"
+         JOIN "customer" c ON c.id = b."customerId" AND c."organizationId" = b."organizationId"
          LEFT JOIN "user" assignee ON assignee.id = b."assignedUserId"
          LEFT JOIN "user" updater ON updater.id = b."updatedByUserId"
          LEFT JOIN "user" creator ON creator.id = b."createdByUserId"
-         LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id
-         LEFT JOIN "product" p ON p.id = bi."productId"
+         LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id AND bi."organizationId" = b."organizationId"
+         LEFT JOIN "product" p ON p.id = bi."productId" AND p."organizationId" = b."organizationId"
+         WHERE b."organizationId" = $1
          GROUP BY b.id, c.id, assignee.id, updater.id, creator.id
-         ORDER BY b."eventDate" DESC, b.id DESC`
+         ORDER BY b."eventDate" DESC, b.id DESC`,
+        [organizationId]
       );
 
       return json(200, result.rows);
@@ -190,13 +206,6 @@ export async function handler(event) {
 
     if (event.httpMethod !== "POST" && event.httpMethod !== "PUT") {
       return json(405, { error: "Method Not Allowed" }, { "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS" });
-    }
-
-    let data;
-    try {
-      data = JSON.parse(event.body || "{}");
-    } catch {
-      return json(400, { error: "Invalid JSON body." });
     }
 
     const parseDate = (value) => {
@@ -233,22 +242,22 @@ export async function handler(event) {
       return json(400, { error: "At least one booking item is required." });
     }
 
-    const bundleEligible = normalizedItems.length >= BUNDLE_MIN_ITEMS;
+    let bundleEligible = normalizedItems.length >= BUNDLE_MIN_ITEMS;
 
-    const actor = await resolveActor(client, normalizeActor(data));
-    const actorUserId = await ensureValidUserId(client, actor.userId);
+    const actor = await resolveActor(client, normalizeActor(data), organizationId);
+    const actorUserId = await ensureValidUserId(client, actor.userId, organizationId);
     const assignedUserIdValue = hasAssignedUser
       ? assignedUserIdRaw === null
         ? null
-        : await ensureValidUserId(client, assignedUserIdRaw)
+        : await ensureValidUserId(client, assignedUserIdRaw, organizationId)
       : null;
 
     await client.query("BEGIN");
 
     try {
       const customerCheck = await client.query(
-        `SELECT id FROM "customer" WHERE id = $1`,
-        [customerId]
+        `SELECT id FROM "customer" WHERE id = $1 AND "organizationId" = $2`,
+        [customerId, organizationId]
       );
       if (customerCheck.rowCount === 0) {
         await client.query("ROLLBACK");
@@ -259,8 +268,8 @@ export async function handler(event) {
       const productRes = await client.query(
         `SELECT id, price, sku, "sourceCategoryCode"
          FROM "product"
-         WHERE id = ANY($1::int[])`,
-        [productIds]
+         WHERE id = ANY($1::int[]) AND "organizationId" = $2`,
+        [productIds, organizationId]
       );
       const productMap = new Map(productRes.rows.map((row) => [row.id, row]));
 
@@ -280,9 +289,18 @@ export async function handler(event) {
         }
       }
 
+      const pricedItems = normalizedItems.filter((item) => {
+        const product = productMap.get(item.productId);
+        const priceCents = Number.isFinite(item.price)
+          ? Math.round(item.price * 100)
+          : product?.price || 0;
+        return priceCents > 0;
+      });
+      bundleEligible = pricedItems.length >= BUNDLE_MIN_ITEMS;
+
       if (applyBundleDiscount) {
         if (bundleEligible) {
-          const bundleSubtotalCents = normalizedItems.reduce((sum, item) => {
+          const bundleSubtotalCents = pricedItems.reduce((sum, item) => {
             const product = productMap.get(item.productId);
             const priceCents = Number.isFinite(item.price)
               ? Math.round(item.price * 100)
@@ -300,8 +318,8 @@ export async function handler(event) {
       const motorsRes = await client.query(
         `SELECT "productId", COALESCE("motorsToPump", 0) AS motors
          FROM "bouncy_castles"
-         WHERE "productId" = ANY($1::int[])`,
-        [productIds]
+         WHERE "productId" = ANY($1::int[]) AND "organizationId" = $2`,
+        [productIds, organizationId]
       );
       const motorsMap = new Map(
         motorsRes.rows.map((row) => [Number(row.productId), Number(row.motors) || 0])
@@ -317,9 +335,11 @@ export async function handler(event) {
         const pumpRes = await client.query(
           `SELECT id, price, sku, "sourceCategoryCode"
            FROM "product"
-           WHERE LOWER(name) LIKE '%motor pump%' OR UPPER(sku) LIKE 'PUM-%'
+           WHERE (LOWER(name) LIKE '%motor pump%' OR UPPER(sku) LIKE 'PUM-%')
+             AND "organizationId" = $1
            ORDER BY id
-           LIMIT 1`
+           LIMIT 1`,
+          [organizationId]
         );
         const pumpProduct = pumpRes.rows[0];
         if (!pumpProduct) {
@@ -360,6 +380,7 @@ export async function handler(event) {
         await ensureBookingSequence(client);
         const bookingRes = await client.query(
           `INSERT INTO "booking" (
+             "organizationId",
              "customerId",
              "eventDate",
              "startTime",
@@ -374,9 +395,10 @@ export async function handler(event) {
              "updatedByUserId",
              "assignedUserId"
            )
-           VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW(),NOW(),$8,$8,$9)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW(),NOW(),$9,$9,$10)
            RETURNING id`,
           [
+            organizationId,
             customerId,
             eventDate,
             startTime || null,
@@ -396,7 +418,10 @@ export async function handler(event) {
           return json(400, { error: "id is required for update." });
         }
 
-        const exists = await client.query(`SELECT id FROM "booking" WHERE id = $1`, [bookingId]);
+        const exists = await client.query(
+          `SELECT id FROM "booking" WHERE id = $1 AND "organizationId" = $2`,
+          [bookingId, organizationId]
+        );
         if (exists.rowCount === 0) {
           await client.query("ROLLBACK");
           return json(404, { error: "Booking not found." });
@@ -415,7 +440,7 @@ export async function handler(event) {
                "lastModifiedAt" = NOW(),
                "updatedByUserId" = $9,
                "assignedUserId" = CASE WHEN $10 THEN $11 ELSE "assignedUserId" END
-           WHERE id = $8`,
+           WHERE id = $8 AND "organizationId" = $12`,
           [
             customerId,
             eventDate,
@@ -428,19 +453,23 @@ export async function handler(event) {
             actorUserId,
             hasAssignedUser,
             assignedUserIdValue,
+            organizationId,
           ]
         );
 
-        await client.query(`DELETE FROM "bookingItem" WHERE "bookingId" = $1`, [bookingId]);
+        await client.query(
+          `DELETE FROM "bookingItem" WHERE "bookingId" = $1 AND "organizationId" = $2`,
+          [bookingId, organizationId]
+        );
       }
 
       for (const item of finalItems) {
         const fallbackPrice = productMap.get(item.productId)?.price;
         const price = Number.isFinite(item.price) ? Math.round(item.price * 100) : fallbackPrice;
         await client.query(
-          `INSERT INTO "bookingItem" ("bookingId", "productId", quantity, price)
-           VALUES ($1,$2,$3,$4)`,
-          [bookingId, item.productId, item.quantity, price]
+          `INSERT INTO "bookingItem" ("organizationId", "bookingId", "productId", quantity, price)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [organizationId, bookingId, item.productId, item.quantity, price]
         );
       }
 
@@ -485,11 +514,11 @@ export async function handler(event) {
          LEFT JOIN "user" assignee ON assignee.id = b."assignedUserId"
          LEFT JOIN "user" updater ON updater.id = b."updatedByUserId"
          LEFT JOIN "user" creator ON creator.id = b."createdByUserId"
-         LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id
-         LEFT JOIN "product" p ON p.id = bi."productId"
-         WHERE b.id = $1
+         LEFT JOIN "bookingItem" bi ON bi."bookingId" = b.id AND bi."organizationId" = b."organizationId"
+         LEFT JOIN "product" p ON p.id = bi."productId" AND p."organizationId" = b."organizationId"
+         WHERE b.id = $1 AND b."organizationId" = $2
          GROUP BY b.id, c.id, assignee.id, updater.id, creator.id`,
-        [bookingId]
+        [bookingId, organizationId]
       );
 
       if (event.httpMethod === "POST") {

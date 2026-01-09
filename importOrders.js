@@ -8,6 +8,8 @@ import path from 'path';
 import { parse } from 'csv-parse'; 
 import { hashPassword } from "./utils/passwords.js";
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 // Helper function to read a CSV file
 function readCsv(filePath) {
     return new Promise((resolve, reject) => {
@@ -69,23 +71,27 @@ async function importTransactionalData() {
     console.log(`\nFound ${usersData.length} users, ${customersData.length} customers, ${ordersData.length} orders, ${orderItemsData.length} order items, and ${stockMovementsData.length} stock movements.`);
 
     // 2. Clear Tables (Must be done in reverse dependency order)
-    try {
-        console.log("🧹 Clearing existing data...");
-        await prisma.$executeRaw`
-            TRUNCATE TABLE
-                "bookingItem",
-                "booking",
-                "stockMovement",
-                "orderItem",
-                "order",
-                "customer",
-                "user"
-            RESTART IDENTITY CASCADE
-        `;
-        console.log("✅ Tables cleared.");
-    } catch (e) {
-        console.error("Critical error clearing tables:", e.message);
-        process.exit(1); 
+    if (shouldReset) {
+        try {
+            console.log("🧹 Clearing existing data...");
+            await prisma.$executeRaw`
+                TRUNCATE TABLE
+                    "bookingItem",
+                    "booking",
+                    "stockMovement",
+                    "orderItem",
+                    "order",
+                    "customer",
+                    "user"
+                RESTART IDENTITY CASCADE
+            `;
+            console.log("✅ Tables cleared.");
+        } catch (e) {
+            console.error("Critical error clearing tables:", e.message);
+            process.exit(1); 
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving existing data.");
     }
 
     // 3. Import Users
@@ -163,10 +169,10 @@ async function importTransactionalData() {
     // 5. Import Orders (Uses total_amount)
     const ordersToCreate = ordersData.map(row => ({
         id: toInt(row.id, undefined), 
-        orderNumber: row.orderNumber,
+        orderNumber: cleanText(row.orderNumber),
         customerId: toInt(row.customerId, null), 
-        customerName: row.customerName,
-        status: row.status,
+        customerName: cleanText(row.customerName),
+        status: cleanText(row.status),
         deliveryMethod: (row.deliveryMethod || row.fulfillment || row.fulfillmentMethod || "delivery").toLowerCase(),
         total_amount: toInt(row.totalCents, 0), // ensure integer cents
         orderDate: toDate(row.orderDate),
@@ -175,8 +181,32 @@ async function importTransactionalData() {
     }));
     // Filter out rows missing required foreign keys or date
     const validOrders = ordersToCreate.filter((o) => o.customerId && o.orderDate);
-    await prisma.order.createMany({ data: validOrders, skipDuplicates: true });
-    console.log(`✅ Imported ${ordersToCreate.length} Orders.`);
+    let existingOrderIds = new Set();
+    let existingOrderNumbers = new Set();
+    if (!shouldReset && validOrders.length) {
+        const orderIds = validOrders.map((o) => o.id).filter(Number.isFinite);
+        const orderNumbers = validOrders.map((o) => o.orderNumber).filter(Boolean);
+        const conditions = [];
+        if (orderIds.length) conditions.push({ id: { in: orderIds } });
+        if (orderNumbers.length) conditions.push({ orderNumber: { in: orderNumbers } });
+        if (conditions.length) {
+            const existingOrders = await prisma.order.findMany({
+                where: { OR: conditions },
+                select: { id: true, orderNumber: true },
+            });
+            existingOrderIds = new Set(existingOrders.map((row) => row.id));
+            existingOrderNumbers = new Set(existingOrders.map((row) => row.orderNumber));
+        }
+    }
+    const newOrders = shouldReset
+        ? validOrders
+        : validOrders.filter(
+              (order) =>
+                  !existingOrderIds.has(order.id) && !existingOrderNumbers.has(order.orderNumber)
+          );
+    await prisma.order.createMany({ data: newOrders, skipDuplicates: true });
+    console.log(`✅ Imported ${newOrders.length} Orders.`);
+    const newOrderIds = new Set(newOrders.map((order) => order.id).filter(Number.isFinite));
 
     // 6. Import Order Items (Uses unit_price and calculates total_amount)
     const orderItemsToCreate = orderItemsData.map(row => {
@@ -193,8 +223,11 @@ async function importTransactionalData() {
         }
     });
     const validOrderItems = orderItemsToCreate.filter((oi) => oi.orderId && oi.productId);
-    await prisma.orderItem.createMany({ data: validOrderItems, skipDuplicates: true });
-    console.log(`✅ Imported ${orderItemsToCreate.length} Order Items.`);
+    const filteredOrderItems = shouldReset
+        ? validOrderItems
+        : validOrderItems.filter((oi) => newOrderIds.has(oi.orderId));
+    await prisma.orderItem.createMany({ data: filteredOrderItems, skipDuplicates: true });
+    console.log(`✅ Imported ${filteredOrderItems.length} Order Items.`);
 
     // 7. Import Stock Movements
     const stockMovementsToCreate = stockMovementsData.map(row => ({
@@ -206,8 +239,22 @@ async function importTransactionalData() {
         notes: row.notes || null,
     }));
     const validStock = stockMovementsToCreate.filter((s) => s.productId);
-    await prisma.stockMovement.createMany({ data: validStock, skipDuplicates: true });
-    console.log(`✅ Imported ${stockMovementsToCreate.length} Stock Movements.`);
+    let filteredStock = validStock;
+    if (!shouldReset && validStock.length) {
+        const references = validStock.map((row) => row.reference).filter(Boolean);
+        if (references.length) {
+            const existingRefs = await prisma.stockMovement.findMany({
+                where: { reference: { in: references } },
+                select: { reference: true },
+            });
+            const existingReferenceSet = new Set(existingRefs.map((row) => row.reference));
+            filteredStock = validStock.filter(
+                (row) => !row.reference || !existingReferenceSet.has(row.reference)
+            );
+        }
+    }
+    await prisma.stockMovement.createMany({ data: filteredStock, skipDuplicates: true });
+    console.log(`✅ Imported ${filteredStock.length} Stock Movements.`);
 
     // 7. Import Booking Data
     const bookingsData = await readCsv('data/bookings.csv');
@@ -228,9 +275,7 @@ async function importTransactionalData() {
             .map((p) => [String(p.name).trim().toLowerCase(), p.id])
     );
 
-    for (const row of bookingsData) {
-    await prisma.booking.create({
-        data: {
+    const bookingRows = bookingsData.map((row) => ({
         id: toInt(row.id),
         customerId: toInt(row.customerId),
         eventDate: toDate(row.eventDate),
@@ -240,10 +285,26 @@ async function importTransactionalData() {
         totalAmount: toInt(row.totalAmount),
         status: row.status,
         assignedUserId: toInt(row.assignedUserId, null),
+    }));
+    const validBookings = bookingRows.filter((row) => row.customerId && row.eventDate);
+    let existingBookingIds = new Set();
+    if (!shouldReset && validBookings.length) {
+        const bookingIds = validBookings.map((row) => row.id).filter(Number.isFinite);
+        if (bookingIds.length) {
+            const existingBookings = await prisma.booking.findMany({
+                where: { id: { in: bookingIds } },
+                select: { id: true },
+            });
+            existingBookingIds = new Set(existingBookings.map((row) => row.id));
         }
-    });
     }
+    const newBookings = shouldReset
+        ? validBookings
+        : validBookings.filter((row) => !existingBookingIds.has(row.id));
+    await prisma.booking.createMany({ data: newBookings, skipDuplicates: true });
+    const newBookingIds = new Set(newBookings.map((row) => row.id).filter(Number.isFinite));
 
+    const bookingItemsToCreate = [];
     for (const row of bookingItemsData) {
         const rawProductId = toInt(row.productId, null);
         const rawSku = typeof row.productSku === "string" ? row.productSku.trim() : "";
@@ -259,18 +320,24 @@ async function importTransactionalData() {
             continue;
         }
 
-        await prisma.bookingItem.create({
-            data: {
-                bookingId: toInt(row.bookingId),
-                productId: productId,
-                quantity: toInt(row.quantity, 0),
-                price: toInt(row.price, 0),
-            }
+        const bookingId = toInt(row.bookingId);
+        if (!shouldReset && (!newBookingIds.size || !newBookingIds.has(bookingId))) {
+            continue;
+        }
+        bookingItemsToCreate.push({
+            bookingId: bookingId,
+            productId: productId,
+            quantity: toInt(row.quantity, 0),
+            price: toInt(row.price, 0),
         });
     }
 
-    console.log("✅ Bookings populated!");
+    if (bookingItemsToCreate.length) {
+        await prisma.bookingItem.createMany({ data: bookingItemsToCreate });
     }
+
+    console.log("✅ Bookings populated!");
+}
 
 importTransactionalData()
     .catch((e) => {

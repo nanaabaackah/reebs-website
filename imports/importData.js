@@ -8,6 +8,8 @@ import path from 'path';
 // Ensure you have installed this package: npm install csv-parse
 import { parse } from 'csv-parse'; 
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 // --- Helper Functions ---
 
 // 1. Convert Price to Cents
@@ -274,11 +276,15 @@ async function importProducts() {
     ];
 
     // 4. Clear and Insert
-    try {
-        await prisma.product.deleteMany({});
-        console.log("\n🧹 Cleared existing data from 'Product' table for fresh import.");
-    } catch (e) {
-        console.error("Warning: Could not clear table. Proceeding with insertion.", e.message);
+    if (shouldReset) {
+        try {
+            await prisma.product.deleteMany({});
+            console.log("\n🧹 Cleared existing data from 'Product' table for fresh import.");
+        } catch (e) {
+            console.error("Warning: Could not clear table. Proceeding with insertion.", e.message);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving existing products.");
     }
 
     // 5. Bulk Insert

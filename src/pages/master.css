@@ -5769,6 +5769,57 @@ body.shop-theme{
   margin-top: 0.25rem;
 }
 
+.booking-bundle-picker{
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed rgba(14, 134, 96, 0.2);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.booking-bundle-list{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.booking-bundle-option{
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid rgba(14, 134, 96, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  color: #1f2b3a;
+  cursor: pointer;
+}
+
+.booking-bundle-option input{
+  width: 16px;
+  height: 16px;
+  accent-color: #0e8660;
+}
+
+.booking-bundle-option.is-selected{
+  border-color: rgba(14, 134, 96, 0.6);
+  box-shadow: 0 8px 18px rgba(14, 134, 96, 0.18);
+}
+
+.booking-bundle-hint{
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0e8660;
+}
+
+@media (max-width: 720px) {
+  .booking-bundle-list{
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .booking-summary{
   margin-top: 0.8rem;
   padding-top: 0.8rem;
@@ -7814,6 +7865,21 @@ label{
 .checkout-field.full-width{
   grid-column: 1 / -1;
 }
+.checkout-checkbox{
+  align-items: center;
+}
+.checkout-checkbox-label{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #5b667a;
+}
+.checkout-checkbox-label input{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--checkout-accent);
+}
 .checkout-modal{
   position: fixed;
   inset: 0;
@@ -9452,6 +9518,12 @@ body.admin-readonly .customers-search-input input {
   gap: 12px;
 }
 
+.admin-modal-nav-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
 .admin-modal-meta {
   color: var(--text-main);
   opacity: 0.7;
@@ -9491,10 +9563,64 @@ body.admin-readonly .customers-search-input input {
   object-fit: cover;
 }
 
+
 .admin-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.admin-form-tip {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(99, 231, 198, 0.12);
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+  font-weight: 600;
+}
+
+.admin-form-hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.admin-form-optional {
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.admin-form-optional summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.admin-form-optional summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-form-optional[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-simple-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.admin-simple-steps span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(99, 231, 198, 0.16);
+  border: 1px solid rgba(15, 23, 42, 0.1);
 }
 
 .admin-form label {
@@ -9732,6 +9858,45 @@ body.admin-readonly .customers-search-input input {
 .admin-detail-panel {
   max-width: 980px;
   width: min(96%, 980px);
+}
+
+.admin-detail-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-detail-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+}
+
+.admin-detail-nav button {
+  border: none;
+  background: rgba(0, 0, 0, 0.12);
+  color: inherit;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.admin-detail-nav button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-detail-nav-count {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  min-width: 60px;
+  text-align: center;
 }
 
 .admin-detail-form {
@@ -9999,6 +10164,10 @@ body.admin-readonly .customers-search-input input {
 }
 
 .admin-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.admin-table tbody tr.menu-open {
   background: rgba(0, 0, 0, 0.03);
 }
 
@@ -11607,6 +11776,8 @@ body.dark-mode .invoice-terms {
   padding: 10px 12px;
   background: var(--glass-bg);
   color: var(--text-main);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .expenses-primary {
@@ -12145,6 +12316,11 @@ body.dark-mode .invoice-terms {
   margin:2rem 0;
 }
 
+.accounting-kpis.accounting-kpis-tight {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 1.5rem;
+}
+
 .accounting-kpi-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -12231,6 +12407,88 @@ body.dark-mode .invoice-terms {
   border-top: 1px solid var(--glass-border);
   padding-top: 10px;
   font-size: 1.05rem;
+}
+
+.accounting-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.accounting-field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.accounting-field input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--text-main);
+  padding: 8px 10px;
+}
+
+.accounting-field select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--text-main);
+  padding: 8px 10px;
+}
+
+.accounting-field.accounting-check {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.accounting-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--back2);
+}
+
+.accounting-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.accounting-balance-col h4 {
+  margin: 0 0 6px;
+}
+
+.accounting-balance-check {
+  border: 1px dashed var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.accounting-balance-check.is-balanced {
+  color: var(--back2);
+  background: rgba(99, 231, 198, 0.12);
+}
+
+.accounting-balance-check.is-off {
+  color: var(--back3);
+  background: rgba(255, 122, 89, 0.12);
+}
+
+.accounting-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.accounting-checklist li {
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .accounting-positive {
@@ -12563,6 +12821,10 @@ body.dark-mode .invoice-terms {
 
   .accounting-kpi-value {
     font-size: 1.25rem;
+  }
+
+  .accounting-form-grid {
+    grid-template-columns: 1fr;
   }
 
   .accounting-panels {
@@ -13380,6 +13642,16 @@ body.dark-mode .invoice-terms {
   color: var(--black);
 }
 
+[data-theme="dark"] .bookings-menu-list button:focus-visible {
+  outline: 2px solid rgba(99, 231, 198, 0.5);
+  outline-offset: 2px;
+  background: rgba(99, 231, 198, 0.16);
+}
+
+[data-theme="dark"] .inventory-menu .bookings-menu-list button:hover {
+  background: rgba(14, 134, 96, 0.18);
+}
+
 .bookings-menu-list button {
   width: 100%;
   text-align: left;
@@ -13394,6 +13666,20 @@ body.dark-mode .invoice-terms {
 
 .bookings-menu-list button:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.bookings-menu-list button:focus-visible {
+  outline: 2px solid rgba(99, 231, 198, 0.45);
+  outline-offset: 2px;
+  background: rgba(99, 231, 198, 0.12);
+}
+
+.inventory-menu .bookings-menu-list button:hover {
+  background: rgba(14, 134, 96, 0.12);
+}
+
+.inventory-menu .bookings-menu-list button:active {
+  background: rgba(14, 134, 96, 0.18);
 }
 
 .bookings-menu-list.open {
@@ -14260,6 +14546,11 @@ body.dark-mode .invoice-terms {
   background: rgba(255, 255, 255, 0.6);
 }
 
+.orders-detail-list li:hover {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
 .orders-detail-thumb {
   width: 48px;
   height: 48px;
@@ -14289,6 +14580,109 @@ body.dark-mode .invoice-terms {
 
 .orders-detail-item-total {
   font-weight: 700;
+}
+
+@media (min-width: 721px) {
+  .orders-detail-panel {
+    max-width: 860px;
+    padding: 24px 26px;
+    gap: 16px;
+  }
+
+  .orders-detail-panel header {
+    align-items: center;
+  }
+
+  .orders-detail-title h2 {
+    font-size: 1.4rem;
+  }
+
+  .orders-detail-actions {
+    gap: 10px;
+  }
+
+  .orders-detail-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 24px;
+    font-size: 0.95rem;
+  }
+
+  .orders-detail-body p {
+    margin: 0;
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+  }
+
+  .orders-detail-items {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+
+  .orders-detail-items-title {
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .orders-detail-list {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .orders-detail-list li {
+    grid-template-columns: 300px minmax(320px, 1fr) max-content;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+
+  .orders-detail-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .orders-detail-item-name,
+  .orders-detail-item-meta {
+    max-width: 100%;
+  }
+
+  .orders-detail-item-total {
+    text-align: right;
+  }
+}
+
+[data-theme="dark"] .orders-detail-modal {
+  background: rgba(6, 9, 16, 0.78);
+}
+
+[data-theme="dark"] .orders-detail-panel {
+  background: rgba(16, 20, 30, 0.92);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .orders-detail-body p {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .orders-action {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f3f6ff;
+}
+
+[data-theme="dark"] .orders-action-primary {
+  background: #ff9a6a;
+  color: #2b1b12;
+}
+
+[data-theme="dark"] .orders-detail-list li {
+  background: rgba(15, 19, 30, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .orders-detail-thumb {
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 720px) {
@@ -15175,6 +15569,14 @@ body.dark-mode .invoice-terms {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
   border-color: var(--back2);
   outline: none;
+}
+
+.inventory-card.menu-open,
+.inventory-card.menu-open:hover,
+.inventory-card.menu-open:focus-visible {
+  transform: none;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+  border-color: var(--back2);
 }
 
 .inventory-card.is-low {
@@ -17985,6 +18387,27 @@ button.admin-kpi-card {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
+  gap: 12px;
+}
+
+.delivery-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.delivery-item-name {
+  font-weight: 700;
+}
+
+.delivery-item-meta {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.delivery-item-qty {
+  white-space: nowrap;
 }
 
 .delivery-form {

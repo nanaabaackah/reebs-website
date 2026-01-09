@@ -28,9 +28,45 @@ const formatDate = (value) => {
   });
 };
 
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const loadLocalState = (key, fallback) => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored);
+    return { ...fallback, ...(parsed && typeof parsed === "object" ? parsed : {}) };
+  } catch {
+    return fallback;
+  }
+};
+
+const saveLocalState = (key, value) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore local storage write failures
+  }
+};
+
+const CORPORATE_RATE_MAP = {
+  general: { label: "General rate", rate: 0.25 },
+  hotel: { label: "Hotel industry", rate: 0.22 },
+  mining: { label: "Mining & upstream petroleum", rate: 0.35 },
+  nonTraditional: { label: "Non-traditional exports", rate: 0.08 },
+  bankAgriLeasing: { label: "Banks (agri/leasing income)", rate: 0.2 },
+  lottery: { label: "Lottery operators (gross gaming)", rate: 0.2 },
+  custom: { label: "Custom rate", rate: null },
+};
+
 function AdminAccounting() {
   const [windowKey, setWindowKey] = useState("allTime");
-  const [viewMode, setViewMode] = useState("overview"); // overview | charts | kanban | list | taxes
+  const [viewMode, setViewMode] = useState("overview"); // overview | statements | charts | kanban | list | taxes
   const [data, setData] = useState(null);
   const [financeData, setFinanceData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +79,49 @@ function AdminAccounting() {
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState("");
   const [listLoaded, setListLoaded] = useState(false);
-  const [taxConfig, setTaxConfig] = useState({ taxRate: "0" });
+  const balanceDefaults = {
+    cashOnHand: "0",
+    bankBalance: "0",
+    accountsReceivable: "0",
+    inventoryValue: "0",
+    prepaidExpenses: "0",
+    otherCurrentAssets: "0",
+    fixedAssets: "0",
+    otherAssets: "0",
+    accountsPayable: "0",
+    taxesPayable: "0",
+    accruedExpenses: "0",
+    shortTermLoans: "0",
+    longTermLoans: "0",
+    ownerEquity: "0",
+    retainedEarnings: "0",
+  };
+  const ghTaxDefaults = {
+    vatCoreRate: "0.125",
+    nhilRate: "0.025",
+    getFundRate: "0.025",
+    covidRate: "0",
+    corporateRate: "0.25",
+    corporateCategory: "general",
+    gslCategory: "categoryC",
+    fsrlEnabled: false,
+  };
+  const taxInputDefaults = {
+    exemptSales: "0",
+    inputVatCredits: "0",
+    allowableDeductions: "0",
+    withholdingCredits: "0",
+    grossProduction: "0",
+  };
+  const [balanceInputs, setBalanceInputs] = useState(() =>
+    loadLocalState("reebs_accounting_balances_v1", balanceDefaults)
+  );
+  const [ghanaTaxConfig, setGhanaTaxConfig] = useState(() =>
+    loadLocalState("reebs_ghana_tax_v1", ghTaxDefaults)
+  );
+  const [taxInputs, setTaxInputs] = useState(() =>
+    loadLocalState("reebs_ghana_tax_inputs_v1", taxInputDefaults)
+  );
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
   );
@@ -72,22 +150,23 @@ function AdminAccounting() {
     }
   }, [isMobileView, viewMode]);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("reebs_erp_config");
-      if (stored) {
-        setTaxConfig((prev) => ({ ...prev, ...JSON.parse(stored) }));
-      }
-    } catch {
-      setTaxConfig({ taxRate: "0" });
-    }
-  }, []);
-
-  const parseTaxRate = (value) => {
+  const parsePercent = (value) => {
     const raw = Number(value);
     if (!Number.isFinite(raw) || raw <= 0) return 0;
     return raw > 1 ? raw / 100 : raw;
   };
+
+  useEffect(() => {
+    saveLocalState("reebs_accounting_balances_v1", balanceInputs);
+  }, [balanceInputs]);
+
+  useEffect(() => {
+    saveLocalState("reebs_ghana_tax_v1", ghanaTaxConfig);
+  }, [ghanaTaxConfig]);
+
+  useEffect(() => {
+    saveLocalState("reebs_ghana_tax_inputs_v1", taxInputs);
+  }, [taxInputs]);
 
   const fetchJson = async (url) => {
     const res = await fetch(url);
@@ -242,9 +321,6 @@ function AdminAccounting() {
     [filteredBookings]
   );
   const combinedTotal = receiptsTotal + invoicesTotal;
-  const taxRate = parseTaxRate(taxConfig?.taxRate);
-  const taxDue = combinedTotal * taxRate;
-  const taxLabel = `${Math.round(taxRate * 100)}%`;
   const cashflowSpark = useMemo(() => {
     if (!cashflowTrend.length) return { points: "", max: 0 };
     const max = Math.max(...cashflowTrend.map((d) => d.revenue || 0), 0);
@@ -260,6 +336,103 @@ function AdminAccounting() {
     return { points, max };
   }, [cashflowTrend]);
 
+  const updateBalance = (field) => (event) => {
+    const value = event.target.value;
+    setBalanceInputs((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateTaxInput = (field) => (event) => {
+    const value = event.target.value;
+    setTaxInputs((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateGhanaTax = (field) => (event) => {
+    const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+    setGhanaTaxConfig((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "corporateRate") {
+        next.corporateCategory = "custom";
+      }
+      return next;
+    });
+  };
+
+  const updateCorporateCategory = (event) => {
+    const value = event.target.value;
+    const mapped = CORPORATE_RATE_MAP[value];
+    setGhanaTaxConfig((prev) => ({
+      ...prev,
+      corporateCategory: value,
+      corporateRate: mapped?.rate == null ? prev.corporateRate : String(mapped.rate),
+    }));
+  };
+
+  const cashOnHand = toNumber(balanceInputs.cashOnHand);
+  const bankBalance = toNumber(balanceInputs.bankBalance);
+  const accountsReceivable = toNumber(balanceInputs.accountsReceivable);
+  const inventoryValue = toNumber(balanceInputs.inventoryValue);
+  const prepaidExpenses = toNumber(balanceInputs.prepaidExpenses);
+  const otherCurrentAssets = toNumber(balanceInputs.otherCurrentAssets);
+  const fixedAssets = toNumber(balanceInputs.fixedAssets);
+  const otherAssets = toNumber(balanceInputs.otherAssets);
+  const accountsPayable = toNumber(balanceInputs.accountsPayable);
+  const taxesPayable = toNumber(balanceInputs.taxesPayable);
+  const accruedExpenses = toNumber(balanceInputs.accruedExpenses);
+  const shortTermLoans = toNumber(balanceInputs.shortTermLoans);
+  const longTermLoans = toNumber(balanceInputs.longTermLoans);
+  const ownerEquity = toNumber(balanceInputs.ownerEquity);
+  const retainedEarnings = toNumber(balanceInputs.retainedEarnings);
+  const currentAssets =
+    cashOnHand +
+    bankBalance +
+    accountsReceivable +
+    inventoryValue +
+    prepaidExpenses +
+    otherCurrentAssets;
+  const currentLiabilities = accountsPayable + taxesPayable + accruedExpenses + shortTermLoans;
+  const totalAssets = currentAssets + fixedAssets + otherAssets;
+  const totalLiabilities = currentLiabilities + longTermLoans;
+  const periodNetProfit = toNumber(financeSummary?.netProfit || 0);
+  const equityBase = ownerEquity + retainedEarnings;
+  const totalEquity = equityBase + periodNetProfit;
+  const balanceGap = totalAssets - (totalLiabilities + totalEquity);
+  const workingCapital = currentAssets - currentLiabilities;
+  const quickAssets = cashOnHand + bankBalance + accountsReceivable;
+  const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : null;
+  const quickRatio = currentLiabilities > 0 ? quickAssets / currentLiabilities : null;
+
+  const corporateCategory = ghanaTaxConfig.corporateCategory || "general";
+  const vatCoreRate = parsePercent(ghanaTaxConfig.vatCoreRate);
+  const nhilRate = parsePercent(ghanaTaxConfig.nhilRate);
+  const getFundRate = parsePercent(ghanaTaxConfig.getFundRate);
+  const covidRate = parsePercent(ghanaTaxConfig.covidRate);
+  const corporateRate = parsePercent(ghanaTaxConfig.corporateRate);
+  const vatTotalRate = vatCoreRate + nhilRate + getFundRate + covidRate;
+  const exemptSales = toNumber(taxInputs.exemptSales);
+  const taxableSales = Math.max(0, combinedTotal - exemptSales);
+  const outputVat = taxableSales * vatTotalRate;
+  const inputVatCredits = toNumber(taxInputs.inputVatCredits);
+  const vatPayable = Math.max(0, outputVat - inputVatCredits);
+  const grossProduction = toNumber(taxInputs.grossProduction);
+  const profitBeforeTax =
+    toNumber(financeSummary?.grossProfit || 0) - toNumber(financeSummary?.operatingExpenses || 0);
+  const profitBeforeTaxBase = Math.max(0, profitBeforeTax);
+  const allowableDeductions = toNumber(taxInputs.allowableDeductions);
+  const taxableIncome = Math.max(0, profitBeforeTax - allowableDeductions);
+  const corporateTaxDue = taxableIncome * corporateRate;
+  const gslCategory = ghanaTaxConfig.gslCategory || "none";
+  let gslDue = 0;
+  if (gslCategory === "categoryA") gslDue = profitBeforeTaxBase * 0.05;
+  if (gslCategory === "categoryBGold") gslDue = Math.max(0, grossProduction) * 0.03;
+  if (gslCategory === "categoryBOther") gslDue = Math.max(0, grossProduction) * 0.01;
+  if (gslCategory === "categoryC") gslDue = profitBeforeTaxBase * 0.025;
+  const fsrlDue = ghanaTaxConfig.fsrlEnabled ? profitBeforeTaxBase * 0.05 : 0;
+  const withholdingCredits = toNumber(taxInputs.withholdingCredits);
+  const totalTaxDue = Math.max(
+    0,
+    vatPayable + corporateTaxDue + gslDue + fsrlDue - withholdingCredits
+  );
+
   return (
     <div className="accounting-page">
       <div className="accounting-shell">
@@ -270,7 +443,7 @@ function AdminAccounting() {
             <p className="accounting-eyebrow">Financial Intelligence</p>
             <h1>Accounting</h1>
             <p className="accounting-subtitle">
-              Move from recording data to understanding profit: revenue mix, top sellers, and cash flow trends.
+              Track liquidity, build year-end statements, and keep tax prep in one place.
             </p>
           </div>
           <div className="accounting-filters">
@@ -323,6 +496,15 @@ function AdminAccounting() {
                     onClick={() => setViewMode("overview")}
                   >
                     Overview
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === "statements"}
+                    className={viewMode === "statements" ? "is-active" : ""}
+                    onClick={() => setViewMode("statements")}
+                  >
+                    Statements
                   </button>
                   <button
                     type="button"
@@ -695,6 +877,361 @@ function AdminAccounting() {
           </>
         )}
 
+        {!loading && !error && data && viewMode === "statements" && (
+          <>
+            <section className="accounting-kpis accounting-kpis-tight">
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Cash + bank</p>
+                <h3 className="accounting-kpi-value">{formatCurrency(cashOnHand + bankBalance)}</h3>
+                <p className="accounting-kpi-sub">Working capital {formatCurrency(workingCapital)}</p>
+              </div>
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Current ratio</p>
+                <h3 className="accounting-kpi-value">
+                  {currentRatio ? currentRatio.toFixed(2) : "N/A"}
+                </h3>
+                <p className="accounting-kpi-sub">Quick ratio {quickRatio ? quickRatio.toFixed(2) : "N/A"}</p>
+              </div>
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Period net profit</p>
+                <h3 className="accounting-kpi-value">{formatCurrency(periodNetProfit)}</h3>
+                <p className="accounting-kpi-sub">{data.windowLabel || ""}</p>
+              </div>
+              <div className="accounting-kpi-card">
+                <p className="accounting-kpi-label">Taxable sales</p>
+                <h3 className="accounting-kpi-value">{formatCurrency(taxableSales)}</h3>
+                <p className="accounting-kpi-sub">VAT rate {Math.round(vatTotalRate * 1000) / 10}%</p>
+              </div>
+            </section>
+
+            <section className="accounting-panels accounting-panels-stack">
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Statement</p>
+                    <h3>Profit & loss</h3>
+                    <p className="accounting-panel-sub">For {data.windowLabel || ""}</p>
+                  </div>
+                </div>
+                {financeLoading && !financeSummary ? (
+                  <p className="accounting-muted">Reconciling ledgers…</p>
+                ) : financeError && !financeSummary ? (
+                  <p className="accounting-error">{financeError}</p>
+                ) : financeSummary ? (
+                  <div className="accounting-pnl">
+                    <div className="accounting-pnl-row">
+                      <span>Retail sales revenue</span>
+                      <span>{formatCurrency(financeSummary.revenue)}</span>
+                    </div>
+                    <div className="accounting-pnl-row">
+                      <span>Rental income</span>
+                      <span>{formatCurrency(financeSummary.rentalIncome)}</span>
+                    </div>
+                    <div className="accounting-pnl-row accounting-negative">
+                      <span>Cost of goods sold</span>
+                      <span>-{formatCurrency(financeSummary.cogs)}</span>
+                    </div>
+                    <div className="accounting-pnl-row">
+                      <span>Gross profit</span>
+                      <span>{formatCurrency(financeSummary.grossProfit)}</span>
+                    </div>
+                    <div className="accounting-pnl-row accounting-negative">
+                      <span>Operating expenses</span>
+                      <span>-{formatCurrency(financeSummary.operatingExpenses)}</span>
+                    </div>
+                    <div className="accounting-pnl-row total">
+                      <strong>Net profit</strong>
+                      <strong>{formatCurrency(financeSummary.netProfit)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="accounting-muted">No reconciliation data in this window.</p>
+                )}
+              </div>
+
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Statement</p>
+                    <h3>Balance sheet</h3>
+                    <p className="accounting-panel-sub">
+                      As of {windowEnd ? formatDate(windowEnd) : "today"} · use inputs to set opening/closing balances.
+                    </p>
+                  </div>
+                </div>
+                <div className="accounting-balance-grid">
+                  <div className="accounting-balance-col">
+                    <h4>Assets</h4>
+                    <div className="accounting-pnl">
+                      <div className="accounting-pnl-row">
+                        <span>Cash on hand</span>
+                        <span>{formatCurrency(cashOnHand)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Bank balance</span>
+                        <span>{formatCurrency(bankBalance)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Accounts receivable</span>
+                        <span>{formatCurrency(accountsReceivable)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Inventory</span>
+                        <span>{formatCurrency(inventoryValue)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Prepaid expenses</span>
+                        <span>{formatCurrency(prepaidExpenses)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Other current assets</span>
+                        <span>{formatCurrency(otherCurrentAssets)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Fixed assets</span>
+                        <span>{formatCurrency(fixedAssets)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Other assets</span>
+                        <span>{formatCurrency(otherAssets)}</span>
+                      </div>
+                      <div className="accounting-pnl-row total">
+                        <strong>Total assets</strong>
+                        <strong>{formatCurrency(totalAssets)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="accounting-balance-col">
+                    <h4>Liabilities</h4>
+                    <div className="accounting-pnl">
+                      <div className="accounting-pnl-row">
+                        <span>Accounts payable</span>
+                        <span>{formatCurrency(accountsPayable)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Taxes payable</span>
+                        <span>{formatCurrency(taxesPayable)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Accrued expenses</span>
+                        <span>{formatCurrency(accruedExpenses)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Short-term loans</span>
+                        <span>{formatCurrency(shortTermLoans)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Long-term loans</span>
+                        <span>{formatCurrency(longTermLoans)}</span>
+                      </div>
+                      <div className="accounting-pnl-row total">
+                        <strong>Total liabilities</strong>
+                        <strong>{formatCurrency(totalLiabilities)}</strong>
+                      </div>
+                    </div>
+                    <h4>Equity</h4>
+                    <div className="accounting-pnl">
+                      <div className="accounting-pnl-row">
+                        <span>Owner equity</span>
+                        <span>{formatCurrency(ownerEquity)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Retained earnings</span>
+                        <span>{formatCurrency(retainedEarnings)}</span>
+                      </div>
+                      <div className="accounting-pnl-row">
+                        <span>Current period profit</span>
+                        <span>{formatCurrency(periodNetProfit)}</span>
+                      </div>
+                      <div className="accounting-pnl-row total">
+                        <strong>Total equity</strong>
+                        <strong>{formatCurrency(totalEquity)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className={`accounting-balance-check ${
+                    Math.abs(balanceGap) <= 1 ? "is-balanced" : "is-off"
+                  }`}
+                >
+                  {Math.abs(balanceGap) <= 1
+                    ? "Balance check: assets match liabilities + equity."
+                    : `Balance check: gap ${formatCurrency(Math.abs(balanceGap))}.`}
+                </div>
+              </div>
+
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Inputs</p>
+                    <h3>Balance sheet inputs</h3>
+                    <p className="accounting-panel-sub">
+                      Update opening balances at year start and closing balances at year end.
+                    </p>
+                  </div>
+                </div>
+                <div className="accounting-form-grid">
+                  <label className="accounting-field">
+                    Cash on hand
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.cashOnHand}
+                      onChange={updateBalance("cashOnHand")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Bank balance
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.bankBalance}
+                      onChange={updateBalance("bankBalance")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Accounts receivable
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.accountsReceivable}
+                      onChange={updateBalance("accountsReceivable")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Inventory value
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.inventoryValue}
+                      onChange={updateBalance("inventoryValue")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Prepaid expenses
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.prepaidExpenses}
+                      onChange={updateBalance("prepaidExpenses")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Other current assets
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.otherCurrentAssets}
+                      onChange={updateBalance("otherCurrentAssets")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Fixed assets
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.fixedAssets}
+                      onChange={updateBalance("fixedAssets")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Other assets
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.otherAssets}
+                      onChange={updateBalance("otherAssets")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Accounts payable
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.accountsPayable}
+                      onChange={updateBalance("accountsPayable")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Taxes payable
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.taxesPayable}
+                      onChange={updateBalance("taxesPayable")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Accrued expenses
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.accruedExpenses}
+                      onChange={updateBalance("accruedExpenses")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Short-term loans
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.shortTermLoans}
+                      onChange={updateBalance("shortTermLoans")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Long-term loans
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.longTermLoans}
+                      onChange={updateBalance("longTermLoans")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Owner equity
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.ownerEquity}
+                      onChange={updateBalance("ownerEquity")}
+                    />
+                  </label>
+                  <label className="accounting-field">
+                    Retained earnings
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={balanceInputs.retainedEarnings}
+                      onChange={updateBalance("retainedEarnings")}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
+                    <p className="accounting-panel-label">Checklist</p>
+                    <h3>Opening & closing books</h3>
+                    <p className="accounting-panel-sub">
+                      Capture year-end entries and keep your ledgers audit-ready.
+                    </p>
+                  </div>
+                </div>
+                <ul className="accounting-checklist">
+                  <li>Confirm cash, bank, and receivable balances.</li>
+                  <li>Reconcile inventory counts and asset values.</li>
+                  <li>Review payables, taxes payable, and loan schedules.</li>
+                  <li>Finalize P&amp;L, then roll net profit into retained earnings.</li>
+                  <li>Export statements for your accountant or tax filing.</li>
+                </ul>
+              </div>
+            </section>
+          </>
+        )}
+
         {!loading && !error && data && viewMode === "charts" && (
           <>
             <section className="accounting-kpis">
@@ -1033,66 +1570,242 @@ function AdminAccounting() {
           <section className="accounting-panels accounting-panels-stack">
             <div className="accounting-panel">
               <div className="accounting-panel-head">
-                <h3>Tax summary</h3>
+                <h3>Ghana tax summary</h3>
                 <span className="accounting-panel-label">{data.windowLabel || ""}</span>
               </div>
-              <div className="accounting-pnl">
+                <div className="accounting-pnl">
+                  <div className="accounting-pnl-row">
+                    <span>Taxable sales</span>
+                    <strong>{formatCurrency(taxableSales)}</strong>
+                  </div>
+                  <div className="accounting-pnl-row">
+                    <span>VAT (core)</span>
+                    <strong>{formatCurrency(taxableSales * vatCoreRate)}</strong>
+                  </div>
                 <div className="accounting-pnl-row">
-                  <span>Tax rate</span>
-                  <strong>{taxRate > 0 ? taxLabel : "Not set"}</strong>
+                  <span>NHIL</span>
+                  <strong>{formatCurrency(taxableSales * nhilRate)}</strong>
                 </div>
                 <div className="accounting-pnl-row">
-                  <span>Receipts (retail)</span>
-                  <strong>{formatCurrency(receiptsTotal)}</strong>
+                  <span>GETFund</span>
+                  <strong>{formatCurrency(taxableSales * getFundRate)}</strong>
                 </div>
+                {covidRate > 0 && (
+                  <div className="accounting-pnl-row">
+                    <span>COVID levy</span>
+                    <strong>{formatCurrency(taxableSales * covidRate)}</strong>
+                  </div>
+                )}
                 <div className="accounting-pnl-row">
-                  <span>Invoices (rentals)</span>
-                  <strong>{formatCurrency(invoicesTotal)}</strong>
+                  <span>Output VAT total</span>
+                  <strong>{formatCurrency(outputVat)}</strong>
+                </div>
+                <div className="accounting-pnl-row accounting-negative">
+                  <span>Input VAT credits</span>
+                  <strong>-{formatCurrency(inputVatCredits)}</strong>
                 </div>
                 <div className="accounting-pnl-row total">
-                  <span>Estimated tax due</span>
-                  <strong>{formatCurrency(taxDue)}</strong>
+                  <span>VAT payable</span>
+                  <strong>{formatCurrency(vatPayable)}</strong>
+                </div>
+                <div className="accounting-pnl-row">
+                  <span>Profit before tax</span>
+                  <strong>{formatCurrency(profitBeforeTax)}</strong>
+                </div>
+                <div className="accounting-pnl-row accounting-negative">
+                  <span>Allowable deductions</span>
+                  <strong>-{formatCurrency(allowableDeductions)}</strong>
+                </div>
+                <div className="accounting-pnl-row">
+                  <span>Taxable income</span>
+                  <strong>{formatCurrency(taxableIncome)}</strong>
+                </div>
+                <div className="accounting-pnl-row total">
+                  <span>
+                    Corporate tax ({Math.round(corporateRate * 100)}% · {CORPORATE_RATE_MAP[corporateCategory]?.label || "Custom"})
+                  </span>
+                  <strong>{formatCurrency(corporateTaxDue)}</strong>
+                </div>
+                {gslCategory !== "none" && (
+                  <div className="accounting-pnl-row">
+                    <span>Growth & Sustainability Levy</span>
+                    <strong>{formatCurrency(gslDue)}</strong>
+                  </div>
+                )}
+                {ghanaTaxConfig.fsrlEnabled && (
+                  <div className="accounting-pnl-row">
+                    <span>Financial sector recovery levy</span>
+                    <strong>{formatCurrency(fsrlDue)}</strong>
+                  </div>
+                )}
+                <div className="accounting-pnl-row accounting-negative">
+                  <span>Withholding credits</span>
+                  <strong>-{formatCurrency(withholdingCredits)}</strong>
+                </div>
+                <div className="accounting-pnl-row total">
+                  <strong>Total estimated tax due</strong>
+                  <strong>{formatCurrency(totalTaxDue)}</strong>
                 </div>
               </div>
-              {taxRate === 0 && (
-                <p className="accounting-muted">Set your tax rate in Settings → ERP Config.</p>
-              )}
+              <p className="accounting-muted">
+                Rates are editable—confirm current GRA requirements before filing.
+              </p>
             </div>
+
             <div className="accounting-panel">
               <div className="accounting-panel-head">
-                <h3>Tax breakdown</h3>
-                <span className="accounting-panel-label">By document type</span>
+                <h3>Tax inputs</h3>
+                <span className="accounting-panel-label">Adjustable credits & deductions</span>
               </div>
-              <div className="accounting-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Taxable total</th>
-                      <th>Tax ({taxLabel})</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Receipts</td>
-                      <td>{formatCurrency(receiptsTotal)}</td>
-                      <td>{formatCurrency(receiptsTotal * taxRate)}</td>
-                    </tr>
-                    <tr>
-                      <td>Invoices</td>
-                      <td>{formatCurrency(invoicesTotal)}</td>
-                      <td>{formatCurrency(invoicesTotal * taxRate)}</td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td>Total</td>
-                      <td>{formatCurrency(combinedTotal)}</td>
-                      <td>{formatCurrency(taxDue)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div className="accounting-form-grid">
+                <label className="accounting-field">
+                  Exempt sales
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={taxInputs.exemptSales}
+                    onChange={updateTaxInput("exemptSales")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  Input VAT credits
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={taxInputs.inputVatCredits}
+                    onChange={updateTaxInput("inputVatCredits")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  Allowable deductions
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={taxInputs.allowableDeductions}
+                    onChange={updateTaxInput("allowableDeductions")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  Gross production (GSL)
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={taxInputs.grossProduction}
+                    onChange={updateTaxInput("grossProduction")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  Withholding credits
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={taxInputs.withholdingCredits}
+                    onChange={updateTaxInput("withholdingCredits")}
+                  />
+                </label>
               </div>
+            </div>
+
+            <div className="accounting-panel">
+              <div className="accounting-panel-head">
+                <h3>Ghana tax rates</h3>
+                <span className="accounting-panel-label">Adjust to current policy</span>
+              </div>
+              <div className="accounting-form-grid">
+                <label className="accounting-field">
+                  Corporate tax category
+                  <select
+                    value={corporateCategory}
+                    onChange={updateCorporateCategory}
+                  >
+                    <option value="general">General rate (25%)</option>
+                    <option value="hotel">Hotel industry (22%)</option>
+                    <option value="mining">Mining & upstream petroleum (35%)</option>
+                    <option value="nonTraditional">Non-traditional exports (8%)</option>
+                    <option value="bankAgriLeasing">Banks lending to agri/leasing (20%)</option>
+                    <option value="lottery">Lottery operators (20%)</option>
+                    <option value="custom">Custom rate</option>
+                  </select>
+                </label>
+                <label className="accounting-field">
+                  Corporate tax rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.corporateRate}
+                    onChange={updateGhanaTax("corporateRate")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  GSL category
+                  <select
+                    value={ghanaTaxConfig.gslCategory}
+                    onChange={updateGhanaTax("gslCategory")}
+                  >
+                    <option value="none">Not applicable</option>
+                    <option value="categoryA">Category A · 5% of PBT</option>
+                    <option value="categoryBGold">Category B (gold) · 3% gross production</option>
+                    <option value="categoryBOther">Category B (other) · 1% gross production</option>
+                    <option value="categoryC">Category C · 2.5% of PBT</option>
+                  </select>
+                </label>
+                <label className="accounting-field accounting-check">
+                  Apply FSRL (banks)
+                  <input
+                    type="checkbox"
+                    checked={Boolean(ghanaTaxConfig.fsrlEnabled)}
+                    onChange={updateGhanaTax("fsrlEnabled")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  VAT core rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.vatCoreRate}
+                    onChange={updateGhanaTax("vatCoreRate")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  NHIL rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.nhilRate}
+                    onChange={updateGhanaTax("nhilRate")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  GETFund rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.getFundRate}
+                    onChange={updateGhanaTax("getFundRate")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  COVID levy rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.covidRate}
+                    onChange={updateGhanaTax("covidRate")}
+                  />
+                </label>
+                <label className="accounting-field">
+                  Corporate tax rate
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={ghanaTaxConfig.corporateRate}
+                    onChange={updateGhanaTax("corporateRate")}
+                  />
+                </label>
+              </div>
+              <p className="accounting-muted">
+                Total VAT rate: {Math.round(vatTotalRate * 1000) / 10}% · Corporate rates & levies per PwC Tax Summaries (reviewed 28 Aug 2025).
+              </p>
             </div>
           </section>
         )}

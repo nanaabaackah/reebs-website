@@ -39,7 +39,7 @@ export async function handler(event) {
   try {
     await client.connect();
     const result = await client.query(
-      `SELECT id, "firstName", "lastName", "fullName", email, role, password
+      `SELECT id, "firstName", "lastName", "fullName", email, role, "organizationId", password
        FROM "user"
        WHERE email = $1
        LIMIT 1`,

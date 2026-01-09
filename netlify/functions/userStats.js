@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { ensureAuditColumns, findDefaultAdmin, backfillAuditDefaults } from "./auditHelpers.js";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 export async function handler(event) {
   const userId = Number(event.queryStringParameters?.userId || 0);
@@ -29,16 +30,33 @@ export async function handler(event) {
       await backfillAuditDefaults(client, admin.id);
     }
 
+    const orderDetailsPromise = client.query(
+      `SELECT
+         o.id,
+         o."orderNumber",
+         o."customerName",
+         o.status,
+         o."total_amount",
+         o."deliveryMethod",
+         o."deliveryDetails",
+         o."orderDate",
+         o."deliveryDate",
+         o."lastModifiedAt",
+         o."assignedUserId",
+         o."updatedByUserId",
+         assignee."fullName" AS "assignedUserName",
+         updater."fullName" AS "updatedByName"
+       FROM "order" o
+       LEFT JOIN "user" assignee ON assignee.id = o."assignedUserId"
+       LEFT JOIN "user" updater ON updater.id = o."updatedByUserId"
+       WHERE $1 = COALESCE(o."assignedUserId", o."createdByUserId")
+          OR $1 = o."updatedByUserId"
+       ORDER BY o."lastModifiedAt" DESC NULLS LAST, o."orderDate" DESC, o."id" DESC`,
+      [userId]
+    );
+
     const basePromises = [
-      client.query(
-        `SELECT
-           COUNT(*)::int AS orders,
-           COALESCE(SUM(total_amount), 0) AS revenue_cents
-         FROM "order"
-         WHERE $1 = COALESCE("assignedUserId", "createdByUserId")
-            OR $1 = "updatedByUserId"`,
-        [userId]
-      ),
+      orderDetailsPromise,
       client.query(
         `SELECT
            COUNT(*)::int AS bookings,
@@ -58,28 +76,6 @@ export async function handler(event) {
 
     const detailPromises = includeDetails
       ? [
-          client.query(
-            `SELECT
-               o.id,
-               o."orderNumber",
-               o."customerName",
-               o.status,
-               (o."total_amount"::numeric / 100) AS total,
-               o."orderDate",
-               o."deliveryDate",
-               o."lastModifiedAt",
-               o."assignedUserId",
-               o."updatedByUserId",
-               assignee."fullName" AS "assignedUserName",
-               updater."fullName" AS "updatedByName"
-             FROM "order" o
-             LEFT JOIN "user" assignee ON assignee.id = o."assignedUserId"
-             LEFT JOIN "user" updater ON updater.id = o."updatedByUserId"
-             WHERE $1 = COALESCE(o."assignedUserId", o."createdByUserId")
-                OR $1 = o."updatedByUserId"
-             ORDER BY o."lastModifiedAt" DESC NULLS LAST, o."orderDate" DESC, o."id" DESC`,
-            [userId]
-          ),
           client.query(
             `SELECT
                b.id,
@@ -131,7 +127,26 @@ export async function handler(event) {
       : [];
 
     const results = await Promise.all([...basePromises, ...detailPromises]);
-    const [orderRows, bookingRows, stockRows, orderDetails, bookingDetails, stockDetails] = results;
+    const [orderDetails, bookingRows, stockRows, bookingDetails, stockDetails] = results;
+    const orderRows = orderDetails?.rows || [];
+    let orderRevenueCents = 0;
+    const orderDetailList = orderRows.map((row) => {
+      const baseCents = Number(row.total_amount || 0);
+      const { distanceKm, feeCents } = getDeliveryFeeDetails(
+        row.deliveryMethod,
+        row.deliveryDetails
+      );
+      const totalCents = baseCents + feeCents;
+      orderRevenueCents += totalCents;
+      return {
+        ...row,
+        itemsTotal: baseCents / 100,
+        deliveryFee: feeCents / 100,
+        deliveryFeeCents: feeCents,
+        deliveryDistanceKm: distanceKm || 0,
+        total: totalCents / 100,
+      };
+    });
 
     return {
       statusCode: 200,
@@ -140,14 +155,14 @@ export async function handler(event) {
         "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
-        orders: orderRows.rows[0]?.orders || 0,
-        orderRevenue: Number(orderRows.rows[0]?.revenue_cents || 0) / 100,
+        orders: orderRows.length,
+        orderRevenue: orderRevenueCents / 100,
         bookings: bookingRows.rows[0]?.bookings || 0,
         bookingRevenue: Number(bookingRows.rows[0]?.revenue_cents || 0) / 100,
         stockMovements: stockRows.rows[0]?.movements || 0,
         details: includeDetails
           ? {
-              orders: orderDetails?.rows || [],
+              orders: orderDetailList,
               bookings: bookingDetails?.rows || [],
               stockMovements: stockDetails?.rows || [],
             }

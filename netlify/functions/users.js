@@ -3,6 +3,7 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { hashPassword } from "../../utils/passwords.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
 const stripSpaces = (value) => cleanNamePart(value).replace(/\s+/g, "");
@@ -36,11 +37,11 @@ export async function handler(event) {
 
   try {
     await client.connect();
-
-    if (event.httpMethod === "POST") {
-      let data;
+    const method = event.httpMethod;
+    let payload = null;
+    if (method === "POST" || method === "PUT") {
       try {
-        data = JSON.parse(event.body || "{}");
+        payload = JSON.parse(event.body || "{}");
       } catch {
         return {
           statusCode: 400,
@@ -48,11 +49,14 @@ export async function handler(event) {
           body: JSON.stringify({ error: "Invalid JSON body." }),
         };
       }
+    }
+    const organizationId = await resolveOrganizationId(client, event, payload);
 
-      const firstName = cleanNamePart(data.firstName);
-      const lastName = cleanNamePart(data.lastName);
-      const password = typeof data.password === "string" ? data.password.trim() : "";
-      const role = typeof data.role === "string" && data.role.trim() ? data.role.trim() : "Staff";
+    if (method === "POST") {
+      const firstName = cleanNamePart(payload.firstName);
+      const lastName = cleanNamePart(payload.lastName);
+      const password = typeof payload.password === "string" ? payload.password.trim() : "";
+      const role = typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : "Staff";
 
       if (!firstName || !lastName) {
         return {
@@ -84,10 +88,10 @@ export async function handler(event) {
       try {
         const passwordHash = await hashPassword(password);
         const result = await client.query(
-          `INSERT INTO "user" ("email", "password", "firstName", "lastName", "fullName", "role", "createdAt", "updatedAt")
-           VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          `INSERT INTO "user" ("organizationId", "email", "password", "firstName", "lastName", "fullName", "role", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
            RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
-          [email, passwordHash, firstName, lastName, fullName, role]
+          [organizationId, email, passwordHash, firstName, lastName, fullName, role]
         );
 
         return {
@@ -107,19 +111,8 @@ export async function handler(event) {
       }
     }
 
-    if (event.httpMethod === "PUT") {
-      let data;
-      try {
-        data = JSON.parse(event.body || "{}");
-      } catch {
-        return {
-          statusCode: 400,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-          body: JSON.stringify({ error: "Invalid JSON body." }),
-        };
-      }
-
-      const id = Number(data.id);
+    if (method === "PUT") {
+      const id = Number(payload.id);
       if (!Number.isFinite(id)) {
         return {
           statusCode: 400,
@@ -128,16 +121,16 @@ export async function handler(event) {
         };
       }
 
-      const firstNameRaw = data.firstName;
-      const lastNameRaw = data.lastName;
+      const firstNameRaw = payload.firstName;
+      const lastNameRaw = payload.lastName;
       const firstName = firstNameRaw === undefined ? null : cleanNamePart(firstNameRaw);
       const lastName = lastNameRaw === undefined ? null : cleanNamePart(lastNameRaw);
-      const role = typeof data.role === "string" && data.role.trim() ? data.role.trim() : null;
-      const password = typeof data.password === "string" ? data.password.trim() : null;
+      const role = typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : null;
+      const password = typeof payload.password === "string" ? payload.password.trim() : null;
 
       const existingRes = await client.query(
-        `SELECT "firstName", "lastName" FROM "user" WHERE id = $1`,
-        [id]
+        `SELECT "firstName", "lastName" FROM "user" WHERE id = $1 AND "organizationId" = $2`,
+        [id, organizationId]
       );
       if (existingRes.rowCount === 0) {
         return {
@@ -204,11 +197,12 @@ export async function handler(event) {
       }
 
       values.push(id);
+      values.push(organizationId);
 
       try {
         const result = await client.query(
           `UPDATE "user" SET ${updates.join(", ")}
-           WHERE id = $${index}
+           WHERE id = $${index} AND "organizationId" = $${index + 1}
            RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
           values
         );
@@ -238,7 +232,7 @@ export async function handler(event) {
       }
     }
 
-    if (event.httpMethod !== "GET") {
+    if (method !== "GET") {
       return {
         statusCode: 405,
         headers: {
@@ -253,7 +247,10 @@ export async function handler(event) {
     const result = await client.query(
       `SELECT id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"
        FROM "user"
+       WHERE "organizationId" = $1
        ORDER BY id DESC`
+      ,
+      [organizationId]
     );
 
     return {

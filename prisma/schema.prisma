@@ -6,9 +6,39 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id              Int              @id @default(autoincrement())
+  name            String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orders          Order[]
+  orderItems      OrderItem[]
+  products        Product[]
+  stockMovements  StockMovement[]
+  users           User[]
+  employeeProfiles EmployeeProfile[]
+  documents       Document[]
+  vendors         Vendor[]
+  maintenanceLogs MaintenanceLog[]
+  timesheets      Timesheet[]
+  expenses        Expense[]
+  discounts       Discount[]
+  customers       Customer[]
+  bookings        Booking[]
+  bookingItems    BookingItem[]
+  bouncyCastles   BouncyCastle[]
+  indoorGames     IndoorGame[]
+  machines        Machine[]
+  shopItems       ShopItem[]
+
+  @@map("organization")
+}
+
 model Order {
   id              Int           @id @default(autoincrement())
-  orderNumber     String        @unique
+  organizationId  Int @default(1)
+  organization    Organization  @relation(fields: [organizationId], references: [id])
+  orderNumber     String
   customerId      Int
   customerName    String
   status          String
@@ -26,11 +56,14 @@ model Order {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   
+  @@unique([organizationId, orderNumber])
   @@map("order")
 }
 
 model OrderItem {
   id             Int     @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   orderId        Int
   productId      Int
   quantity       Int
@@ -46,7 +79,9 @@ model OrderItem {
 
 model Product {
   id                   Int      @id @default(autoincrement())
-  sku                  String   @unique
+  organizationId       Int @default(1)
+  organization         Organization @relation(fields: [organizationId], references: [id])
+  sku                  String
   name                 String
   description          String?
   vendorId             Int?
@@ -82,11 +117,14 @@ model Product {
   machine              Machine?
   shopItem             ShopItem?
   
+  @@unique([organizationId, sku])
   @@map("product")
 }
 
 model StockMovement {
   id        Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   productId Int
   type      String
   quantity  Int
@@ -108,6 +146,8 @@ enum StockType {
 
 model User {
   id        Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   email     String   @unique
   password  String   
   firstName String
@@ -128,6 +168,8 @@ model User {
 
 model EmployeeProfile {
   id                     Int      @id @default(autoincrement())
+  organizationId         Int @default(1)
+  organization           Organization @relation(fields: [organizationId], references: [id])
   userId                 Int      @unique
   user                   User     @relation(fields: [userId], references: [id])
   jobTitle               String?
@@ -142,6 +184,8 @@ model EmployeeProfile {
 
 model Document {
   id        Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   title     String
   category  String?
   fileName  String
@@ -157,6 +201,8 @@ model Document {
 
 model Vendor {
   id           Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name         String
   contactName  String?
   email        String?
@@ -176,6 +222,8 @@ model Vendor {
 
 model MaintenanceLog {
   id         Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   productId  Int
   product    Product  @relation(fields: [productId], references: [id])
   issue      String
@@ -192,6 +240,8 @@ model MaintenanceLog {
 
 model Timesheet {
   id         Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   userId     Int
   user       User     @relation(fields: [userId], references: [id])
   clockIn    DateTime
@@ -208,6 +258,8 @@ model Timesheet {
 
 model Expense {
   id          Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   category    String
   amount      Int
   description String
@@ -226,7 +278,9 @@ model Expense {
 
 model Discount {
   id            Int      @id @default(autoincrement())
-  code          String   @unique
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  code          String
   type          String
   value         Float
   minOrderValue Float?
@@ -239,13 +293,16 @@ model Discount {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@unique([organizationId, code])
   @@map("discount")
 }
 
 model Customer {
   id        Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name      String
-  email     String?  @unique
+  email     String?
   phone     String?
   
   orders    Order[] 
@@ -254,11 +311,14 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  @@unique([organizationId, email])
   @@map("customer")
 }
 
 model Booking {
   id           Int           @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   customerId   Int
   customer     Customer      @relation(fields: [customerId], references: [id])
   eventDate    DateTime
@@ -278,6 +338,8 @@ model Booking {
 
 model BookingItem {
   id        Int     @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   bookingId Int
   booking   Booking @relation(fields: [bookingId], references: [id])
   productId Int
@@ -290,7 +352,9 @@ model BookingItem {
 
 model BouncyCastle {
   id             Int      @id @default(autoincrement())
-  bouncerId      String   @unique
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  bouncerId      String
   name           String
   productId      Int?     @unique
   product        Product? @relation(fields: [productId], references: [id])
@@ -305,11 +369,14 @@ model BouncyCastle {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([organizationId, bouncerId])
   @@map("bouncy_castles")
 }
 
 model IndoorGame {
   id           Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name         String
   productId    Int?     @unique
   product      Product? @relation(fields: [productId], references: [id])
@@ -330,6 +397,8 @@ model IndoorGame {
 
 model Machine {
   id           Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name         String
   productId    Int?     @unique
   product      Product? @relation(fields: [productId], references: [id])
@@ -351,6 +420,8 @@ model Machine {
 
 model ShopItem {
   id          Int      @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization   Organization @relation(fields: [organizationId], references: [id])
   name        String
   productId   Int?     @unique
   product     Product? @relation(fields: [productId], references: [id])

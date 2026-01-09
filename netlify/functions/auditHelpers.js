@@ -18,6 +18,7 @@ const addColumnStatements = [
   `ALTER TABLE "stockMovement" ADD COLUMN IF NOT EXISTS "performedByName" TEXT`,
   `ALTER TABLE "stockMovement" ADD COLUMN IF NOT EXISTS "performedByEmail" TEXT`,
   `ALTER TABLE "stockMovement" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ DEFAULT NOW()`,
+  `ALTER TABLE "stockMovement" ADD COLUMN IF NOT EXISTS "soldMonth" DATE`,
 ];
 
 export const ensureAuditColumns = async (client) => {
@@ -32,14 +33,27 @@ export const ensureAuditColumns = async (client) => {
   }
 };
 
-export const findDefaultAdmin = async (client) => {
+export const findDefaultAdmin = async (client, organizationId = null) => {
+  const hasOrg = Number.isFinite(Number(organizationId));
+  const orgClause = hasOrg ? ` AND "organizationId" = $1` : "";
+  const orgValues = hasOrg ? [organizationId] : [];
   const admin = await client.query(
-    `SELECT id, "fullName", email FROM "user" WHERE role ILIKE 'admin' ORDER BY id ASC LIMIT 1`
+    `SELECT id, "fullName", email
+     FROM "user"
+     WHERE role ILIKE 'admin'${orgClause}
+     ORDER BY id ASC
+     LIMIT 1`,
+    orgValues
   );
   if (admin.rowCount > 0) return admin.rows[0];
 
   const anyUser = await client.query(
-    `SELECT id, "fullName", email FROM "user" ORDER BY id ASC LIMIT 1`
+    `SELECT id, "fullName", email
+     FROM "user"
+     ${hasOrg ? `WHERE "organizationId" = $1` : ""}
+     ORDER BY id ASC
+     LIMIT 1`,
+    orgValues
   );
   return anyUser.rows[0] || null;
 };
@@ -53,9 +67,9 @@ export const normalizeActor = (raw) => {
   };
 };
 
-export const resolveActor = async (client, rawActor) => {
+export const resolveActor = async (client, rawActor, organizationId = null) => {
   const actor = normalizeActor(rawActor);
-  const fallback = await findDefaultAdmin(client);
+  const fallback = await findDefaultAdmin(client, organizationId);
   return {
     userId: actor.userId ?? fallback?.id ?? null,
     userName: actor.userName || fallback?.fullName || "Admin",
@@ -63,8 +77,11 @@ export const resolveActor = async (client, rawActor) => {
   };
 };
 
-export const backfillAuditDefaults = async (client, adminUserId) => {
+export const backfillAuditDefaults = async (client, adminUserId, organizationId = null) => {
   if (!adminUserId) return;
+  const hasOrg = Number.isFinite(Number(organizationId));
+  const orgClause = hasOrg ? ` AND "organizationId" = $2` : "";
+  const values = hasOrg ? [adminUserId, organizationId] : [adminUserId];
 
   await client.query(
     `UPDATE "order"
@@ -75,8 +92,8 @@ export const backfillAuditDefaults = async (client, adminUserId) => {
      WHERE "assignedUserId" IS NULL
         OR "createdByUserId" IS NULL
         OR "updatedByUserId" IS NULL
-        OR "lastModifiedAt" IS NULL`,
-    [adminUserId]
+        OR "lastModifiedAt" IS NULL${orgClause}`,
+    values
   );
 
   await client.query(
@@ -90,8 +107,8 @@ export const backfillAuditDefaults = async (client, adminUserId) => {
         OR "createdByUserId" IS NULL
         OR "updatedByUserId" IS NULL
         OR "lastModifiedAt" IS NULL
-        OR "updatedAt" IS NULL`,
-    [adminUserId]
+        OR "updatedAt" IS NULL${orgClause}`,
+    values
   );
 
   await client.query(
@@ -99,8 +116,8 @@ export const backfillAuditDefaults = async (client, adminUserId) => {
      SET "lastUpdatedByUserId" = COALESCE("lastUpdatedByUserId", $1),
          "lastUpdatedAt" = COALESCE("lastUpdatedAt", NOW())
      WHERE "lastUpdatedByUserId" IS NULL
-        OR "lastUpdatedAt" IS NULL`,
-    [adminUserId]
+        OR "lastUpdatedAt" IS NULL${orgClause}`,
+    values
   );
 
   await client.query(
@@ -110,7 +127,7 @@ export const backfillAuditDefaults = async (client, adminUserId) => {
          "createdAt" = COALESCE("createdAt", NOW())
      WHERE "performedByUserId" IS NULL
         OR "performedByName" IS NULL
-        OR "createdAt" IS NULL`,
-    [adminUserId]
+        OR "createdAt" IS NULL${orgClause}`,
+    values
   );
 };

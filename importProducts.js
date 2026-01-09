@@ -7,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse'; 
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 /**
  * --- HELPERS ---
  */
@@ -72,6 +74,7 @@ const generateSku = (name, category, index) => {
 };
 
 const normalizeKey = (value) => (value || "").toString().trim().toLowerCase();
+const normalizeSkuKey = (value) => (value || "").toString().trim().toUpperCase();
 
 const normalizeImages = (entry) => {
     const raw = entry?.images;
@@ -178,12 +181,66 @@ function readCsvWithHeadersRelaxed(filePath) {
 async function importAllProducts() {
     console.log("🚀 Starting Unified Import...");
 
+    const existingProductBySku = new Map();
+    const existingMachineProductIds = new Set();
+    const existingBouncyProductIds = new Set();
+    const existingIndoorProductIds = new Set();
+    const existingShopProductIds = new Set();
+    const existingBouncerIds = new Set();
+
+    if (!shouldReset) {
+        const [
+            existingProducts,
+            existingMachines,
+            existingBouncy,
+            existingIndoor,
+            existingShop
+        ] = await Promise.all([
+            prisma.product.findMany({ select: { id: true, sku: true } }),
+            prisma.machine.findMany({ select: { productId: true } }),
+            prisma.bouncyCastle.findMany({ select: { productId: true, bouncerId: true } }),
+            prisma.indoorGame.findMany({ select: { productId: true } }),
+            prisma.shopItem.findMany({ select: { productId: true } })
+        ]);
+
+        for (const row of existingProducts) {
+            if (!row.sku) continue;
+            existingProductBySku.set(normalizeSkuKey(row.sku), { id: row.id });
+        }
+        for (const row of existingMachines) {
+            if (row.productId) existingMachineProductIds.add(row.productId);
+        }
+        for (const row of existingBouncy) {
+            if (row.productId) existingBouncyProductIds.add(row.productId);
+            if (row.bouncerId) existingBouncerIds.add(row.bouncerId);
+        }
+        for (const row of existingIndoor) {
+            if (row.productId) existingIndoorProductIds.add(row.productId);
+        }
+        for (const row of existingShop) {
+            if (row.productId) existingShopProductIds.add(row.productId);
+        }
+    }
+
+    const ensureProductRecord = async (productData) => {
+        const skuKey = normalizeSkuKey(productData.sku);
+        const existing = existingProductBySku.get(skuKey);
+        if (existing) return { id: existing.id, isNew: false };
+        const created = await prisma.product.create({ data: productData });
+        existingProductBySku.set(skuKey, { id: created.id });
+        return { id: created.id, isNew: true };
+    };
+
     // Ensure IDs start from 1 on a fresh import
-    try {
-        await prisma.$executeRaw`TRUNCATE TABLE "product" RESTART IDENTITY CASCADE`;
-        console.log("🔄 Product table truncated and identity reset.");
-    } catch (err) {
-        console.warn("Could not truncate product table:", err?.message || err);
+    if (shouldReset) {
+        try {
+            await prisma.$executeRaw`TRUNCATE TABLE "product" RESTART IDENTITY CASCADE`;
+            console.log("🔄 Product table truncated and identity reset.");
+        } catch (err) {
+            console.warn("Could not truncate product table:", err?.message || err);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving existing products.");
     }
 
     // 1. Process Inventory Files (Clothes, Toys, Shoes)
@@ -239,14 +296,10 @@ async function importAllProducts() {
                 imageUrl: imageUrl
             };
 
-            await prisma.product.upsert({
-                where: { sku: productData.sku },
-                update: productData,
-                create: productData
-            });
-            count++;
+            const productRecord = await ensureProductRecord(productData);
+            if (productRecord.isNew) count++;
         }
-        console.log(`✅ ${source.type}: Synced ${count} items.`);
+        console.log(`✅ ${source.type}: Added ${count} items.`);
     }
 
     // 2. Process Rentals
@@ -307,14 +360,10 @@ async function importAllProducts() {
             attendantsNeeded: parseAttendants(row.attendantsNeeded || row.attendants_needed)
         };
 
-        await prisma.product.upsert({
-            where: { sku: rentalData.sku },
-            update: rentalData,
-            create: rentalData
-        });
-        rentalCount++;
+        const rentalRecord = await ensureProductRecord(rentalData);
+        if (rentalRecord.isNew) rentalCount++;
     }
-    console.log(`✅ RENTALS: Synced ${rentalCount} items.`);
+    console.log(`✅ RENTALS: Added ${rentalCount} items.`);
 
     // 2b. Process Vendor Rentals (outsourced rental items)
     console.log("\n📂 Reading Vendor Rentals...");
@@ -375,15 +424,11 @@ async function importAllProducts() {
             vendorId: Number.isFinite(vendorId) ? vendorId : null
         };
 
-        await prisma.product.upsert({
-            where: { sku: vendorRentalData.sku },
-            update: vendorRentalData,
-            create: vendorRentalData
-        });
-        vendorRentalCount++;
+        const vendorRecord = await ensureProductRecord(vendorRentalData);
+        if (vendorRecord.isNew) vendorRentalCount++;
     }
 
-    console.log(`✅ VENDOR RENTALS: Synced ${vendorRentalCount} items.`);
+    console.log(`✅ VENDOR RENTALS: Added ${vendorRentalCount} items.`);
 
     // 2c. Process Outsourced Inventory (non-rental vendor items)
     console.log("\n📂 Reading Outsourced Inventory...");
@@ -421,25 +466,25 @@ async function importAllProducts() {
             vendorId: Number.isFinite(vendorId) ? vendorId : null
         };
 
-        await prisma.product.upsert({
-            where: { sku: outsourcedData.sku },
-            update: outsourcedData,
-            create: outsourcedData
-        });
-        outsourcedCount++;
+        const outsourcedRecord = await ensureProductRecord(outsourcedData);
+        if (outsourcedRecord.isNew) outsourcedCount++;
     }
 
-    console.log(`✅ OUTSOURCED INVENTORY: Synced ${outsourcedCount} items.`);
+    console.log(`✅ OUTSOURCED INVENTORY: Added ${outsourcedCount} items.`);
 
     // 3. Process Machines (Snow Cone, Popcorn, Cotton Candy, Motor Pumps)
     console.log("\n📂 Reading Machines...");
     let machineCount = 0;
 
-    try {
-        await prisma.$executeRaw`TRUNCATE TABLE "machines" RESTART IDENTITY CASCADE`;
-        console.log("🔄 Machines table truncated and identity reset.");
-    } catch (err) {
-        console.warn("Could not truncate machines table:", err?.message || err);
+    if (shouldReset) {
+        try {
+            await prisma.$executeRaw`TRUNCATE TABLE "machines" RESTART IDENTITY CASCADE`;
+            console.log("🔄 Machines table truncated and identity reset.");
+        } catch (err) {
+            console.warn("Could not truncate machines table:", err?.message || err);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving machines.");
     }
 
     const motorPumpRows = await readRentalsCsv('data/motor_pumps.csv');
@@ -475,44 +520,45 @@ async function importAllProducts() {
             attendantsNeeded: parseAttendants(row.attendantsNeeded || row.attendants_needed)
         };
 
-        const productRecord = await prisma.product.upsert({
-            where: { sku: machineProduct.sku },
-            update: machineProduct,
-            create: machineProduct
-        });
-
-        await prisma.machine.create({
-            data: {
-                name: name,
-                productId: productRecord.id,
-                quantity: quantity,
-                price: price,
-                rate: row.rate || null,
-                availability: row.status || null,
-                category: row.category || null,
-                image: imageUrl,
-                page: row.page || null,
-                power: null,
-                output: null,
-                notes: null
-            }
-        });
-
-        machineCount++;
+        const productRecord = await ensureProductRecord(machineProduct);
+        if (!existingMachineProductIds.has(productRecord.id)) {
+            await prisma.machine.create({
+                data: {
+                    name: name,
+                    productId: productRecord.id,
+                    quantity: quantity,
+                    price: price,
+                    rate: row.rate || null,
+                    availability: row.status || null,
+                    category: row.category || null,
+                    image: imageUrl,
+                    page: row.page || null,
+                    power: null,
+                    output: null,
+                    notes: null
+                }
+            });
+            existingMachineProductIds.add(productRecord.id);
+            machineCount++;
+        }
     }
 
-    console.log(`✅ MACHINES: Synced ${machineCount} items.`);
+    console.log(`✅ MACHINES: Added ${machineCount} items.`);
 
     // 4. Process Bouncy Castle Types
     console.log("\n📂 Reading Bouncy Castles...");
     const bouncyRows = await readRentalsCsv('data/bounty_castle.csv');
     let bouncyCount = 0;
 
-    try {
-        await prisma.$executeRaw`TRUNCATE TABLE "bouncy_castles" RESTART IDENTITY CASCADE`;
-        console.log("🔄 Bouncy castles table truncated and identity reset.");
-    } catch (err) {
-        console.warn("Could not truncate bouncy_castles table:", err?.message || err);
+    if (shouldReset) {
+        try {
+            await prisma.$executeRaw`TRUNCATE TABLE "bouncy_castles" RESTART IDENTITY CASCADE`;
+            console.log("🔄 Bouncy castles table truncated and identity reset.");
+        } catch (err) {
+            console.warn("Could not truncate bouncy_castles table:", err?.message || err);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving bouncy castles.");
     }
 
     for (const [idx, row] of bouncyRows.entries()) {
@@ -558,40 +604,50 @@ async function importAllProducts() {
             attendantsNeeded: parseAttendants(attendantsNeeded)
         };
 
-        const productRecord = await prisma.product.upsert({
-            where: { sku: bouncyProduct.sku },
-            update: bouncyProduct,
-            create: bouncyProduct
-        });
-
-        await prisma.bouncyCastle.create({
-            data: {
-                bouncerId: `BOUN-${String(idx + 1).padStart(3, "0")}`,
-                name: name,
-                productId: productRecord.id,
-                capacity: capacity || null,
-                recommendedAge: recommendedAge,
-                priceRange: row.price?.trim() || null,
-                motorsToPump: Number.isFinite(Number(motorsToPump)) ? Number(motorsToPump) : null,
-                bestFor: bestFor || null,
-                features: features || null,
-                image: imageUrl,
-                images: images
+        const productRecord = await ensureProductRecord(bouncyProduct);
+        if (!existingBouncyProductIds.has(productRecord.id)) {
+            let bouncerId = shouldReset
+                ? `BOUN-${String(idx + 1).padStart(3, "0")}`
+                : `BOUN-${String(productRecord.id).padStart(6, "0")}`;
+            if (existingBouncerIds.has(bouncerId)) {
+                console.warn(`Skipping bouncy castle with duplicate bouncerId: ${bouncerId}`);
+                continue;
             }
-        });
-        bouncyCount++;
+            await prisma.bouncyCastle.create({
+                data: {
+                    bouncerId,
+                    name: name,
+                    productId: productRecord.id,
+                    capacity: capacity || null,
+                    recommendedAge: recommendedAge,
+                    priceRange: row.price?.trim() || null,
+                    motorsToPump: Number.isFinite(Number(motorsToPump)) ? Number(motorsToPump) : null,
+                    bestFor: bestFor || null,
+                    features: features || null,
+                    image: imageUrl,
+                    images: images
+                }
+            });
+            existingBouncyProductIds.add(productRecord.id);
+            existingBouncerIds.add(bouncerId);
+            bouncyCount++;
+        }
     }
-    console.log(`✅ BOUNCY CASTLES: Synced ${bouncyCount} items.`);
+    console.log(`✅ BOUNCY CASTLES: Added ${bouncyCount} items.`);
 
     // 5. Process Indoor Games
     console.log("\n📂 Reading Indoor Games...");
     let indoorCount = 0;
 
-    try {
-        await prisma.$executeRaw`TRUNCATE TABLE "indoor_games" RESTART IDENTITY CASCADE`;
-        console.log("🔄 Indoor games table truncated and identity reset.");
-    } catch (err) {
-        console.warn("Could not truncate indoor_games table:", err?.message || err);
+    if (shouldReset) {
+        try {
+            await prisma.$executeRaw`TRUNCATE TABLE "indoor_games" RESTART IDENTITY CASCADE`;
+            console.log("🔄 Indoor games table truncated and identity reset.");
+        } catch (err) {
+            console.warn("Could not truncate indoor_games table:", err?.message || err);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving indoor games.");
     }
 
     const indoorRows = await readRentalsCsv('data/indoor_games.csv');
@@ -619,45 +675,47 @@ async function importAllProducts() {
             isActive: true
         };
 
-        const productRecord = await prisma.product.upsert({
-            where: { sku: indoorProduct.sku },
-            update: indoorProduct,
-            create: indoorProduct
-        });
+        const productRecord = await ensureProductRecord(indoorProduct);
 
         const piecesTotal = row.piecesTotal ? parseInt(row.piecesTotal, 10) : null;
         const piecesMissing = row.piecesMissing ? parseInt(row.piecesMissing, 10) : null;
 
-        await prisma.indoorGame.create({
-            data: {
-                name: name,
-                productId: productRecord.id,
-                quantity: quantity,
-                price: price,
-                rate: row.rate || null,
-                availability: row.availability || null,
-                category: category,
-                image: imageUrl,
-                page: row.page || null,
-                piecesTotal: Number.isFinite(piecesTotal) ? piecesTotal : null,
-                piecesMissing: Number.isFinite(piecesMissing) ? piecesMissing : null
-            }
-        });
-
-        indoorCount++;
+        if (!existingIndoorProductIds.has(productRecord.id)) {
+            await prisma.indoorGame.create({
+                data: {
+                    name: name,
+                    productId: productRecord.id,
+                    quantity: quantity,
+                    price: price,
+                    rate: row.rate || null,
+                    availability: row.availability || null,
+                    category: category,
+                    image: imageUrl,
+                    page: row.page || null,
+                    piecesTotal: Number.isFinite(piecesTotal) ? piecesTotal : null,
+                    piecesMissing: Number.isFinite(piecesMissing) ? piecesMissing : null
+                }
+            });
+            existingIndoorProductIds.add(productRecord.id);
+            indoorCount++;
+        }
     }
 
-    console.log(`✅ INDOOR GAMES: Synced ${indoorCount} items.`);
+    console.log(`✅ INDOOR GAMES: Added ${indoorCount} items.`);
 
     // 6. Process Shop Items (from JSON)
     console.log("\n📂 Reading Shop Items...");
     let shopCount = 0;
 
-    try {
-        await prisma.$executeRaw`TRUNCATE TABLE "shop_items" RESTART IDENTITY CASCADE`;
-        console.log("🔄 Shop items table truncated and identity reset.");
-    } catch (err) {
-        console.warn("Could not truncate shop_items table:", err?.message || err);
+    if (shouldReset) {
+        try {
+            await prisma.$executeRaw`TRUNCATE TABLE "shop_items" RESTART IDENTITY CASCADE`;
+            console.log("🔄 Shop items table truncated and identity reset.");
+        } catch (err) {
+            console.warn("Could not truncate shop_items table:", err?.message || err);
+        }
+    } else {
+        console.log("ℹ️  IMPORT_RESET not set. Preserving shop items.");
     }
 
     const shopItems = await readCsvWithHeadersRelaxed('data/inventory.csv');
@@ -692,11 +750,7 @@ async function importAllProducts() {
             isActive: isActive
         };
 
-        const productRecord = await prisma.product.upsert({
-            where: { sku: shopProduct.sku },
-            update: shopProduct,
-            create: shopProduct
-        });
+        const productRecord = await ensureProductRecord(shopProduct);
 
         shopItemRows.set(productRecord.id, {
             name: name,
@@ -744,11 +798,16 @@ async function importAllProducts() {
 
     const shopItemData = Array.from(shopItemRows.values());
     if (shopItemData.length) {
-        await prisma.shopItem.createMany({ data: shopItemData, skipDuplicates: true });
+        for (const item of shopItemData) {
+            const { productId, ...rest } = item;
+            if (existingShopProductIds.has(productId)) continue;
+            await prisma.shopItem.create({ data: { productId, ...rest } });
+            existingShopProductIds.add(productId);
+            shopCount += 1;
+        }
     }
 
-    shopCount = shopItemData.length;
-    console.log(`✅ SHOP ITEMS: Synced ${shopCount} items.`);
+    console.log(`✅ SHOP ITEMS: Added ${shopCount} items.`);
 }
 
 importAllProducts()

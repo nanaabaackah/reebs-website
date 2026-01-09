@@ -4,6 +4,8 @@ import fs from "fs";
 import Papa from "papaparse";
 import { prisma } from "./prismaClient.js";
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 const toCents = (value) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
@@ -85,7 +87,7 @@ async function importMaintenanceLogs() {
   const openProductIds = [
     ...new Set(logsToCreate.filter((log) => log.status === "open").map((log) => log.productId)),
   ];
-  if (openProductIds.length) {
+  if (shouldReset && openProductIds.length) {
     await prisma.product.updateMany({
       where: { id: { in: openProductIds } },
       data: { isActive: false },

@@ -2,6 +2,7 @@
 // Filename: orderStats.js
 import "dotenv/config";
 import { Client } from "pg";
+import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
 const statusColumnStatements = [
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isArchived" BOOLEAN DEFAULT false`,
@@ -49,6 +50,7 @@ export async function handler() {
       expenseTotalSummary,
       maintenanceOpenSummary,
       maintenanceCostSummary,
+      deliveryFeeRows,
     ] = await Promise.all([
       client.query(
         `SELECT
@@ -146,10 +148,19 @@ export async function handler() {
          FROM "maintenanceLog"
          WHERE "createdAt" >= NOW() - INTERVAL '${windowDays} days'`
       ),
+      client.query(
+        `SELECT "deliveryMethod", "deliveryDetails"
+         FROM "order"
+         WHERE "orderDate" >= NOW() - INTERVAL '${windowDays} days'`
+      ),
     ]);
 
     const orders = orderSummary.rows[0]?.orders || 0;
-    const revenueCents = Number(orderSummary.rows[0]?.revenue_cents || 0);
+    const deliveryFeeCents = (deliveryFeeRows.rows || []).reduce((sum, row) => {
+      const { feeCents } = getDeliveryFeeDetails(row.deliveryMethod, row.deliveryDetails);
+      return sum + feeCents;
+    }, 0);
+    const revenueCents = Number(orderSummary.rows[0]?.revenue_cents || 0) + deliveryFeeCents;
     const units = unitsSummary.rows[0]?.units || 0;
     const bookings = bookingSummary.rows[0]?.bookings || 0;
     const bookingRevenueCents = Number(bookingSummary.rows[0]?.revenue_cents || 0);
