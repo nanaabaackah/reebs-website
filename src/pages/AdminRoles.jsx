@@ -18,6 +18,7 @@ const ROLE_OPTIONS = [
 ];
 const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 
+const PERMISSION_KEY = "reebs_permission_matrix";
 const generateEmailFromNames = (firstName, lastName) => {
   const clean = (value) => (value || "").trim().replace(/\s+/g, "").toLowerCase();
   const first = clean(firstName);
@@ -33,6 +34,43 @@ const formatDate = (value) => {
   return date.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
+const buildDefaultPermissions = (role = "") => {
+  const normalized = (role || "").toLowerCase();
+  const isAdmin = normalized === "admin";
+  return {
+    inventoryView: true,
+    inventoryEdit: true,
+    inventoryAdjustStock: isAdmin,
+    bookingsView: true,
+    bookingsCreate: true,
+    financialViewDash: isAdmin,
+    crmView: true,
+    crmEditContacts: true,
+  };
+};
+
+const loadStoredPermissions = (userId, role) => {
+  if (typeof window === "undefined" || !Number.isFinite(userId)) return {};
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PERMISSION_KEY) || "{}");
+    const entry = stored[userId];
+    return entry ? { ...entry } : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistPermissions = (userId, permissions) => {
+  if (typeof window === "undefined" || !Number.isFinite(userId)) return;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(PERMISSION_KEY) || "{}");
+    const next = { ...stored, [userId]: permissions };
+    window.localStorage.setItem(PERMISSION_KEY, JSON.stringify(next));
+  } catch {
+    /* swallow */
+  }
+};
+
 function AdminRoles() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +79,7 @@ function AdminRoles() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [detailUser, setDetailUser] = useState(null);
   const [detailRole, setDetailRole] = useState("Staff");
+  const [detailPermissions, setDetailPermissions] = useState({});
   const [permissionSaving, setPermissionSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState("");
   const [permissionError, setPermissionError] = useState("");
@@ -56,9 +95,26 @@ function AdminRoles() {
     setPermissionError("");
   };
 
+  const togglePermission = (key) => {
+    setDetailPermissions((prev) => ({
+      ...prev,
+      [key]: !Boolean(prev[key]),
+    }));
+  };
+
   const { user: authUser } = useAuth();
   const normalizedAuthEmail = (authUser?.email || "").toLowerCase();
   const isSystemAdmin = normalizedAuthEmail === SYSTEM_ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (!detailUser) {
+      setDetailPermissions({});
+      return;
+    }
+    const defaults = buildDefaultPermissions(detailUser.role);
+    const stored = loadStoredPermissions(detailUser.id, detailUser.role);
+    setDetailPermissions({ ...defaults, ...stored });
+  }, [detailUser?.id, detailUser?.role]);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -171,6 +227,7 @@ function AdminRoles() {
 
   const savePermissions = async () => {
     if (!detailUser) return;
+    const targetUserId = detailUser.id;
     setPermissionSaving(true);
     setPermissionStatus("");
     setPermissionError("");
@@ -197,6 +254,9 @@ function AdminRoles() {
       setDetailUser((prev) => (prev?.id === data.id ? { ...prev, ...data } : prev));
       setDetailRole(data.role || detailRole);
       setPermissionStatus("Permissions saved.");
+      persistPermissions(targetUserId, {
+        ...detailPermissions,
+      });
     } catch (err) {
       console.error("Permission save failed", err);
       setPermissionError(err.message || "Failed to save permissions.");
@@ -477,29 +537,85 @@ function AdminRoles() {
               <div className="roles-matrix-row">
                 <span>Inventory</span>
                 <div className="roles-matrix-perms">
-                  <label><input type="checkbox" defaultChecked /> View</label>
-                  <label><input type="checkbox" defaultChecked /> Edit</label>
-                  <label><input type="checkbox" defaultChecked={detailUser.role?.toLowerCase() === "admin"} /> Adjust stock</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.inventoryView)}
+                      onChange={() => togglePermission("inventoryView")}
+                    />
+                    View
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.inventoryEdit)}
+                      onChange={() => togglePermission("inventoryEdit")}
+                    />
+                    Edit
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.inventoryAdjustStock)}
+                      onChange={() => togglePermission("inventoryAdjustStock")}
+                    />
+                    Adjust stock
+                  </label>
                 </div>
               </div>
               <div className="roles-matrix-row">
                 <span>Bookings</span>
                 <div className="roles-matrix-perms">
-                  <label><input type="checkbox" defaultChecked /> View</label>
-                  <label><input type="checkbox" defaultChecked /> Create</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.bookingsView)}
+                      onChange={() => togglePermission("bookingsView")}
+                    />
+                    View
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.bookingsCreate)}
+                      onChange={() => togglePermission("bookingsCreate")}
+                    />
+                    Create
+                  </label>
                 </div>
               </div>
               <div className="roles-matrix-row">
                 <span>Financials</span>
                 <div className="roles-matrix-perms">
-                  <label><input type="checkbox" defaultChecked={detailUser.role?.toLowerCase() === "admin"} /> View dashboards</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.financialViewDash)}
+                      onChange={() => togglePermission("financialViewDash")}
+                    />
+                    View dashboards
+                  </label>
                 </div>
               </div>
               <div className="roles-matrix-row">
                 <span>CRM</span>
                 <div className="roles-matrix-perms">
-                  <label><input type="checkbox" defaultChecked /> View</label>
-                  <label><input type="checkbox" defaultChecked /> Edit contacts</label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.crmView)}
+                      onChange={() => togglePermission("crmView")}
+                    />
+                    View
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(detailPermissions.crmEditContacts)}
+                      onChange={() => togglePermission("crmEditContacts")}
+                    />
+                    Edit contacts
+                  </label>
                 </div>
               </div>
             </div>
