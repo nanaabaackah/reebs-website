@@ -9,7 +9,22 @@ const roleColors = {
   staff: "blue",
   custodian: "green",
   manager: "red",
+  warehouse: "blue",
+  driver: "green",
+  viewer: "purple",
+  sales: "blue",
 };
+
+const ROLE_OPTIONS = [
+  "Admin",
+  "Manager",
+  "Staff",
+  "Warehouse",
+  "Driver",
+  "Viewer",
+  "Custodian",
+  "Sales",
+];
 
 const generateEmailFromNames = (firstName, lastName) => {
   const clean = (value) => (value || "").trim().replace(/\s+/g, "").toLowerCase();
@@ -33,11 +48,21 @@ function AdminRoles() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [detailUser, setDetailUser] = useState(null);
+  const [detailRole, setDetailRole] = useState("Staff");
+  const [permissionSaving, setPermissionSaving] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState("");
+  const [permissionError, setPermissionError] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteSaving, setInviteSaving] = useState(false);
   const [inviteError, setInviteError] = useState("");
   const [inviteForm, setInviteForm] = useState({ firstName: "", lastName: "", role: "Staff", password: "" });
   const [openMenuId, setOpenMenuId] = useState(null);
+  const openDetailModal = (user) => {
+    setDetailUser(user);
+    setDetailRole(user.role || "Staff");
+    setPermissionStatus("");
+    setPermissionError("");
+  };
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -148,6 +173,39 @@ function AdminRoles() {
     }
   };
 
+  const savePermissions = async () => {
+    if (!detailUser) return;
+    setPermissionSaving(true);
+    setPermissionStatus("");
+    setPermissionError("");
+    try {
+      const response = await fetch("/.netlify/functions/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: detailUser.id,
+          firstName: detailUser.firstName || detailUser.fullName?.split(" ")?.[0] || "",
+          lastName:
+            detailUser.lastName || detailUser.fullName?.split(" ").slice(1).join(" ") || "",
+          role: detailRole,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Failed to save permissions");
+      setUsers((prev) =>
+        prev.map((user) => (user.id === data.id ? { ...user, ...data } : user))
+      );
+      setDetailUser((prev) => (prev?.id === data.id ? { ...prev, ...data } : prev));
+      setDetailRole(data.role || detailRole);
+      setPermissionStatus("Permissions saved.");
+    } catch (err) {
+      console.error("Permission save failed", err);
+      setPermissionError(err.message || "Failed to save permissions.");
+    } finally {
+      setPermissionSaving(false);
+    }
+  };
+
   return (
     <div className="roles-page">
       <div className="roles-shell">
@@ -240,8 +298,8 @@ function AdminRoles() {
           {!loading && error && <p className="accounting-error">{error}</p>}
           {!loading && !error && (
             <div className="roles-table-wrapper">
-              <table className="roles-table">
-                <thead>
+          <table className="roles-table">
+            <thead>
                   <tr>
                     <th>User</th>
                     <th>Role</th>
@@ -253,7 +311,7 @@ function AdminRoles() {
                     const roleKey = (user.role || "").toLowerCase();
                     const menuOpen = openMenuId === user.id;
                     return (
-                      <tr key={user.id} onClick={() => setDetailUser(user)} className="roles-row">
+                        <tr key={user.id} onClick={() => openDetailModal(user)} className="roles-row">
                         <td>
                           <div className="roles-user">
                             <strong>{user.fullName || user.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed"}</strong>
@@ -280,7 +338,7 @@ function AdminRoles() {
                             </button>
                             {menuOpen && (
                               <div className="roles-menu-list">
-                                <button type="button" onClick={() => { setDetailUser(user); setOpenMenuId(null); }}>
+                                <button type="button" onClick={() => { openDetailModal(user); setOpenMenuId(null); }}>
                                   Edit permissions
                                 </button>
                                 <button type="button" onClick={() => setOpenMenuId(null)}>Reset password</button>
@@ -386,7 +444,19 @@ function AdminRoles() {
               <div>
                 <p className="customers-eyebrow">Permissions</p>
                 <h2>{detailUser.fullName || detailUser.name || [detailUser.firstName, detailUser.lastName].filter(Boolean).join(" ") || "User"}</h2>
-                <p className="roles-sub">{detailUser.email}</p>
+                 <p className="roles-sub">{detailUser.email}</p>
+                <label className="roles-detail-role">
+                  Role
+                  <select value={detailRole} onChange={(event) => setDetailRole(event.target.value)}>
+                    {ROLE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {permissionStatus && <p className="roles-success">{permissionStatus}</p>}
+                {permissionError && <p className="roles-error">{permissionError}</p>}
               </div>
               <button
                 type="button"
@@ -427,14 +497,19 @@ function AdminRoles() {
                 </div>
               </div>
             </div>
-            <div className="customers-form-actions">
-              <button type="button" className="customers-secondary" onClick={() => setDetailUser(null)}>
-                Close
-              </button>
-              <button type="button" className="customers-primary">
-                Save changes
-              </button>
-            </div>
+              <div className="customers-form-actions">
+                <button type="button" className="customers-secondary" onClick={() => setDetailUser(null)}>
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="customers-primary"
+                  onClick={savePermissions}
+                  disabled={permissionSaving}
+                >
+                  {permissionSaving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
           </div>
         </div>
       )}
