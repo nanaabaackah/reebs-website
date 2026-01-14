@@ -17,6 +17,19 @@ const buildEmailFromNames = (firstName, lastName) => {
 const buildFullName = (firstName, lastName) => {
   return [cleanNamePart(firstName), cleanNamePart(lastName)].filter(Boolean).join(" ").trim();
 };
+const cleanPermissions = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -71,6 +84,7 @@ export async function handler(event) {
       const lastName = cleanNamePart(payload.lastName);
       const password = typeof payload.password === "string" ? payload.password.trim() : "";
       const role = typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : "Staff";
+      const permissions = cleanPermissions(payload.permissions) || {};
 
       if (!firstName || !lastName) {
         return {
@@ -102,10 +116,10 @@ export async function handler(event) {
       try {
         const passwordHash = await hashPassword(password);
         const result = await client.query(
-          `INSERT INTO "user" ("organizationId", "email", "password", "firstName", "lastName", "fullName", "role", "createdAt", "updatedAt")
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-           RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
-          [organizationId, email, passwordHash, firstName, lastName, fullName, role]
+        `INSERT INTO "user" ("organizationId", "email", "password", "firstName", "lastName", "fullName", "role", permissions, "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+           RETURNING id, email, "firstName", "lastName", "fullName", role, permissions, "createdAt", "updatedAt"`,
+          [organizationId, email, passwordHash, firstName, lastName, fullName, role, permissions]
         );
 
         return {
@@ -141,6 +155,7 @@ export async function handler(event) {
       const lastName = lastNameRaw === undefined ? null : cleanNamePart(lastNameRaw);
       const requestedRole =
         typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : null;
+      const parsedPermissions = cleanPermissions(payload.permissions);
       const role = requestedRole;
       const password = typeof payload.password === "string" ? payload.password.trim() : null;
 
@@ -209,6 +224,11 @@ export async function handler(event) {
         values.push(role);
       }
 
+      if (parsedPermissions !== null) {
+        updates.push(`"permissions" = $${index++}`);
+        values.push(parsedPermissions);
+      }
+
       if (password) {
         const passwordHash = await hashPassword(password);
         updates.push(`"password" = $${index++}`);
@@ -232,7 +252,7 @@ export async function handler(event) {
         const result = await client.query(
           `UPDATE "user" SET ${updates.join(", ")}
            WHERE id = $${index} AND "organizationId" = $${index + 1}
-           RETURNING id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"`,
+           RETURNING id, email, "firstName", "lastName", "fullName", role, permissions, "createdAt", "updatedAt"`,
           values
         );
 
@@ -274,7 +294,7 @@ export async function handler(event) {
     }
 
     const result = await client.query(
-      `SELECT id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"
+      `SELECT id, email, "firstName", "lastName", "fullName", role, permissions, "createdAt", "updatedAt"
        FROM "user"
        WHERE "organizationId" = $1
        ORDER BY id DESC`,

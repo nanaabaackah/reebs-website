@@ -18,7 +18,6 @@ const ROLE_OPTIONS = [
 ];
 const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 
-const PERMISSION_KEY = "reebs_permission_matrix";
 const generateEmailFromNames = (firstName, lastName) => {
   const clean = (value) => (value || "").trim().replace(/\s+/g, "").toLowerCase();
   const first = clean(firstName);
@@ -49,26 +48,12 @@ const buildDefaultPermissions = (role = "") => {
   };
 };
 
-const loadStoredPermissions = (userId, role) => {
-  if (typeof window === "undefined" || !Number.isFinite(userId)) return {};
-  try {
-    const stored = JSON.parse(window.localStorage.getItem(PERMISSION_KEY) || "{}");
-    const entry = stored[userId];
-    return entry ? { ...entry } : {};
-  } catch {
-    return {};
+const normalizePermissions = (value, fallbackRole = "") => {
+  const defaults = buildDefaultPermissions(fallbackRole);
+  if (!value || typeof value !== "object") {
+    return defaults;
   }
-};
-
-const persistPermissions = (userId, permissions) => {
-  if (typeof window === "undefined" || !Number.isFinite(userId)) return;
-  try {
-    const stored = JSON.parse(window.localStorage.getItem(PERMISSION_KEY) || "{}");
-    const next = { ...stored, [userId]: permissions };
-    window.localStorage.setItem(PERMISSION_KEY, JSON.stringify(next));
-  } catch {
-    /* swallow */
-  }
+  return { ...defaults, ...value };
 };
 
 function AdminRoles() {
@@ -107,14 +92,8 @@ function AdminRoles() {
   const isSystemAdmin = normalizedAuthEmail === SYSTEM_ADMIN_EMAIL;
 
   useEffect(() => {
-    if (!detailUser) {
-      setDetailPermissions({});
-      return;
-    }
-    const defaults = buildDefaultPermissions(detailUser.role);
-    const stored = loadStoredPermissions(detailUser.id, detailUser.role);
-    setDetailPermissions({ ...defaults, ...stored });
-  }, [detailUser?.id, detailUser?.role]);
+    setDetailPermissions(normalizePermissions(detailUser?.permissions, detailUser?.role));
+  }, [detailUser?.id, detailUser?.permissions, detailUser?.role]);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -233,10 +212,11 @@ function AdminRoles() {
     setPermissionError("");
     try {
       const body = {
-        id: detailUser.id,
-        firstName: detailUser.firstName || detailUser.fullName?.split(" ")?.[0] || "",
-        lastName:
-          detailUser.lastName || detailUser.fullName?.split(" ").slice(1).join(" ") || "",
+      id: targetUserId,
+      firstName: detailUser.firstName || detailUser.fullName?.split(" ")?.[0] || "",
+      lastName:
+        detailUser.lastName || detailUser.fullName?.split(" ").slice(1).join(" ") || "",
+      permissions: detailPermissions,
       };
       if (isSystemAdmin) {
         body.role = detailRole;
@@ -253,10 +233,8 @@ function AdminRoles() {
       );
       setDetailUser((prev) => (prev?.id === data.id ? { ...prev, ...data } : prev));
       setDetailRole(data.role || detailRole);
+      setDetailPermissions(normalizePermissions(data.permissions, data.role || detailRole));
       setPermissionStatus("Permissions saved.");
-      persistPermissions(targetUserId, {
-        ...detailPermissions,
-      });
     } catch (err) {
       console.error("Permission save failed", err);
       setPermissionError(err.message || "Failed to save permissions.");

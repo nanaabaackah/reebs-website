@@ -18,23 +18,29 @@ const parseDate = (value) => {
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
 
-const parseOptionalDate = (value, fallback = null) => {
-  if (!value) return fallback;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? fallback : date;
-};
-
-const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
-
 async function importExpenses() {
   if (shouldReset) {
     await prisma.$executeRaw`TRUNCATE TABLE "expense" RESTART IDENTITY CASCADE`;
     await prisma.$executeRaw`TRUNCATE TABLE "maintenanceLog" RESTART IDENTITY CASCADE`;
     console.log("🔄 Cleared expenses and maintenance logs.");
+  } else {
+    await prisma.expense.deleteMany();
+    await prisma.maintenanceLog.deleteMany();
+    console.log("🔄 Cleared expenses and maintenance logs.");
   }
 
-  const file = fs.readFileSync("data/expenses.csv", "utf8");
+  const filePath = "data/expenses.csv";
+  if (!fs.existsSync(filePath)) {
+    console.log("ℹ️  Expense import disabled; CSV missing.");
+    return;
+  }
+
+  const file = fs.readFileSync(filePath, "utf8");
   const { data } = Papa.parse(file, { header: true, skipEmptyLines: true });
+  if (!data.length) {
+    console.log("No expense rows to import.");
+    return;
+  }
 
   const orders = await prisma.order.findMany({
     select: { id: true, deliveryMethod: true },
@@ -71,13 +77,11 @@ async function importExpenses() {
     });
   if (!filtered.length) {
     console.log("No expense rows to import.");
-  } else {
-    await prisma.expense.createMany({ data: filtered });
-    console.log(`✅ Imported ${filtered.length} expenses.`);
+    return;
   }
 
-  await prisma.maintenanceLog.deleteMany();
-  console.log("ℹ️  Maintenance logs import disabled; table cleared.");
+  await prisma.expense.createMany({ data: filtered });
+  console.log(`✅ Imported ${filtered.length} expenses.`);
 }
 
 importExpenses()

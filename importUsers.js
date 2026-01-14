@@ -53,6 +53,17 @@ const buildFullName = (firstName, lastName) => {
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
 
+const parsePermissions = (value) => {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
 const profileDefaults = (jobTitle, phone, emergencyContactName, emergencyContactPhone) => ({
   jobTitle: jobTitle || "Team Member",
   phone: phone || "0244000000",
@@ -279,6 +290,7 @@ async function importUsers() {
     const email = buildEmailFromNames(firstName, lastName);
     const role = cleanNamePart(row.role) || "Staff";
     const rawPassword = resolvePassword(row, email, secretsIndex);
+    const parsedPermissions = parsePermissions(row.permissions);
     const jobTitle = cleanText(row.jobTitle) || null;
     const phone = cleanText(row.phone) || null;
     const emergencyContactName = cleanText(row.emergencyContactName) || null;
@@ -306,6 +318,9 @@ async function importUsers() {
       if (existing.lastName !== lastName) updates.lastName = lastName;
       if (existing.fullName !== fullName) updates.fullName = fullName;
       if (existing.role !== role) updates.role = role;
+      if (parsedPermissions && JSON.stringify(existing.permissions || {}) !== JSON.stringify(parsedPermissions)) {
+        updates.permissions = parsedPermissions;
+      }
 
       if (Object.keys(updates).length) {
         const updatedUser = await prisma.user.update({ where: { email }, data: updates });
@@ -342,6 +357,7 @@ async function importUsers() {
       lastName,
       fullName,
       role,
+      permissions: parsedPermissions || {},
     };
 
     if (Number.isFinite(id)) {
