@@ -4365,7 +4365,7 @@ body.shop-theme{
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.4rem;
   padding: clamp(1.2rem, 3vw, 1.8rem) 0 2.4rem;
   z-index: 70;
@@ -5384,7 +5384,7 @@ body.shop-theme{
     margin-top: 2rem;
   }
   .shop-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
     padding: 1rem 0 1.6rem;
   }
