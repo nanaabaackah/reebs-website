@@ -106,7 +106,7 @@ async function importTransactionalData() {
     // 1. Read Data
     const usersData = await readCsv('data/users.csv');
     const secretsIndex = buildSecretsIndex(await readCsvOptional('data/users.secrets.csv'));
-    const customersData = await readCsv('data/customers.csv'); 
+    const customersData = await readCsvOptional('data/customers.csv'); 
     const ordersData = await readCsvOptional('data/orders.csv');
     const orderItemsData = await readCsvOptional('data/orderItems.csv');
     const stockMovementsData = await readCsv('data/stockMovements.csv');
@@ -115,6 +115,9 @@ async function importTransactionalData() {
         `\nFound ${usersData.length} users, ${customersData.length} customers, ${ordersData.length} orders, ${orderItemsData.length} order items, and ${stockMovementsData.length} stock movements.`
     );
 
+    if (!customersData.length) {
+        console.log("ℹ️  No customers.csv file present; customer records will remain empty.");
+    }
     if (!ordersData.length) {
         console.log("ℹ️  No orders.csv file present; order records will remain empty.");
     }
@@ -212,15 +215,20 @@ async function importTransactionalData() {
         console.log(`✅ Imported ${employeeProfiles.length} Employee Profiles.`);
     }
 
-    // 4. Import Customers 
-    const customersToCreate = customersData.map(row => ({
-        id: parseInt(row.id, 10), 
-        name: row.name,
-        email: row.email || null,
-        phone: row.phone || null,
-    }));
-    await prisma.customer.createMany({ data: customersToCreate, skipDuplicates: true });
-    console.log(`✅ Imported ${customersToCreate.length} Customers.`);
+    // 4. Import Customers
+    if (!customersData.length) {
+        await prisma.$executeRaw`TRUNCATE TABLE "customer" RESTART IDENTITY CASCADE`;
+        console.log("ℹ️  Customer import disabled; table cleared.");
+    } else {
+        const customersToCreate = customersData.map(row => ({
+            id: parseInt(row.id, 10),
+            name: row.name,
+            email: row.email || null,
+            phone: row.phone || null,
+        }));
+        await prisma.customer.createMany({ data: customersToCreate, skipDuplicates: true });
+        console.log(`✅ Imported ${customersToCreate.length} Customers.`);
+    }
 
 
     // 5. Import Orders (Uses total_amount)
