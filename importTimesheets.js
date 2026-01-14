@@ -4,6 +4,8 @@ import fs from "fs";
 import Papa from "papaparse";
 import { Client } from "pg";
 
+const shouldReset = process.env.IMPORT_RESET === "true";
+
 const tableStatements = [
   `CREATE TABLE IF NOT EXISTS "timesheet" (
     "id" SERIAL PRIMARY KEY,
@@ -69,6 +71,11 @@ async function importTimesheets() {
   try {
     await client.connect();
     await ensureTimesheetTable(client);
+
+    if (shouldReset) {
+      await client.query(`TRUNCATE TABLE "timesheet" RESTART IDENTITY CASCADE`);
+      console.log("🔄 Cleared timesheets.");
+    }
 
     const file = fs.readFileSync("data/timesheets.csv", "utf8");
     const { data } = Papa.parse(file, { header: true, skipEmptyLines: true });

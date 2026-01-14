@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const tasks = [
   { label: "Vendors", script: "importVendors.js" },
   { label: "Products", script: "importProducts.js" },
+  { label: "Orders + Bookings", script: "importOrders.js" },
   { label: "Expenses + Maintenance", script: "importExpenses.js" },
   { label: "Timesheets", script: "importTimesheets.js" },
 ];

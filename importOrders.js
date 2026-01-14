@@ -31,6 +31,12 @@ function readCsv(filePath) {
     });
 }
 
+const readCsvOptional = async (filePath) => {
+    const fullPath = path.resolve(filePath);
+    if (!fs.existsSync(fullPath)) return [];
+    return readCsv(filePath);
+};
+
 const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
 
 const buildEmailFromNames = (firstName, lastName) => {
@@ -52,6 +58,42 @@ const toInt = (value, fallback = 0) => {
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
 
+const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
+const profileDefaults = (jobTitle, phone, emergencyContactName, emergencyContactPhone) => ({
+    jobTitle: jobTitle || "Team Member",
+    phone: phone || "0244000000",
+    emergencyContactName: emergencyContactName || "Reebs Support",
+    emergencyContactPhone: emergencyContactPhone || "0201000000",
+});
+
+const buildSecretsIndex = (rows) => {
+    const byId = new Map();
+    const byEmail = new Map();
+    for (const row of rows) {
+        const id = row.id ? parseInt(row.id, 10) : NaN;
+        const email = cleanText(row.email).toLowerCase();
+        const password = cleanText(row.password);
+        if (!password) continue;
+        if (Number.isFinite(id)) byId.set(id, password);
+        if (email) byEmail.set(email, password);
+    }
+    return { byId, byEmail };
+};
+
+const resolvePassword = (row, email, secretsIndex) => {
+    const inline = cleanText(row.password);
+    if (inline) return inline;
+    const id = row.id ? parseInt(row.id, 10) : NaN;
+    if (Number.isFinite(id) && secretsIndex.byId.has(id)) {
+        return secretsIndex.byId.get(id);
+    }
+    const emailKey = cleanText(email).toLowerCase();
+    if (emailKey && secretsIndex.byEmail.has(emailKey)) {
+        return secretsIndex.byEmail.get(emailKey);
+    }
+    return "";
+};
+
 const toDate = (value) => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -63,6 +105,7 @@ async function importTransactionalData() {
     
     // 1. Read Data
     const usersData = await readCsv('data/users.csv');
+    const secretsIndex = buildSecretsIndex(await readCsvOptional('data/users.secrets.csv'));
     const customersData = await readCsv('data/customers.csv'); 
     const ordersData = await readCsv('data/orders.csv');
     const orderItemsData = await readCsv('data/orderItems.csv');
@@ -101,7 +144,7 @@ async function importTransactionalData() {
         const lastName = cleanNamePart(row.lastName);
         const fullName = buildFullName(firstName, lastName);
         const email = buildEmailFromNames(firstName, lastName);
-        const rawPassword = typeof row.password === "string" ? row.password.trim() : "";
+        const rawPassword = resolvePassword(row, email, secretsIndex);
 
         if (!firstName || !lastName) {
             throw new Error("User rows must include firstName and lastName.");
@@ -110,7 +153,9 @@ async function importTransactionalData() {
             throw new Error(`Could not generate email for ${firstName} ${lastName}`);
         }
         if (!rawPassword) {
-            throw new Error(`User ${firstName} ${lastName} is missing a password.`);
+            throw new Error(
+                `User ${firstName} ${lastName} is missing a password (set data/users.secrets.csv or data/users.csv).`
+            );
         }
 
         const user = {
@@ -135,17 +180,20 @@ async function importTransactionalData() {
         .map((row) => {
             const userId = row.id ? parseInt(row.id, 10) : undefined;
             if (!Number.isFinite(userId)) return null;
-            const jobTitle = cleanText(row.jobTitle) || null;
-            const phone = cleanText(row.phone) || null;
-            const emergencyContactName = cleanText(row.emergencyContactName) || null;
-            const emergencyContactPhone = cleanText(row.emergencyContactPhone) || null;
-            if (!jobTitle && !phone && !emergencyContactName && !emergencyContactPhone) return null;
+            const email =
+                buildEmailFromNames(row.firstName, row.lastName) ||
+                cleanText(row.email || "");
+            if (email.toLowerCase() === SYSTEM_ADMIN_EMAIL) {
+                return null;
+            }
             return {
                 userId,
-                jobTitle,
-                phone,
-                emergencyContactName,
-                emergencyContactPhone,
+                ...profileDefaults(
+                    row.jobTitle,
+                    row.phone,
+                    row.emergencyContactName,
+                    row.emergencyContactPhone
+                ),
             };
         })
         .filter(Boolean);

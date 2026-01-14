@@ -98,6 +98,12 @@ async function importMaintenanceLogs() {
 }
 
 async function importExpenses() {
+  if (shouldReset) {
+    await prisma.$executeRaw`TRUNCATE TABLE "expense" RESTART IDENTITY CASCADE`;
+    await prisma.$executeRaw`TRUNCATE TABLE "maintenanceLog" RESTART IDENTITY CASCADE`;
+    console.log("🔄 Cleared expenses and maintenance logs.");
+  }
+
   const file = fs.readFileSync("data/expenses.csv", "utf8");
   const { data } = Papa.parse(file, { header: true, skipEmptyLines: true });
 

@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 *.local
+data/users.secrets.csv
 
 # Editor directories and files
 .vscode/*

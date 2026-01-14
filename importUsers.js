@@ -7,6 +7,7 @@ import { parse } from "csv-parse";
 import { hashPassword } from "./utils/passwords.js";
 
 const shouldReset = process.env.IMPORT_RESET === "true";
+const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 
 const readCsv = (filePath) =>
   new Promise((resolve, reject) => {
@@ -30,6 +31,12 @@ const readCsv = (filePath) =>
     });
   });
 
+const readCsvOptional = async (filePath) => {
+  const fullPath = path.resolve(filePath);
+  if (!fs.existsSync(fullPath)) return [];
+  return readCsv(filePath);
+};
+
 const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
 
 const buildEmailFromNames = (firstName, lastName) => {
@@ -45,6 +52,41 @@ const buildFullName = (firstName, lastName) => {
 };
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const profileDefaults = (jobTitle, phone, emergencyContactName, emergencyContactPhone) => ({
+  jobTitle: jobTitle || "Team Member",
+  phone: phone || "0244000000",
+  emergencyContactName: emergencyContactName || "Reebs Support",
+  emergencyContactPhone: emergencyContactPhone || "0201000000",
+});
+
+const buildSecretsIndex = (rows) => {
+  const byId = new Map();
+  const byEmail = new Map();
+  for (const row of rows) {
+    const id = row.id ? parseInt(row.id, 10) : NaN;
+    const email = cleanText(row.email).toLowerCase();
+    const password = cleanText(row.password);
+    if (!password) continue;
+    if (Number.isFinite(id)) byId.set(id, password);
+    if (email) byEmail.set(email, password);
+  }
+  return { byId, byEmail };
+};
+
+const resolvePassword = (row, email, secretsIndex) => {
+  const inline = cleanText(row.password);
+  if (inline) return inline;
+  const id = row.id ? parseInt(row.id, 10) : NaN;
+  if (Number.isFinite(id) && secretsIndex.byId.has(id)) {
+    return secretsIndex.byId.get(id);
+  }
+  const emailKey = cleanText(email).toLowerCase();
+  if (emailKey && secretsIndex.byEmail.has(emailKey)) {
+    return secretsIndex.byEmail.get(emailKey);
+  }
+  return "";
+};
 
 async function importVendors() {
   const vendorData = await readCsv("data/vendors.csv");
@@ -221,6 +263,7 @@ const assignVendorItems = async () => {
 
 async function importUsers() {
   const usersData = await readCsv("data/users.csv");
+  const secretsIndex = buildSecretsIndex(await readCsvOptional("data/users.secrets.csv"));
   console.log(`Found ${usersData.length} users in data/users.csv`);
 
   let created = 0;
@@ -235,12 +278,14 @@ async function importUsers() {
     const fullName = buildFullName(firstName, lastName);
     const email = buildEmailFromNames(firstName, lastName);
     const role = cleanNamePart(row.role) || "Staff";
-    const rawPassword = typeof row.password === "string" ? row.password.trim() : "";
+    const rawPassword = resolvePassword(row, email, secretsIndex);
     const jobTitle = cleanText(row.jobTitle) || null;
     const phone = cleanText(row.phone) || null;
     const emergencyContactName = cleanText(row.emergencyContactName) || null;
     const emergencyContactPhone = cleanText(row.emergencyContactPhone) || null;
-    const hasProfileData = Boolean(jobTitle || phone || emergencyContactName || emergencyContactPhone);
+    const isSystemAdmin = email === SYSTEM_ADMIN_EMAIL;
+    const profileInfo = profileDefaults(jobTitle, phone, emergencyContactName, emergencyContactPhone);
+    const hasProfileData = !isSystemAdmin;
 
     if (!firstName || !lastName) {
       console.warn("Skipping row without first/last name:", row);
@@ -256,46 +301,35 @@ async function importUsers() {
     const existing = await prisma.user.findUnique({ where: { email } });
     let userId = existing?.id;
     if (existing) {
-      if (shouldReset) {
-        const updates = {};
-        if (existing.firstName !== firstName) updates.firstName = firstName;
-        if (existing.lastName !== lastName) updates.lastName = lastName;
-        if (existing.fullName !== fullName) updates.fullName = fullName;
-        if (existing.role !== role) updates.role = role;
+      const updates = {};
+      if (existing.firstName !== firstName) updates.firstName = firstName;
+      if (existing.lastName !== lastName) updates.lastName = lastName;
+      if (existing.fullName !== fullName) updates.fullName = fullName;
+      if (existing.role !== role) updates.role = role;
 
-        if (Object.keys(updates).length) {
-          const updatedUser = await prisma.user.update({ where: { email }, data: updates });
-          userId = updatedUser.id;
-          updated += 1;
-        } else {
-          skipped += 1;
-        }
+      if (Object.keys(updates).length) {
+        const updatedUser = await prisma.user.update({ where: { email }, data: updates });
+        userId = updatedUser.id;
+        updated += 1;
       } else {
         skipped += 1;
       }
+
       if (hasProfileData && userId) {
-        if (shouldReset) {
-          await prisma.employeeProfile.upsert({
-            where: { userId },
-            create: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
-            update: { jobTitle, phone, emergencyContactName, emergencyContactPhone },
-          });
-          profilesUpserted += 1;
-        } else {
-          const existingProfile = await prisma.employeeProfile.findUnique({ where: { userId } });
-          if (!existingProfile) {
-            await prisma.employeeProfile.create({
-              data: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
-            });
-            profilesUpserted += 1;
-          }
-        }
+        await prisma.employeeProfile.upsert({
+          where: { userId },
+          create: { userId, ...profileInfo },
+          update: profileInfo,
+        });
+        profilesUpserted += 1;
       }
       continue;
     }
 
     if (!rawPassword) {
-      console.warn(`Skipping ${fullName} because password is missing.`);
+      console.warn(
+        `Skipping ${fullName} because password is missing (set data/users.secrets.csv or data/users.csv).`
+      );
       skipped += 1;
       continue;
     }
@@ -320,7 +354,7 @@ async function importUsers() {
 
     if (hasProfileData && userId) {
       await prisma.employeeProfile.create({
-        data: { userId, jobTitle, phone, emergencyContactName, emergencyContactPhone },
+        data: { userId, ...profileInfo },
       });
       profilesUpserted += 1;
     }

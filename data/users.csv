@@ -1,12 +1,7 @@
 id,firstName,lastName,fullName,email,password,role,jobTitle,phone,emergencyContactName,emergencyContactPhone
-1,System,Admin,System Admin,system_admin@reebs.com,123456,Admin,System Administrator,0244238419,Ama Owusu,0201002001
-2,Maame Ebe,Ackah,Maame Ebe Ackah,maameebe_ackah@reebs.com,staffpass,Staff,Sales Associate,0244001122,Yaw Ackah,0201002002
-3,Mamaa Enyimah,Ackah,Mamaa Enyimah Ackah,mamaaenyimah_ackah@reebs.com,viewonly,Viewer,Warehouse Assistant,0245003300,Nana Mensah,0201002003
-4,Sabina,Ackah,Sabina Ackah,sabina_ackah@reebs.com,654321,Manager,Operations Manager,0244112233,Efua Boateng,0201002004
-5,Kwaku,Mensah,Kwaku Mensah,kwaku_mensah@reebs.com,driverpass,Driver,Delivery Driver,0245667788,Akwasi Mensah,0201002005
-6,Esi,Nyarko,Esi Nyarko,esi_nyarko@reebs.com,warehouse1,Warehouse,Warehouse Lead,0245332200,Adwoa Nyarko,0201002006
-7,Kojo,Asante,Kojo Asante,kojo_asante@reebs.com,sales2025,Sales,Sales Associate,0245889900,Nana Asante,0201002007
-8,Abena,Owusu,Abena Owusu,abena_owusu@reebs.com,staff2025,Staff,Inventory Clerk,0245774411,Akosua Owusu,0201002008
-9,Yaw,Agyeman,Yaw Agyeman,yaw_agyeman@reebs.com,driver2025,Driver,Delivery Driver,0245331122,Akua Agyeman,0201002009
-10,Efua,Sarpong,Efua Sarpong,efua_sarpong@reebs.com,attend2025,Attendant,Rental Attendant,0245887700,Kojo Sarpong,0201002010
-11,Josephine,Mensima,Josephine Mensima,josephine_mensima@reebs.com,attend2026,Attendant,Rental Attendant,0245007788,Mabel Mensima,0201002011
+1,System,Admin,System Admin,system_admin@reebs.com,,Admin,System Administrator,0244238419,Ama Owusu,0201002001
+2,Maame Ebe,Ackah,Maame Ebe Ackah,maameebe_ackah@reebs.com,,Staff,Sales Associate,0244001122,Yaw Ackah,0201002002
+3,Mamaa Enyimah,Ackah,Mamaa Enyimah Ackah,mamaaenyimah_ackah@reebs.com,,Viewer,Warehouse Assistant,0245003300,Nana Mensah,0201002003
+4,Sabina,Ackah,Sabina Ackah,sabina_ackah@reebs.com,,Manager,Operations Manager,0244112233,Efua Boateng,0201002004
+5,Ato,Ayensu,Ato Ayensu,ato_ayensu@reebs.com,,Driver,Delivery Driver,0245557788,Adjoa Ayensu,0201002012
+6,Sanndra,Mensah,Sanndra Mensah,sanndra_mensah@reebs.com,,Sales,Sales Associate,0245887788,Kwaku Mensah,0201002013

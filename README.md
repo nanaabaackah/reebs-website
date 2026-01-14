@@ -1,36 +1,146 @@
-# React + Vite
+# Reebs Hybrid ERP and SaaS Platform
+A unified operating system for hybrid retail and rental businesses.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Live Demo: https://reebspartythemes.netlify.app/
 
-Currently, two official plugins are available:
+## Project Overview
+Most ERP systems handle retail or rentals. Reebs ERP bridges both. It provides a unified inventory core that manages stock-based sales alongside time-based asset reservations, reconciled into a single financial ledger.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+What started as a bespoke solution for a Ghanaian retail and events company is being re-engineered into a SaaS platform designed to scale across multiple organizations while maintaining strict data isolation.
 
-## Expanding the ESLint configuration
+## Tech Stack
+- Frontend: React, Vite, React Router, Context (auth, cart, currency), CSS (global and component styles)
+- Backend: Node.js serverless functions on Netlify, REST API
+- Database: PostgreSQL (Railway)
+- Schema and migrations: Prisma
+- Queries and services: pg, Netlify Functions
+- Tooling: Playwright, ESLint, Netlify CLI
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Core Modules
+### Commerce Engine
+- Unified inventory for SKU sales and serialized rental assets
+- Order management with atomic writes
+- Booking system with date-based availability checks
 
-## Maps / Geocoding
+### Financial Intelligence
+- General ledger with revenue and cost attribution
+- Invoicing with branded PDF output
+- Expense tracking for net profit visibility
 
-The admin bookings "Map" view (see `src/pages/AdminScheduler.jsx`) renders a Leaflet map and geocodes venue addresses server-side via the Netlify function `netlify/functions/geocode.js`.
+### Logistics and Supply Chain
+- Dispatch workflows for delivery and pickup
+- Digital waivers with signature capture
+- Maintenance tracking for asset health
 
-- **Default geocoder:** OpenStreetMap Nominatim (free, but can be hit-or-miss for some local addresses)
-- **Optional fallback:** Google Geocoding API (more reliable for many addresses)
+### Workforce Management
+- HR profiles with role-based access control
+- Timesheets for operational crews
 
-To enable the Google fallback:
+### SaaS Infrastructure
+- Admin console for system oversight
+- Authentication and permissions for manager and staff roles
 
-- Set `GOOGLE_MAPS_API_KEY` in your Netlify environment variables (or locally in `.env` for `netlify dev`).
-- In Google Cloud Console, enable **Geocoding API** for the same project/key (billing is typically required).
+## Technical Highlights and Challenges
+### Hybrid inventory model
+Retail order items and rental bookings flow through a single checkout path. Serverless functions validate availability, pricing, and totals before committing changes.
 
-No additional npm package is required for geocoding; it’s just an HTTPS call from the Netlify function.
+### Integer-based financials
+All money values are stored as integer cents to avoid floating point drift.
 
-## WhatsApp order/booking notifications
+```js
+const toCents = (val) =>
+  Math.round(parseFloat(String(val).replace(/[^\d.-]/g, "")) * 100);
+```
 
-New orders and bookings can send a WhatsApp message to the manager via the Meta WhatsApp Cloud API.
+### Data normalization at the API boundary
+Input parsing in inventory and order services sanitizes currency strings and prevents invalid values from entering the ledger.
 
-Set these environment variables (Netlify or local `.env` for `netlify dev`):
+## SaaS Business Model
+Example tiers for positioning and pricing.
 
-- `WHATSAPP_ACCESS_TOKEN` (Cloud API token)
-- `WHATSAPP_PHONE_NUMBER_ID` (Cloud API phone number ID)
-- `WHATSAPP_MANAGER_PHONE` (manager phone number, any format)
+| Tier | Target | Key Features | Pricing Strategy |
+| --- | --- | --- | --- |
+| Starter | Solo retailer | Inventory, POS, invoicing | GHS 250 per month |
+| Growth | Rental agency | Bookings, waivers, dispatch | GHS 600 per month |
+| Scale | Enterprise | API access, custom integrations | Custom |
+
+## Screenshots
+1. Command Center dashboard for stock value, revenue split, and net profit
+2. Digital waiver for on-site signature capture
+3. Fleet dispatch and delivery status tracking
+
+## Getting Started (Local Dev)
+### Clone and install
+
+```bash
+git clone https://github.com/yourusername/reebs-website.git
+cd reebs-erp
+npm install
+```
+
+### Environment setup
+Create a `.env` file at the project root.
+
+```
+DATABASE_URL="postgresql://user:password@localhost:5432/reebs"
+MANAGER_APP_SECRET="change-me"
+USER_APP_SECRET="change-me"
+MANAGER_PIN_HASH="scrypt$..."
+```
+
+Optional integrations:
+
+```
+GOOGLE_MAPS_API_KEY="optional"
+WHATSAPP_ACCESS_TOKEN="optional"
+WHATSAPP_PHONE_NUMBER_ID="optional"
+WHATSAPP_MANAGER_PHONE="optional"
+```
+
+### Database and migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### Run the app
+For frontend only:
+
+```bash
+npm run dev
+```
+
+For full stack (Netlify functions + Vite):
+
+```bash
+npm run netlify
+```
+
+### Tests
+
+```bash
+npm run test:e2e
+```
+
+## Maps and Geocoding
+The admin bookings Map view renders a Leaflet map and geocodes venue addresses server-side via `netlify/functions/geocode.js`.
+
+- Default geocoder: OpenStreetMap Nominatim
+- Optional fallback: Google Geocoding API
+
+To enable the Google fallback, set `GOOGLE_MAPS_API_KEY` in your environment and enable the Geocoding API in Google Cloud.
+
+## WhatsApp Order and Booking Notifications
+Orders and bookings can send a WhatsApp message to the manager via the Meta WhatsApp Cloud API.
+
+Set these environment variables:
+
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_MANAGER_PHONE`
+
+## Contact
+Created by Nana 
+Portfolio: nanaabaackah.com
+LinkedIn: https://www.linkedin.com/in/nana-aba-ackah/
+Email: nanaabaackah@gmail.com
