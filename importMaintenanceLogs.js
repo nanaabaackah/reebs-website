@@ -15,7 +15,13 @@ const toDate = (value) => {
 };
 
 async function importMaintenanceLogs() {
-  const file = fs.readFileSync("data/maintenance_logs.csv", "utf8");
+  const filePath = "data/maintenance_logs.csv";
+  if (!fs.existsSync(filePath)) {
+    console.log("ℹ️  Maintenance log CSV missing; skipping import.");
+    return;
+  }
+
+  const file = fs.readFileSync(filePath, "utf8");
   const { data } = Papa.parse(file, { header: true, skipEmptyLines: true });
 
   const products = await prisma.product.findMany({ select: { id: true, name: true } });

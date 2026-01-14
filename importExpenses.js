@@ -26,77 +26,6 @@ const parseOptionalDate = (value, fallback = null) => {
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
 
-async function importMaintenanceLogs() {
-  const file = fs.readFileSync("data/maintenance_logs.csv", "utf8");
-  const { data } = Papa.parse(file, { header: true, skipEmptyLines: true });
-
-  if (!data.length) {
-    console.log("No maintenance logs found in data/maintenance_logs.csv");
-    return { created: 0, skipped: 0 };
-  }
-
-  const products = await prisma.product.findMany({ select: { id: true, name: true } });
-  const productByName = new Map(
-    products.map((product) => [String(product.name || "").toLowerCase(), product.id])
-  );
-
-  const logsToCreate = [];
-  let skipped = 0;
-
-  for (const row of data) {
-    const productName = cleanText(row.productName);
-    const productId = productByName.get(productName.toLowerCase());
-    if (!productId) {
-      skipped += 1;
-      continue;
-    }
-
-    const issue = cleanText(row.issue);
-    if (!issue) {
-      skipped += 1;
-      continue;
-    }
-
-    const type = cleanText(row.type) || "repair";
-    const cost = toCents(row.cost);
-    const status = cleanText(row.status).toLowerCase() || "open";
-    const notes = cleanText(row.notes) || null;
-    const createdAt = parseOptionalDate(row.createdAt, new Date());
-    const resolvedAt = parseOptionalDate(row.resolvedAt, null);
-
-    logsToCreate.push({
-      productId,
-      issue,
-      type,
-      cost,
-      status,
-      notes,
-      createdAt,
-      resolvedAt,
-      updatedAt: createdAt,
-    });
-  }
-
-  if (!logsToCreate.length) {
-    console.log("No maintenance logs to import.");
-    return { created: 0, skipped: data.length };
-  }
-
-  await prisma.maintenanceLog.createMany({ data: logsToCreate });
-
-  const openProductIds = [
-    ...new Set(logsToCreate.filter((log) => log.status === "open").map((log) => log.productId)),
-  ];
-  if (shouldReset && openProductIds.length) {
-    await prisma.product.updateMany({
-      where: { id: { in: openProductIds } },
-      data: { isActive: false },
-    });
-  }
-
-  return { created: logsToCreate.length, skipped };
-}
-
 async function importExpenses() {
   if (shouldReset) {
     await prisma.$executeRaw`TRUNCATE TABLE "expense" RESTART IDENTITY CASCADE`;
@@ -147,10 +76,8 @@ async function importExpenses() {
     console.log(`✅ Imported ${filtered.length} expenses.`);
   }
 
-  const maintenanceSummary = await importMaintenanceLogs();
-  console.log(
-    `✅ Maintenance logs imported: ${maintenanceSummary.created}, skipped: ${maintenanceSummary.skipped}`
-  );
+  await prisma.maintenanceLog.deleteMany();
+  console.log("ℹ️  Maintenance logs import disabled; table cleared.");
 }
 
 importExpenses()

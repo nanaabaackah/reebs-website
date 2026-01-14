@@ -1,19 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import { useAuth } from "../components/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
-
-const roleColors = {
-  admin: "purple",
-  staff: "blue",
-  custodian: "green",
-  manager: "red",
-  warehouse: "blue",
-  driver: "green",
-  viewer: "purple",
-  sales: "blue",
-};
+import roleColors from "../utils/roleColors";
 
 const ROLE_OPTIONS = [
   "Admin",
@@ -25,6 +16,7 @@ const ROLE_OPTIONS = [
   "Custodian",
   "Sales",
 ];
+const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 
 const generateEmailFromNames = (firstName, lastName) => {
   const clean = (value) => (value || "").trim().replace(/\s+/g, "").toLowerCase();
@@ -63,6 +55,10 @@ function AdminRoles() {
     setPermissionStatus("");
     setPermissionError("");
   };
+
+  const { user: authUser } = useAuth();
+  const normalizedAuthEmail = (authUser?.email || "").toLowerCase();
+  const isSystemAdmin = normalizedAuthEmail === SYSTEM_ADMIN_EMAIL;
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -179,16 +175,19 @@ function AdminRoles() {
     setPermissionStatus("");
     setPermissionError("");
     try {
+      const body = {
+        id: detailUser.id,
+        firstName: detailUser.firstName || detailUser.fullName?.split(" ")?.[0] || "",
+        lastName:
+          detailUser.lastName || detailUser.fullName?.split(" ").slice(1).join(" ") || "",
+      };
+      if (isSystemAdmin) {
+        body.role = detailRole;
+      }
       const response = await fetch("/.netlify/functions/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: detailUser.id,
-          firstName: detailUser.firstName || detailUser.fullName?.split(" ")?.[0] || "",
-          lastName:
-            detailUser.lastName || detailUser.fullName?.split(" ").slice(1).join(" ") || "",
-          role: detailRole,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Failed to save permissions");
@@ -447,13 +446,20 @@ function AdminRoles() {
                  <p className="roles-sub">{detailUser.email}</p>
                 <label className="roles-detail-role">
                   Role
-                  <select value={detailRole} onChange={(event) => setDetailRole(event.target.value)}>
+                  <select
+                    value={detailRole}
+                    onChange={(event) => setDetailRole(event.target.value)}
+                    disabled={!isSystemAdmin}
+                  >
                     {ROLE_OPTIONS.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
                     ))}
                   </select>
+                  {!isSystemAdmin && (
+                    <p className="roles-note">Only the system administrator can change roles.</p>
+                  )}
                 </label>
                 {permissionStatus && <p className="roles-success">{permissionStatus}</p>}
                 {permissionError && <p className="roles-error">{permissionError}</p>}

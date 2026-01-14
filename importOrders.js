@@ -107,11 +107,20 @@ async function importTransactionalData() {
     const usersData = await readCsv('data/users.csv');
     const secretsIndex = buildSecretsIndex(await readCsvOptional('data/users.secrets.csv'));
     const customersData = await readCsv('data/customers.csv'); 
-    const ordersData = await readCsv('data/orders.csv');
-    const orderItemsData = await readCsv('data/orderItems.csv');
+    const ordersData = await readCsvOptional('data/orders.csv');
+    const orderItemsData = await readCsvOptional('data/orderItems.csv');
     const stockMovementsData = await readCsv('data/stockMovements.csv');
 
-    console.log(`\nFound ${usersData.length} users, ${customersData.length} customers, ${ordersData.length} orders, ${orderItemsData.length} order items, and ${stockMovementsData.length} stock movements.`);
+    console.log(
+        `\nFound ${usersData.length} users, ${customersData.length} customers, ${ordersData.length} orders, ${orderItemsData.length} order items, and ${stockMovementsData.length} stock movements.`
+    );
+
+    if (!ordersData.length) {
+        console.log("ℹ️  No orders.csv file present; order records will remain empty.");
+    }
+    if (!orderItemsData.length) {
+        console.log("ℹ️  No orderItems.csv file present; order item records will remain empty.");
+    }
 
     // 2. Clear Tables (Must be done in reverse dependency order)
     if (shouldReset) {
@@ -305,86 +314,93 @@ async function importTransactionalData() {
     console.log(`✅ Imported ${filteredStock.length} Stock Movements.`);
 
     // 7. Import Booking Data
-    const bookingsData = await readCsv('data/bookings.csv');
-    const bookingItemsData = await readCsv('data/bookingItems.csv');
+    const bookingsData = await readCsvOptional('data/bookings.csv');
+    const bookingItemsData = await readCsvOptional('data/bookingItems.csv');
 
-    console.log("Importing Bookings...");
-    const products = await prisma.product.findMany({
-        select: { id: true, sku: true, name: true },
-    });
-    const productBySku = new Map(
-        products
-            .filter((p) => p.sku)
-            .map((p) => [String(p.sku).trim().toUpperCase(), p.id])
-    );
-    const productByName = new Map(
-        products
-            .filter((p) => p.name)
-            .map((p) => [String(p.name).trim().toLowerCase(), p.id])
-    );
+    const hasBookingsCsv = bookingsData.length > 0;
+    const hasBookingItemsCsv = bookingItemsData.length > 0;
 
-    const bookingRows = bookingsData.map((row) => ({
-        id: toInt(row.id),
-        customerId: toInt(row.customerId),
-        eventDate: toDate(row.eventDate),
-        startTime: row.startTime,
-        endTime: row.endTime,
-        venueAddress: row.venueAddress,
-        totalAmount: toInt(row.totalAmount),
-        status: row.status,
-        assignedUserId: toInt(row.assignedUserId, null),
-    }));
-    const validBookings = bookingRows.filter((row) => row.customerId && row.eventDate);
-    let existingBookingIds = new Set();
-    if (!shouldReset && validBookings.length) {
-        const bookingIds = validBookings.map((row) => row.id).filter(Number.isFinite);
-        if (bookingIds.length) {
-            const existingBookings = await prisma.booking.findMany({
-                where: { id: { in: bookingIds } },
-                select: { id: true },
-            });
-            existingBookingIds = new Set(existingBookings.map((row) => row.id));
-        }
-    }
-    const newBookings = shouldReset
-        ? validBookings
-        : validBookings.filter((row) => !existingBookingIds.has(row.id));
-    await prisma.booking.createMany({ data: newBookings, skipDuplicates: true });
-    const newBookingIds = new Set(newBookings.map((row) => row.id).filter(Number.isFinite));
-
-    const bookingItemsToCreate = [];
-    for (const row of bookingItemsData) {
-        const rawProductId = toInt(row.productId, null);
-        const rawSku = typeof row.productSku === "string" ? row.productSku.trim() : "";
-        const rawName = typeof row.productName === "string" ? row.productName.trim() : "";
-
-        const productId =
-            rawProductId ||
-            (rawSku ? productBySku.get(rawSku.toUpperCase()) : null) ||
-            (rawName ? productByName.get(rawName.toLowerCase()) : null);
-
-        if (!productId) {
-            console.warn("Skipping booking item with missing product reference:", row);
-            continue;
-        }
-
-        const bookingId = toInt(row.bookingId);
-        if (!shouldReset && (!newBookingIds.size || !newBookingIds.has(bookingId))) {
-            continue;
-        }
-        bookingItemsToCreate.push({
-            bookingId: bookingId,
-            productId: productId,
-            quantity: toInt(row.quantity, 0),
-            price: toInt(row.price, 0),
+    if (hasBookingsCsv && hasBookingItemsCsv) {
+        console.log("Importing Bookings...");
+        const products = await prisma.product.findMany({
+            select: { id: true, sku: true, name: true },
         });
-    }
+        const productBySku = new Map(
+            products
+                .filter((p) => p.sku)
+                .map((p) => [String(p.sku).trim().toUpperCase(), p.id])
+        );
+        const productByName = new Map(
+            products
+                .filter((p) => p.name)
+                .map((p) => [String(p.name).trim().toLowerCase(), p.id])
+        );
 
-    if (bookingItemsToCreate.length) {
-        await prisma.bookingItem.createMany({ data: bookingItemsToCreate });
-    }
+        const bookingRows = bookingsData.map((row) => ({
+            id: toInt(row.id),
+            customerId: toInt(row.customerId),
+            eventDate: toDate(row.eventDate),
+            startTime: row.startTime,
+            endTime: row.endTime,
+            venueAddress: row.venueAddress,
+            totalAmount: toInt(row.totalAmount),
+            status: row.status,
+            assignedUserId: toInt(row.assignedUserId, null),
+        }));
+        const validBookings = bookingRows.filter((row) => row.customerId && row.eventDate);
+        let existingBookingIds = new Set();
+        if (!shouldReset && validBookings.length) {
+            const bookingIds = validBookings.map((row) => row.id).filter(Number.isFinite);
+            if (bookingIds.length) {
+                const existingBookings = await prisma.booking.findMany({
+                    where: { id: { in: bookingIds } },
+                    select: { id: true },
+                });
+                existingBookingIds = new Set(existingBookings.map((row) => row.id));
+            }
+        }
+        const newBookings = shouldReset
+            ? validBookings
+            : validBookings.filter((row) => !existingBookingIds.has(row.id));
+        await prisma.booking.createMany({ data: newBookings, skipDuplicates: true });
+        const newBookingIds = new Set(newBookings.map((row) => row.id).filter(Number.isFinite));
 
-    console.log("✅ Bookings populated!");
+        const bookingItemsToCreate = [];
+        for (const row of bookingItemsData) {
+            const rawProductId = toInt(row.productId, null);
+            const rawSku = typeof row.productSku === "string" ? row.productSku.trim() : "";
+            const rawName = typeof row.productName === "string" ? row.productName.trim() : "";
+
+            const productId =
+                rawProductId ||
+                (rawSku ? productBySku.get(rawSku.toUpperCase()) : null) ||
+                (rawName ? productByName.get(rawName.toLowerCase()) : null);
+
+            if (!productId) {
+                console.warn("Skipping booking item with missing product reference:", row);
+                continue;
+            }
+
+            const bookingId = toInt(row.bookingId);
+            if (!shouldReset && (!newBookingIds.size || !newBookingIds.has(bookingId))) {
+                continue;
+            }
+            bookingItemsToCreate.push({
+                bookingId: bookingId,
+                productId: productId,
+                quantity: toInt(row.quantity, 0),
+                price: toInt(row.price, 0),
+            });
+        }
+
+        if (bookingItemsToCreate.length) {
+            await prisma.bookingItem.createMany({ data: bookingItemsToCreate });
+        }
+
+        console.log("✅ Bookings populated!");
+    } else {
+        console.log("ℹ️  Booking CSVs are missing; skipping booking import.");
+    }
 }
 
 importTransactionalData()

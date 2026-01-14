@@ -3,6 +3,7 @@ import "./master.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faRotateRight, faXmark, faPen } from "@fortawesome/free-solid-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import roleColors from "../utils/roleColors";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -349,35 +350,44 @@ function AdminDirectory() {
                   )}
                 </thead>
                 <tbody>
-                  {paginatedList.map((row) => (
-                    <tr key={`${activeTab}-${row.id}`}>
-                      {activeTab === "customers" ? (
-                        <>
-                          <td>{row.name || "-"}</td>
-                          <td>{row.email || "-"}</td>
-                          <td>{row.phone || "-"}</td>
-                          <td>{formatDate(row.createdAt)}</td>
-                        </>
-                      ) : (
-                        <>
-                          <td>{row.email || "-"}</td>
-                          <td>{row.fullName || row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "-"}</td>
-                          <td>{row.role || "Staff"}</td>
-                          <td>{formatDate(row.createdAt)}</td>
-                        </>
-                      )}
-                      <td className="directory-actions">
-                        <button
-                          type="button"
-                          className="directory-edit"
-                          onClick={() => openEditModal(row)}
-                        >
-                          <FontAwesomeIcon icon={faPen} />
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {paginatedList.map((row) => {
+                    const displayRole = row.role || "Staff";
+                    const roleKey = displayRole.toLowerCase();
+                    const colorClass = roleColors[roleKey] || "blue";
+                    return (
+                      <tr key={`${activeTab}-${row.id}`}>
+                        {activeTab === "customers" ? (
+                          <>
+                            <td>{row.name || "-"}</td>
+                            <td>{row.email || "-"}</td>
+                            <td>{row.phone || "-"}</td>
+                            <td>{formatDate(row.createdAt)}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td>{row.email || "-"}</td>
+                            <td>
+                              {row.fullName || row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "-"}
+                            </td>
+                            <td>
+                              <span className={`pill ${colorClass}`}>{displayRole}</span>
+                            </td>
+                            <td>{formatDate(row.createdAt)}</td>
+                          </>
+                        )}
+                        <td className="directory-actions">
+                          <button
+                            type="button"
+                            className="directory-edit"
+                            onClick={() => openEditModal(row)}
+                          >
+                            <FontAwesomeIcon icon={faPen} />
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {!currentList.length && (
                     <tr>
                       <td colSpan={5} className="customers-empty">

@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-
-const roleColors = {
-  admin: "purple",
-  manager: "purple",
-  staff: "blue",
-  warehouse: "green",
-  driver: "green",
-  sales: "blue",
-};
+import roleColors from "../utils/roleColors";
 
 const initialsFromName = (employee) => {
   const first = employee.firstName || "";

@@ -3,8 +3,9 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { hashPassword } from "../../utils/passwords.js";
-import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
+const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
 const stripSpaces = (value) => cleanNamePart(value).replace(/\s+/g, "");
 const buildEmailFromNames = (firstName, lastName) => {
@@ -50,7 +51,20 @@ export async function handler(event) {
         };
       }
     }
-    const organizationId = await resolveOrganizationId(client, event, payload);
+
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return {
+        statusCode: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+        body: JSON.stringify({ error: "Unauthorized" }),
+      };
+    }
+    const organizationId = authUser.organizationId;
+    const isSystemAdmin = (authUser.email || "").toLowerCase() === SYSTEM_ADMIN_EMAIL;
 
     if (method === "POST") {
       const firstName = cleanNamePart(payload.firstName);
@@ -125,11 +139,14 @@ export async function handler(event) {
       const lastNameRaw = payload.lastName;
       const firstName = firstNameRaw === undefined ? null : cleanNamePart(firstNameRaw);
       const lastName = lastNameRaw === undefined ? null : cleanNamePart(lastNameRaw);
-      const role = typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : null;
+      const requestedRole =
+        typeof payload.role === "string" && payload.role.trim() ? payload.role.trim() : null;
+      const role = requestedRole;
       const password = typeof payload.password === "string" ? payload.password.trim() : null;
 
       const existingRes = await client.query(
-        `SELECT "firstName", "lastName" FROM "user" WHERE id = $1 AND "organizationId" = $2`,
+        `SELECT "firstName", "lastName", role
+         FROM "user" WHERE id = $1 AND "organizationId" = $2`,
         [id, organizationId]
       );
       if (existingRes.rowCount === 0) {
@@ -143,6 +160,18 @@ export async function handler(event) {
       const current = existingRes.rows[0];
       const nextFirstName = firstName === null ? current.firstName : firstName;
       const nextLastName = lastName === null ? current.lastName : lastName;
+
+      const currentRoleNormalized = (current.role || "").toLowerCase();
+      const requestedRoleNormalized = requestedRole ? requestedRole.toLowerCase() : null;
+      const wantsRoleChange =
+        requestedRoleNormalized && requestedRoleNormalized !== currentRoleNormalized;
+      if (wantsRoleChange && !isSystemAdmin) {
+        return {
+          statusCode: 403,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "Only system administrator can change roles." }),
+        };
+      }
 
       if (!nextFirstName || !nextLastName) {
         return {
@@ -248,8 +277,7 @@ export async function handler(event) {
       `SELECT id, email, "firstName", "lastName", "fullName", role, "createdAt", "updatedAt"
        FROM "user"
        WHERE "organizationId" = $1
-       ORDER BY id DESC`
-      ,
+       ORDER BY id DESC`,
       [organizationId]
     );
 

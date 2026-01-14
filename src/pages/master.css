@@ -15868,9 +15868,16 @@ body.dark-mode .delivery-list-item {
 .pill.purple { background: linear-gradient(90deg, #a55ad6, #7b3fa8); }
 .pill.blue { background: linear-gradient(90deg, #4ab4ff, #2587d8); }
 .pill.green { background: linear-gradient(90deg, #48c774, #32a65f); }
+.pill.red { background: linear-gradient(90deg, #fb7185, #f43f5e); }
 
 .roles-detail .customers-form-actions {
   justify-content: flex-end;
+}
+
+.roles-note {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: var(--back3);
 }
 
 @media (max-width: 780px) {
