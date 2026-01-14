@@ -96,6 +96,8 @@ export async function handler(event) {
       cashflowRows,
       deliveryFeeRows,
       skuRows,
+      transactionRows,
+      expenseRows,
       bookingSummary,
       bookingDaily,
       topRentalRows,
@@ -120,7 +122,15 @@ export async function handler(event) {
              JOIN "orderItem" oi ON oi."orderId" = o.id
              WHERE o."orderDate" >= $1
                AND o."orderDate" < $2
-           ), 0)::int AS units`,
+           ), 0)::int AS units,
+           COALESCE((
+             SELECT SUM(oi.quantity * COALESCE(p."purchasePriceGhs", 0))
+             FROM "order" o
+             JOIN "orderItem" oi ON oi."orderId" = o.id
+             JOIN "product" p ON p.id = oi."productId"
+             WHERE o."orderDate" >= $1
+               AND o."orderDate" < $2
+           ), 0) AS cost_cents`,
         params
       ),
       client.query(
@@ -186,6 +196,31 @@ export async function handler(event) {
          WHERE o."orderDate" >= $1
            AND o."orderDate" < $2
          GROUP BY p.sku, p."sourceCategoryCode"`,
+        params
+      ),
+      client.query(
+        `SELECT
+           p.id,
+           p.name,
+           p.sku,
+           COALESCE(SUM(oi.quantity), 0)::int AS units,
+           COALESCE(SUM(oi.total_amount), 0) AS revenue_cents,
+           COALESCE(p."purchasePriceGhs", 0) AS unit_cost_cents
+         FROM "order" o
+         JOIN "orderItem" oi ON oi."orderId" = o.id
+         JOIN "product" p ON p.id = oi."productId"
+         WHERE o."orderDate" >= $1
+           AND o."orderDate" < $2
+         GROUP BY p.id, p.name, p.sku, p."purchasePriceGhs"
+         ORDER BY revenue_cents DESC
+         LIMIT 50`,
+        params
+      ),
+      client.query(
+        `SELECT COALESCE(SUM(amount), 0) AS expense_cents
+         FROM "expense"
+         WHERE date >= $1
+           AND date < $2`,
         params
       ),
       client.query(
@@ -268,6 +303,10 @@ export async function handler(event) {
     }
     categoryMap.retail += deliveryFeeCentsTotal;
     const orderRevenueCents = Number(summary.rows[0]?.revenue_cents || 0) + deliveryFeeCentsTotal;
+    const costCents = Number(summary.rows[0]?.cost_cents || 0);
+    const expenseWindowCents = Number(expenseRows.rows[0]?.expense_cents || 0);
+    const grossProfitCents = orderRevenueCents - costCents + bookingRevenueCents;
+    const netProfitCents = grossProfitCents - expenseWindowCents;
 
     // Merge cashflow from orders and bookings by date
     const cashflowMap = new Map();
@@ -289,6 +328,26 @@ export async function handler(event) {
       .map(([date, revenue]) => ({ date, revenue: revenue / 100 }))
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+    const transactions = (transactionRows.rows || []).map((row) => {
+      const revenue = Number(row.revenue_cents || 0);
+      const unitCost = Number(row.unit_cost_cents || 0);
+      const units = row.units || 0;
+      const cost = unitCost * units;
+      const profit = revenue - cost;
+      const marginPct = revenue > 0 ? (profit / revenue) * 100 : 0;
+      return {
+        id: row.id,
+        name: row.name,
+        sku: row.sku,
+        qty: units,
+        revenue: revenue / 100,
+        unitCost: unitCost / 100,
+        cost: cost / 100,
+        profit: profit / 100,
+        marginPct: Number(marginPct.toFixed(1)),
+      };
+    });
+
     return {
       statusCode: 200,
       headers: {
@@ -305,6 +364,16 @@ export async function handler(event) {
         bookingRevenue: bookingRevenueCents / 100,
         revenue: (orderRevenueCents + bookingRevenueCents) / 100,
         units: summary.rows[0]?.units || 0,
+        expenseWindowLabel: label,
+        summary: {
+          revenue: orderRevenueCents / 100,
+          cogs: costCents / 100,
+          rentalIncome: bookingRevenueCents / 100,
+          grossProfit: grossProfitCents / 100,
+          operatingExpenses: expenseWindowCents / 100,
+          netProfit: netProfitCents / 100,
+        },
+        transactions,
         revenueByCategory: {
           retail: categoryMap.retail / 100,
           rental: categoryMap.rental / 100,

@@ -43,11 +43,16 @@ model Order {
   customerName    String
   status          String
   deliveryMethod  String   @default("delivery")
+  deliveryDetails Json?
+  pickupDetails   Json?
   total_amount    Int           
   orderDate       DateTime
   deliveryDate    DateTime?
   assignedUserId  Int?
   assignedUser    User?         @relation(fields: [assignedUserId], references: [id])
+  createdByUserId Int?
+  updatedByUserId Int?
+  lastModifiedAt  DateTime?     @default(now())
   
   customer        Customer      @relation(fields: [customerId], references: [id]) 
   orderItems      OrderItem[]
@@ -102,8 +107,16 @@ model Product {
   currency             String   @default("GHS")
   stock                Int      @default(0)
   isActive             Boolean  @default(true)
+  isArchived           Boolean  @default(false)
+  archivedAt           DateTime?
+  archivedByUserId     Int?
+  isDeleted            Boolean  @default(false)
+  deletedAt            DateTime?
+  deletedByUserId      Int?
   imageUrl             String?
   attendantsNeeded     Int?
+  lastUpdatedByUserId  Int?
+  lastUpdatedAt        DateTime? @default(now())
   
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) 
@@ -129,8 +142,13 @@ model StockMovement {
   type      String
   quantity  Int
   date      DateTime
+  createdAt DateTime? @default(now())
   notes     String?
   reference String?  // <--- Ensure this line exists
+  soldMonth DateTime? @db.Date
+  performedByUserId Int?
+  performedByName   String?
+  performedByEmail  String?
   userId    Int?
   user      User?    @relation(fields: [userId], references: [id])
 
@@ -330,8 +348,13 @@ model Booking {
   items        BookingItem[]
   expenses     Expense[]
   createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   assignedUserId Int?
   assignedUser User?         @relation(fields: [assignedUserId], references: [id])
+  createdByUserId Int?
+  updatedByUserId Int?
+  lastModifiedAt  DateTime?   @default(now())
+  delivery   Delivery?
 
   @@map("booking")
 }
@@ -436,4 +459,33 @@ model ShopItem {
   updatedAt   DateTime @updatedAt
 
   @@map("shop_items")
+}
+
+model Delivery {
+  id         Int      @id @default(autoincrement())
+  bookingId  Int      @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  status     String   @default("scheduled")
+  driverName String?
+  routeGroup String?
+  routeOrder Int?
+  eta        String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  @@index([status])
+  @@map("delivery")
+}
+
+model ManagerDevice {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  platform   String?
+  deviceId   String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  @@map("managerDevice")
 }

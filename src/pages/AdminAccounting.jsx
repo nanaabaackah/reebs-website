@@ -68,11 +68,8 @@ function AdminAccounting() {
   const [windowKey, setWindowKey] = useState("allTime");
   const [viewMode, setViewMode] = useState("overview"); // overview | statements | charts | kanban | list | taxes
   const [data, setData] = useState(null);
-  const [financeData, setFinanceData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [financeLoading, setFinanceLoading] = useState(false);
   const [error, setError] = useState("");
-  const [financeError, setFinanceError] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [orders, setOrders] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -184,33 +181,16 @@ function AdminAccounting() {
 
   const fetchData = async (key = windowKey) => {
     if (!data) setLoading(true);
-    if (!financeData) setFinanceLoading(true);
     setIsFetching(true);
     setError("");
-    setFinanceError("");
     try {
-      const [financialResult, financeResult] = await Promise.allSettled([
-        fetchJson(`/.netlify/functions/financials?window=${key}`),
-        fetchJson(`/.netlify/functions/finance?window=${key}`),
-      ]);
-
-      if (financialResult.status === "fulfilled") {
-        setData(financialResult.value);
-      } else {
-        setError(financialResult.reason?.message || "Failed to load financial stats.");
-      }
-
-      if (financeResult.status === "fulfilled") {
-        setFinanceData(financeResult.value);
-      } else {
-        setFinanceError(financeResult.reason?.message || "Failed to reconcile finance data.");
-      }
+      const result = await fetchJson(`/.netlify/functions/financials?window=${key}`);
+      setData(result);
     } catch (err) {
       console.error("Financials failed", err);
       setError(err.message || "Unable to load financial stats.");
     } finally {
       setLoading(false);
-      setFinanceLoading(false);
       setIsFetching(false);
     }
   };
@@ -267,9 +247,9 @@ function AdminAccounting() {
   const topProductsMax = useMemo(() => Math.max(...topProducts.map((p) => p.revenue || 0), 0), [topProducts]);
   const topRentals = useMemo(() => data?.topRentals || [], [data]);
   const topRentalsMax = useMemo(() => Math.max(...topRentals.map((p) => p.revenue || 0), 0), [topRentals]);
-  const financeSummary = useMemo(() => financeData?.summary || null, [financeData]);
-  const expenseWindowLabel = financeData?.expenseWindowLabel || data?.windowLabel || "";
-  const financeTransactions = useMemo(() => financeData?.transactions || [], [financeData]);
+  const financeSummary = useMemo(() => data?.summary || null, [data]);
+  const expenseWindowLabel = data?.expenseWindowLabel || data?.windowLabel || "";
+  const financeTransactions = useMemo(() => data?.transactions || [], [data]);
 
   const windowStart = data?.startDate ? new Date(data.startDate) : null;
   const windowEnd = data?.endDate ? new Date(data.endDate) : null;
@@ -618,10 +598,10 @@ function AdminAccounting() {
                     <p className="accounting-panel-sub">COGS uses purchase prices to reveal true gross profit.</p>
                   </div>
                 </div>
-                {financeLoading && !financeSummary ? (
+                {loading && !financeSummary ? (
                   <p className="accounting-muted">Reconciling ledgers…</p>
-                ) : financeError && !financeSummary ? (
-                  <p className="accounting-error">{financeError}</p>
+                ) : error && !financeSummary ? (
+                  <p className="accounting-error">{error}</p>
                 ) : financeSummary ? (
                   <div className="accounting-pnl">
                     <div className="accounting-pnl-row">
@@ -662,10 +642,10 @@ function AdminAccounting() {
                     <p className="accounting-panel-sub">Margins show where profit is strongest.</p>
                   </div>
                 </div>
-                {financeLoading && !financeTransactions.length ? (
+                {loading && !financeTransactions.length ? (
                   <p className="accounting-muted">Calculating product margins…</p>
-                ) : financeError && !financeTransactions.length ? (
-                  <p className="accounting-error">{financeError}</p>
+                ) : error && !financeTransactions.length ? (
+                  <p className="accounting-error">{error}</p>
                 ) : financeTransactions.length === 0 ? (
                   <p className="accounting-muted">No sales items in this window.</p>
                 ) : (
@@ -913,10 +893,10 @@ function AdminAccounting() {
                     <p className="accounting-panel-sub">For {data.windowLabel || ""}</p>
                   </div>
                 </div>
-                {financeLoading && !financeSummary ? (
+                {loading && !financeSummary ? (
                   <p className="accounting-muted">Reconciling ledgers…</p>
-                ) : financeError && !financeSummary ? (
-                  <p className="accounting-error">{financeError}</p>
+                ) : error && !financeSummary ? (
+                  <p className="accounting-error">{error}</p>
                 ) : financeSummary ? (
                   <div className="accounting-pnl">
                     <div className="accounting-pnl-row">

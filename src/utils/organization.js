@@ -6,13 +6,29 @@ const parseOrganizationId = (value) => {
 
 const getStoredUser = () => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage?.getItem("reebs_auth_user");
+  const raw =
+    window.localStorage?.getItem("reebs_auth_user")
+    || window.sessionStorage?.getItem("reebs_auth_user");
   if (!raw) return null;
   try {
     return JSON.parse(raw);
   } catch {
     return null;
   }
+};
+
+export const setAuthToken = (token) => {
+  if (typeof window === "undefined") return;
+  window.__reebsAuthToken = typeof token === "string" ? token.trim() : "";
+};
+
+export const getAuthToken = () => {
+  if (typeof window === "undefined") return null;
+  const stored = getStoredUser();
+  const storedToken = typeof stored?.token === "string" ? stored.token.trim() : "";
+  if (storedToken) return storedToken;
+  const memoryToken = typeof window.__reebsAuthToken === "string" ? window.__reebsAuthToken.trim() : "";
+  return memoryToken || null;
 };
 
 export const getOrganizationId = () => {
@@ -54,15 +70,27 @@ export const patchOrganizationFetch = () => {
 
   window.fetch = (input, init) => {
     const organizationId = getOrganizationId();
+    const token = getAuthToken();
     const url = typeof input === "string" ? input : input?.url;
-    if (!organizationId || !url || !shouldAttachOrganizationId(url)) {
+    if (!url || !shouldAttachOrganizationId(url)) {
       return originalFetch(input, init);
     }
-    const nextUrl = appendOrganizationId(url, organizationId);
-    if (input instanceof Request) {
-      return originalFetch(new Request(nextUrl, input), init);
+    const nextUrl = organizationId ? appendOrganizationId(url, organizationId) : url;
+    const baseHeaders = input instanceof Request ? input.headers : init?.headers;
+    const headers = new Headers(baseHeaders || {});
+    if (organizationId && !headers.has("x-organization-id")) {
+      headers.set("x-organization-id", String(organizationId));
     }
-    return originalFetch(nextUrl, init);
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    if (input instanceof Request) {
+      const request = new Request(input, init);
+      const requestWithUrl = new Request(nextUrl, request);
+      const nextRequest = new Request(requestWithUrl, { headers });
+      return originalFetch(nextRequest);
+    }
+    return originalFetch(nextUrl, { ...(init || {}), headers });
   };
 
   window.__orgFetchPatched = true;

@@ -51,6 +51,11 @@ export async function handler() {
       maintenanceOpenSummary,
       maintenanceCostSummary,
       deliveryFeeRows,
+      inventoryRes,
+      retailRes,
+      rentalRes,
+      categoryRes,
+      velocityRes,
     ] = await Promise.all([
       client.query(
         `SELECT
@@ -153,6 +158,35 @@ export async function handler() {
          FROM "order"
          WHERE "orderDate" >= NOW() - INTERVAL '${windowDays} days'`
       ),
+      client.query(
+        `SELECT COALESCE(SUM(stock * price), 0) AS inventory_value_cents
+         FROM "product"`
+      ),
+      client.query(
+        `SELECT COALESCE(SUM(total_amount), 0) AS retail_cents
+         FROM "order"`
+      ),
+      client.query(
+        `SELECT COALESCE(SUM("totalAmount"), 0) AS rental_cents
+         FROM "booking"`
+      ),
+      client.query(
+        `SELECT COALESCE("specificCategory", 'Uncategorized') AS category,
+                COUNT(*)::int AS count
+         FROM "product"
+         GROUP BY COALESCE("specificCategory", 'Uncategorized')
+         ORDER BY count DESC`
+      ),
+      client.query(
+        `SELECT
+           to_char(date_trunc('month', "date"), 'Mon YYYY') AS label,
+           SUM(CASE WHEN "type" = 'StockIn' THEN quantity ELSE 0 END)::int AS stock_in,
+           SUM(CASE WHEN "type" = 'StockOut' THEN quantity ELSE 0 END)::int AS stock_out
+         FROM "stockMovement"
+         WHERE "date" >= (CURRENT_DATE - INTERVAL '6 months')
+         GROUP BY date_trunc('month', "date")
+         ORDER BY date_trunc('month', "date") ASC`
+      ),
     ]);
 
     const orders = orderSummary.rows[0]?.orders || 0;
@@ -171,6 +205,18 @@ export async function handler() {
       expenseWindowCents > 0 || expenseTotalCents === 0 ? `Last ${windowDays} days` : "All time";
     const maintenanceOpen = maintenanceOpenSummary.rows[0]?.open_count || 0;
     const maintenanceCostCents = Number(maintenanceCostSummary.rows[0]?.cost_cents || 0);
+    const inventoryValue = Number(inventoryRes.rows[0]?.inventory_value_cents || 0) / 100;
+    const retailRevenue = Number(retailRes.rows[0]?.retail_cents || 0) / 100;
+    const rentalRevenue = Number(rentalRes.rows[0]?.rental_cents || 0) / 100;
+    const categories = (categoryRes.rows || []).map((row) => ({
+      category: row.category,
+      count: Number(row.count || 0),
+    }));
+    const velocity = (velocityRes.rows || []).map((row) => ({
+      label: row.label,
+      stockIn: Number(row.stock_in || 0),
+      stockOut: Number(row.stock_out || 0),
+    }));
 
     let lockedInCents = 0;
     try {
@@ -208,6 +254,11 @@ export async function handler() {
         maintenanceCost: maintenanceCostCents / 100,
         lowStockCount: lowStockRows.rows?.length || 0,
         lowStockItems: lowStockRows.rows || [],
+        inventoryValue,
+        retailRevenue,
+        rentalRevenue,
+        categories,
+        velocity,
         topRentalBookings: (topRentalRows.rows || []).map((row) => ({
           id: row.id,
           name: row.name,

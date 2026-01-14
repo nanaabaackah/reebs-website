@@ -218,10 +218,6 @@ const Checkout = () => {
     const name = paymentDetails.name.trim();
     const email = paymentDetails.email.trim();
     const phone = paymentDetails.phone.trim();
-    const normalizeName = (value) =>
-      value.toLowerCase().replace(/\s+/g, " ").trim();
-    const normalizeEmail = (value) => value.toLowerCase().trim();
-    const normalizePhone = (value) => value.replace(/[^\d+]/g, "").trim();
 
     const createRes = await fetch("/.netlify/functions/customers", {
       method: "POST",
@@ -247,26 +243,7 @@ const Checkout = () => {
       const match = await lookupRes.json();
       if (match?.id) return match;
     }
-    const listRes = await fetch("/.netlify/functions/customers");
-    if (!listRes.ok) {
-      throw new Error("Failed to load existing customers.");
-    }
-    const listData = await listRes.json().catch(() => []);
-    const match = Array.isArray(listData)
-      ? listData.find((row) => {
-        const rowEmail = row.email ? normalizeEmail(String(row.email)) : "";
-        const rowName = row.name ? normalizeName(String(row.name)) : "";
-        const rowPhone = row.phone ? normalizePhone(String(row.phone)) : "";
-        if (email && rowEmail === normalizeEmail(email)) return true;
-        if (phone && rowPhone && rowPhone === normalizePhone(phone)) return true;
-        if (name && rowName === normalizeName(name)) return true;
-        return false;
-      })
-      : null;
-    if (!match) {
-      return { id: null, name, email, phone };
-    }
-    return match;
+    return { id: null, name, email, phone };
   };
 
   const validatePayment = () => {

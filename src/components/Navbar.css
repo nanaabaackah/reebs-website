@@ -132,6 +132,8 @@ html, body {
     gap: 0.35rem;
     transform: translateY(6px);
     animation: authMenuFade 120ms ease-out forwards;
+    min-width: 160px;
+    box-sizing: border-box;
 }
 
 .auth-dropdown-menu {
@@ -165,10 +167,11 @@ html, body {
     text-align: left;
     background: transparent;
     border: none;
-    color: var(--text-light);
-    padding: 0.55rem 0.75rem;
+    color: var(--text-dark);
+    padding: 0.7rem 0.95rem;
     border-radius: 10px;
     font-weight: 700;
+    line-height: 1.4;
     cursor: pointer;
     text-decoration: none;
     transition: background 0.15s ease, transform 0.15s ease;
@@ -186,11 +189,22 @@ html, body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    min-height: 1.25rem;
+    white-space: nowrap;
 }
 
 .logout-btn {
     border: 1px solid rgba(255, 99, 99, 0.4);
+    color: #ffb3b3;
+}
+
+[data-theme="dark"] .auth-menu-dropdown button,
+[data-theme="dark"] .auth-menu-dropdown a {
+    color: var(--text-light);
+}
+
+[data-theme="dark"] .auth-menu-dropdown .logout-btn {
     color: #ffb3b3;
 }
 

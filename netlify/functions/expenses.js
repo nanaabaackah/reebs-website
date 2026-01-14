@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -80,7 +81,7 @@ export async function handler(event = {}) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
       },
       body: "",
@@ -94,6 +95,11 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser.organizationId;
     const table = await resolveExpenseTable(client);
     if (!table) {
       return json(500, { error: "Expenses table not found." });
@@ -104,6 +110,7 @@ export async function handler(event = {}) {
     const hasBookingId = columns.includes("bookingId");
     const hasCreatedAt = columns.includes("createdAt");
     const hasUpdatedAt = columns.includes("updatedAt");
+    const hasOrganizationId = columns.includes("organizationId");
     const selectColumns = [
       "id",
       "category",
@@ -113,13 +120,24 @@ export async function handler(event = {}) {
       hasUserId ? "\"userId\"" : null,
       hasOrderId ? "\"orderId\"" : null,
       hasBookingId ? "\"bookingId\"" : null,
+      hasOrganizationId ? "\"organizationId\"" : null,
     ].filter(Boolean);
 
     if (event.httpMethod === "GET") {
       const debug = event.queryStringParameters?.debug === "1";
       const monthParam = event.queryStringParameters?.month;
       const range = monthParam ? getMonthRange(monthParam) : null;
-      const params = range ? [range.start.toISOString(), range.end.toISOString()] : null;
+      const params = [];
+      const whereClauses = [];
+      if (hasOrganizationId) {
+        params.push(organizationId);
+        whereClauses.push(`"organizationId" = $${params.length}`);
+      }
+      if (range) {
+        params.push(range.start.toISOString(), range.end.toISOString());
+        whereClauses.push(`date >= $${params.length - 1} AND date < $${params.length}`);
+      }
+      const whereClause = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
       if (debug) {
         return json(200, {
@@ -132,14 +150,21 @@ export async function handler(event = {}) {
       const result = await client.query(
         `SELECT ${selectColumns.join(", ")}
          FROM ${table.queryRef}
-         ${range ? `WHERE date >= $1 AND date < $2` : ""}
+         ${whereClause}
          ORDER BY date DESC, id DESC`,
-        params || []
+        params
       );
       const maintenanceConditions = [`LOWER(m.status) IN ('open','resolved','accepted')`];
+      const maintenanceParams = [];
+      if (hasOrganizationId) {
+        maintenanceParams.push(organizationId);
+        maintenanceConditions.push(`m."organizationId" = $${maintenanceParams.length}`);
+      }
       if (range) {
+        maintenanceParams.push(range.start.toISOString(), range.end.toISOString());
         maintenanceConditions.push(
-          `COALESCE(m."resolvedAt", m."createdAt") >= $1 AND COALESCE(m."resolvedAt", m."createdAt") < $2`
+          `COALESCE(m."resolvedAt", m."createdAt") >= $${maintenanceParams.length - 1}
+           AND COALESCE(m."resolvedAt", m."createdAt") < $${maintenanceParams.length}`
         );
       }
       const maintenanceWhere = maintenanceConditions.length ? `WHERE ${maintenanceConditions.join(" AND ")}` : "";
@@ -155,9 +180,10 @@ export async function handler(event = {}) {
           COALESCE(m."resolvedAt", m."createdAt") AS date
         FROM "maintenanceLog" m
         JOIN "product" p ON p.id = m."productId"
+        ${hasOrganizationId ? `AND p."organizationId" = m."organizationId"` : ""}
         ${maintenanceWhere}
         ORDER BY date DESC, m.id DESC`,
-        params || []
+        maintenanceParams
       );
 
       const maintenanceRows = (maintenanceRes.rows || []).map((row) => ({
@@ -244,7 +270,7 @@ export async function handler(event = {}) {
     const category = typeof payload.category === "string" ? payload.category.trim() : "";
     const description = typeof payload.description === "string" ? payload.description.trim() : "";
     const amountValue = Number(payload.amount);
-    const userId = payload.userId ? Number(payload.userId) : null;
+    const userId = authUser.id;
     const orderId = payload.orderId ? Number(payload.orderId) : null;
     const bookingId = payload.bookingId ? Number(payload.bookingId) : null;
     const dateValue = payload.date ? new Date(payload.date) : new Date();
@@ -268,13 +294,19 @@ export async function handler(event = {}) {
       return json(400, { error: "Booking links are not supported in this expenses table." });
     }
     if (orderId) {
-      const orderCheck = await client.query(`SELECT id FROM "order" WHERE id = $1`, [orderId]);
+      const orderCheck = await client.query(
+        `SELECT id FROM "order" WHERE id = $1 AND "organizationId" = $2`,
+        [orderId, organizationId]
+      );
       if (orderCheck.rowCount === 0) {
         return json(400, { error: "Order not found." });
       }
     }
     if (bookingId) {
-      const bookingCheck = await client.query(`SELECT id FROM "booking" WHERE id = $1`, [bookingId]);
+      const bookingCheck = await client.query(
+        `SELECT id FROM "booking" WHERE id = $1 AND "organizationId" = $2`,
+        [bookingId, organizationId]
+      );
       if (bookingCheck.rowCount === 0) {
         return json(400, { error: "Booking not found." });
       }
@@ -287,6 +319,10 @@ export async function handler(event = {}) {
     if (hasUserId) {
       insertColumns.push("\"userId\"");
       insertValues.push(userId);
+    }
+    if (hasOrganizationId) {
+      insertColumns.push("\"organizationId\"");
+      insertValues.push(organizationId);
     }
     if (hasOrderId) {
       insertColumns.push("\"orderId\"");

@@ -75,9 +75,6 @@ function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState("");
-  const [analytics, setAnalytics] = useState(null);
-  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-  const [analyticsError, setAnalyticsError] = useState("");
   const { user } = useAuth();
   const [userStats, setUserStats] = useState(null);
   const [userStatsError, setUserStatsError] = useState("");
@@ -208,6 +205,18 @@ function AdminDashboard() {
         ...row,
         stock: toNumber(row.stock),
       })),
+      inventoryValue: toNumber(payload.inventoryValue),
+      retailRevenue: toNumber(payload.retailRevenue),
+      rentalRevenue: toNumber(payload.rentalRevenue),
+      categories: list(payload.categories, (row) => ({
+        category: row.category,
+        count: toNumber(row.count),
+      })),
+      velocity: list(payload.velocity, (row) => ({
+        label: row.label,
+        stockIn: toNumber(row.stockIn),
+        stockOut: toNumber(row.stockOut),
+      })),
     };
   }, []);
 
@@ -230,29 +239,9 @@ function AdminDashboard() {
     }
   }, [normalizeStats]);
 
-  const fetchAnalytics = useCallback(async () => {
-    setLoadingAnalytics(true);
-    setAnalyticsError("");
-    try {
-      const response = await fetch(`/.netlify/functions/analytics?ts=${Date.now()}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || "Failed to load analytics.");
-      setAnalytics(data);
-    } catch (err) {
-      console.error("Failed to load analytics", err);
-      setAnalyticsError(err.message || "Unable to load analytics.");
-    } finally {
-      setLoadingAnalytics(false);
-    }
-  }, []);
-
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
 
   useEffect(() => {
     setUserDetails({ orders: [], bookings: [], stockMovements: [] });
@@ -275,17 +264,17 @@ function AdminDashboard() {
   const lowStockItems = useMemo(() => stats?.lowStockItems || [], [stats]);
   const topBookedRental = useMemo(() => stats?.topRentalBookings?.[0], [stats]);
   const lowStockCount = stats?.lowStockCount ?? lowStockItems.length ?? 0;
-  const inventoryValue = analytics?.inventoryValue ?? 0;
-  const retailRevenue = analytics?.retailRevenue ?? 0;
-  const rentalRevenue = analytics?.rentalRevenue ?? 0;
+  const inventoryValue = stats?.inventoryValue ?? 0;
+  const retailRevenue = stats?.retailRevenue ?? 0;
+  const rentalRevenue = stats?.rentalRevenue ?? 0;
   const revenueTotal = retailRevenue + rentalRevenue || 1;
   const revenueSplit = {
     retailPct: Math.round((retailRevenue / revenueTotal) * 100),
     rentalPct: Math.round((rentalRevenue / revenueTotal) * 100),
   };
-  const categories = analytics?.categories || [];
+  const categories = stats?.categories || [];
   const categoryTotal = categories.reduce((sum, item) => sum + (item.count || 0), 0) || 1;
-  const velocity = analytics?.velocity || [];
+  const velocity = stats?.velocity || [];
   const maxVelocity = velocity.reduce(
     (max, row) => Math.max(max, row.stockIn || 0, row.stockOut || 0),
     0
@@ -301,7 +290,6 @@ function AdminDashboard() {
 
   const refreshDashboard = () => {
     fetchStats();
-    fetchAnalytics();
     if (showPersonalKpis) {
       const includeDetails = Boolean(selectedUserStat || userDetailsLoaded);
       fetchUserStats(includeDetails);
@@ -500,7 +488,7 @@ function AdminDashboard() {
               type="button"
               className="admin-kpi-retry"
               onClick={refreshDashboard}
-              disabled={loadingStats || loadingAnalytics || loadingUserStats || loadingUserDetails}
+              disabled={loadingStats || loadingUserStats || loadingUserDetails}
             >
               <FontAwesomeIcon icon={faRotateRight} />
             </button>
@@ -629,11 +617,9 @@ function AdminDashboard() {
                     </div>
                   </button>
                 </div>
-                {loadingAnalytics && <p className="admin-kpi-status">Loading analytics...</p>}
-                {!loadingAnalytics && analyticsError && (
-                  <p className="admin-kpi-error">{analyticsError}</p>
-                )}
-                {!loadingAnalytics && !analyticsError && analytics && (
+                {loadingStats && <p className="admin-kpi-status">Loading analytics...</p>}
+                {!loadingStats && statsError && <p className="admin-kpi-error">{statsError}</p>}
+                {!loadingStats && !statsError && stats && (
                   <div className="admin-analytics-grid">
                     <div className="admin-analytics-card">
                       <div className="admin-analytics-head">

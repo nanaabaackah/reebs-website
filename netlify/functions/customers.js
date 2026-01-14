@@ -5,6 +5,7 @@ import "dotenv/config";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -12,7 +13,7 @@ export async function handler(event) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
       },
       body: "",
@@ -26,6 +27,7 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
     let data = null;
     if (event.httpMethod === "POST" || event.httpMethod === "PUT") {
       try {
@@ -38,7 +40,39 @@ export async function handler(event) {
         };
       }
     }
-    const organizationId = await resolveOrganizationId(client, event, data);
+    const organizationId = authUser
+      ? authUser.organizationId
+      : await resolveOrganizationId(client, event, data);
+
+    const lookupEmail = typeof event.queryStringParameters?.email === "string"
+      ? event.queryStringParameters.email.trim()
+      : "";
+    const lookupPhone = typeof event.queryStringParameters?.phone === "string"
+      ? event.queryStringParameters.phone.trim()
+      : "";
+    const lookupName = typeof event.queryStringParameters?.name === "string"
+      ? event.queryStringParameters.name.trim()
+      : "";
+    const hasLookup = Boolean(lookupEmail || lookupPhone || lookupName);
+    const id = Number(event.queryStringParameters?.id || 0);
+    const hasId = Number.isFinite(id) && id > 0;
+
+    if (!authUser) {
+      if (event.httpMethod === "PUT") {
+        return {
+          statusCode: 401,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "Unauthorized" }),
+        };
+      }
+      if (event.httpMethod === "GET" && (hasId || !hasLookup)) {
+        return {
+          statusCode: 401,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          body: JSON.stringify({ error: "Unauthorized" }),
+        };
+      }
+    }
 
     // HANDLE POST: Add a new customer
     if (event.httpMethod === "POST") {
@@ -224,8 +258,7 @@ export async function handler(event) {
       };
     }
 
-    const id = Number(event.queryStringParameters?.id || 0);
-    if (Number.isFinite(id) && id > 0) {
+    if (hasId) {
       const customerRes = await client.query(
         `SELECT id, name, email, phone, "createdAt", "updatedAt"
          FROM "customer"
@@ -295,15 +328,6 @@ export async function handler(event) {
       };
     }
 
-    const lookupEmail = typeof event.queryStringParameters?.email === "string"
-      ? event.queryStringParameters.email.trim()
-      : "";
-    const lookupPhone = typeof event.queryStringParameters?.phone === "string"
-      ? event.queryStringParameters.phone.trim()
-      : "";
-    const lookupName = typeof event.queryStringParameters?.name === "string"
-      ? event.queryStringParameters.name.trim()
-      : "";
     const normalizePhoneVariants = (value) => {
       const digits = typeof value === "string" ? value.replace(/\D/g, "") : "";
       if (!digits) return [];
@@ -318,7 +342,7 @@ export async function handler(event) {
     };
     const lookupPhoneVariants = normalizePhoneVariants(lookupPhone);
 
-    if ((lookupEmail || lookupPhone || lookupName) && (!Number.isFinite(id) || id <= 0)) {
+    if (hasLookup && !hasId) {
       let match = null;
       if (lookupEmail) {
         const res = await client.query(

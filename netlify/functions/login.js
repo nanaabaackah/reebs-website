@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { hashPassword, verifyPassword } from "../../utils/passwords.js";
+import { signUserToken } from "./_shared/userAuth.js";
 
 export async function handler(event) {
   if (event.httpMethod !== "POST") {
@@ -78,6 +79,18 @@ export async function handler(event) {
 
     // Strip password before returning
     const { password: _, ...safeUser } = user;
+    const token = signUserToken({
+      userId: user.id,
+      organizationId: user.organizationId,
+      role: user.role,
+    });
+    if (!token) {
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Auth secret is not configured." }),
+      };
+    }
 
     return {
       statusCode: 200,
@@ -85,7 +98,11 @@ export async function handler(event) {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       },
-      body: JSON.stringify(safeUser),
+      body: JSON.stringify({
+        ...safeUser,
+        token,
+        expiresInHours: 24 * 7,
+      }),
     };
   } catch (err) {
     console.error("Login error", err);

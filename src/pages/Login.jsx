@@ -22,11 +22,7 @@ function Login() {
     try {
       const email = form.email.trim().toLowerCase();
       const password = form.password.trim();
-      await login(email, password);
-      if (!form.remember) {
-        // If not remembering, clear stored user after login navigation
-        localStorage.removeItem("reebs_auth_user");
-      }
+      await login(email, password, form.remember);
       navigate("/admin");
     } catch (err) {
       setLocalError(err.message || "Login failed");

@@ -13,6 +13,7 @@ import {
 import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 const formatAmount = (value) => {
   const parsed = Number(value);
@@ -122,7 +123,7 @@ export async function handler(event) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
       },
       body: "",
@@ -136,6 +137,7 @@ export async function handler(event) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
     let data = null;
     if (event.httpMethod === "POST" || event.httpMethod === "PUT") {
       try {
@@ -144,9 +146,16 @@ export async function handler(event) {
         return json(400, { error: "Invalid JSON body." });
       }
     }
-    const organizationId = await resolveOrganizationId(client, event, data);
+    if (!authUser && event.httpMethod !== "POST") {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser
+      ? authUser.organizationId
+      : await resolveOrganizationId(client, event, data);
     await ensureAuditColumns(client);
-    const defaultActor = await resolveActor(client, normalizeActor({}), organizationId);
+    const defaultActor = authUser
+      ? { userId: authUser.id, userName: authUser.fullName, userEmail: authUser.email }
+      : await resolveActor(client, normalizeActor({}), organizationId);
     if (defaultActor.userId) {
       await backfillAuditDefaults(client, defaultActor.userId, organizationId);
     }
@@ -244,7 +253,9 @@ export async function handler(event) {
 
     let bundleEligible = normalizedItems.length >= BUNDLE_MIN_ITEMS;
 
-    const actor = await resolveActor(client, normalizeActor(data), organizationId);
+    const actor = authUser
+      ? { userId: authUser.id, userName: authUser.fullName, userEmail: authUser.email }
+      : await resolveActor(client, normalizeActor(data), organizationId);
     const actorUserId = await ensureValidUserId(client, actor.userId, organizationId);
     const assignedUserIdValue = hasAssignedUser
       ? assignedUserIdRaw === null

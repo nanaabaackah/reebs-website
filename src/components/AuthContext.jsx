@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { setAuthToken } from "../utils/organization.js";
 
 const AuthContext = createContext(null);
 
@@ -11,20 +12,69 @@ function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authReady, setAuthReady] = useState(false);
+  const storageKey = "reebs_auth_user";
+
+  const readStoredUser = () => {
+    if (typeof window === "undefined") return null;
+    const raw = window.localStorage.getItem(storageKey) || window.sessionStorage.getItem(storageKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeStoredUser = (nextUser, remember) => {
+    if (typeof window === "undefined") return;
+    try {
+      if (remember) {
+        window.localStorage.setItem(storageKey, JSON.stringify(nextUser));
+        window.sessionStorage.removeItem(storageKey);
+      } else {
+        window.sessionStorage.setItem(storageKey, JSON.stringify(nextUser));
+        window.localStorage.removeItem(storageKey);
+      }
+    } catch (err) {
+      console.warn("Failed to persist user", err);
+    }
+  };
+
+  const updateStoredUser = (nextUser) => {
+    if (typeof window === "undefined") return;
+    try {
+      if (window.localStorage.getItem(storageKey)) {
+        window.localStorage.setItem(storageKey, JSON.stringify(nextUser));
+      } else if (window.sessionStorage.getItem(storageKey)) {
+        window.sessionStorage.setItem(storageKey, JSON.stringify(nextUser));
+      } else {
+        window.localStorage.setItem(storageKey, JSON.stringify(nextUser));
+      }
+    } catch (err) {
+      console.warn("Failed to persist user", err);
+    }
+  };
+
+  const clearStoredUser = () => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(storageKey);
+    } catch (err) {
+      console.warn("Failed to clear auth cache", err);
+    }
+  };
 
   useEffect(() => {
-    const raw = localStorage.getItem("reebs_auth_user");
-    if (raw) {
-      try {
-        setUser(JSON.parse(raw));
-      } catch {
-        localStorage.removeItem("reebs_auth_user");
-      }
+    const storedUser = readStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+      setAuthToken(storedUser?.token);
     }
     setAuthReady(true);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (email, password, remember = true) => {
     setAuthLoading(true);
     setAuthError("");
     try {
@@ -36,7 +86,8 @@ function AuthProvider({ children }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Login failed");
       setUser(data);
-      localStorage.setItem("reebs_auth_user", JSON.stringify(data));
+      setAuthToken(data?.token);
+      writeStoredUser(data, remember);
       return data;
     } catch (err) {
       setAuthError(err.message || "Login failed");
@@ -48,20 +99,25 @@ function AuthProvider({ children }) {
 
   const logout = () => {
     setUser(null);
-    try {
-      localStorage.removeItem("reebs_auth_user");
-    } catch (err) {
-      console.warn("Failed to clear auth cache", err);
-    }
+    setAuthToken("");
+    clearStoredUser();
   };
 
   const updateUser = (nextUser) => {
-    setUser(nextUser);
-    try {
-      localStorage.setItem("reebs_auth_user", JSON.stringify(nextUser));
-    } catch (err) {
-      console.warn("Failed to persist user", err);
+    if (!nextUser) {
+      setUser(nextUser);
+      setAuthToken("");
+      clearStoredUser();
+      return;
     }
+    const baseUser = user && typeof user === "object" ? user : {};
+    const mergedUser = { ...baseUser, ...nextUser };
+    if (baseUser.token && !mergedUser.token) {
+      mergedUser.token = baseUser.token;
+    }
+    setUser(mergedUser);
+    setAuthToken(mergedUser?.token);
+    updateStoredUser(mergedUser);
   };
 
   const value = {

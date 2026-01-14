@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -52,7 +53,7 @@ export async function handler(event = {}) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
       },
       body: "",
@@ -66,7 +67,21 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser.organizationId;
     await ensureDocumentTable(client);
+    const orgColumnRes = await client.query(
+      `SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'document'
+         AND column_name = 'organizationId'
+       LIMIT 1`
+    );
+    const hasOrganizationId = orgColumnRes.rowCount > 0;
 
     if (event.httpMethod === "GET") {
       const id = Number(event.queryStringParameters?.id);
@@ -74,8 +89,8 @@ export async function handler(event = {}) {
         const result = await client.query(
           `SELECT id, title, category, "fileName", "mimeType", size, data, source, "createdAt"
            FROM "document"
-           WHERE id = $1`,
-          [id]
+           WHERE id = $1${hasOrganizationId ? ` AND "organizationId" = $2` : ""}`,
+          hasOrganizationId ? [id, organizationId] : [id]
         );
         if (result.rowCount === 0) {
           return json(404, { error: "Document not found." });
@@ -86,7 +101,9 @@ export async function handler(event = {}) {
       const list = await client.query(
         `SELECT id, title, category, "fileName", "mimeType", size, source, "createdAt"
          FROM "document"
-         ORDER BY "createdAt" DESC, id DESC`
+         ${hasOrganizationId ? `WHERE "organizationId" = $1` : ""}
+         ORDER BY "createdAt" DESC, id DESC`,
+        hasOrganizationId ? [organizationId] : []
       );
       return json(200, list.rows || []);
     }
@@ -129,10 +146,12 @@ export async function handler(event = {}) {
     }
 
     const result = await client.query(
-      `INSERT INTO "document" (title, category, "fileName", "mimeType", size, data, source, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      `INSERT INTO "document" (${hasOrganizationId ? `"organizationId", ` : ""}title, category, "fileName", "mimeType", size, data, source, "createdAt", "updatedAt")
+       VALUES (${hasOrganizationId ? `$1, ` : ""}$${hasOrganizationId ? 2 : 1}, $${hasOrganizationId ? 3 : 2}, $${hasOrganizationId ? 4 : 3}, $${hasOrganizationId ? 5 : 4}, $${hasOrganizationId ? 6 : 5}, $${hasOrganizationId ? 7 : 6}, $${hasOrganizationId ? 8 : 7}, NOW(), NOW())
        RETURNING id, title, category, "fileName", "mimeType", size, source, "createdAt"`,
-      [title, category, fileName, mimeType, size, data, source]
+      hasOrganizationId
+        ? [organizationId, title, category, fileName, mimeType, size, data, source]
+        : [title, category, fileName, mimeType, size, data, source]
     );
 
     return json(200, result.rows[0]);

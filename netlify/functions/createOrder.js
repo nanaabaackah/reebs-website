@@ -4,13 +4,12 @@ import "dotenv/config";
 import { Client } from "pg";
 import {
   ensureAuditColumns,
-  resolveActor,
   backfillAuditDefaults,
-  normalizeActor,
 } from "./auditHelpers.js";
 import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 const formatAmount = (cents) => {
   const value = Number(cents);
@@ -123,7 +122,7 @@ export async function handler(event) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "POST,OPTIONS",
       },
       body: "",
@@ -143,7 +142,6 @@ export async function handler(event) {
     customerId,
     items,
     status,
-    userId,
     userName,
     userEmail,
     deliveryMethod,
@@ -162,14 +160,17 @@ export async function handler(event) {
     return Math.round(parsed * 100);
   };
 
-  const discountCents = Math.max(0, toCents(discount || 0));
-  const totalAmountCents = Math.max(
-    0,
-    items.reduce((sum, item) => {
-      const quantity = Number(item.quantity) || 0;
-      return sum + toCents(item.price) * quantity;
-    }, 0) - discountCents
-  );
+  const normalizedItems = items
+    .map((item) => ({
+      productId: Number(item.productId),
+      quantity: Math.max(1, parseInt(item.quantity, 10) || 0),
+      price: Number.isFinite(Number(item.price)) ? Number(item.price) : null,
+    }))
+    .filter((item) => Number.isFinite(item.productId) && item.quantity > 0);
+  if (normalizedItems.length === 0) {
+    return json(400, { error: "Missing order items." });
+  }
+
   const safeJson = (value) => (value && typeof value === "object" ? value : null);
   const normalizedDelivery = safeJson(deliveryDetails);
   const normalizedPickup = safeJson(pickupDetails);
@@ -193,15 +194,19 @@ export async function handler(event) {
 
   try {
     await client.connect();
-    const organizationId = await resolveOrganizationId(client, event, payload);
+    const authUser = await requireUser(client, event);
+    if (!authUser && source !== "checkout") {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser
+      ? authUser.organizationId
+      : await resolveOrganizationId(client, event, payload);
     await ensureAuditColumns(client);
     await ensureOrderColumns(client);
 
-    const actorInput = normalizeActor({ userId, userName, userEmail });
-    const actor =
-      source === "checkout"
-        ? { userId: null, userName: userName || "Checkout", userEmail: userEmail || null }
-        : await resolveActor(client, actorInput, organizationId);
+    const actor = authUser
+      ? { userId: authUser.id, userName: authUser.fullName, userEmail: authUser.email }
+      : { userId: null, userName: userName || "Checkout", userEmail: userEmail || null };
     if (actor.userId) {
       const userRes = await client.query(
         `SELECT id FROM "user" WHERE id = $1 AND "organizationId" = $2`,
@@ -217,6 +222,42 @@ export async function handler(event) {
     if (actor.userId) {
       await backfillAuditDefaults(client, actor.userId, organizationId);
     }
+
+    const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
+    const productRes = await client.query(
+      `SELECT id, price
+       FROM "product"
+       WHERE id = ANY($1::int[]) AND "organizationId" = $2`,
+      [productIds, organizationId]
+    );
+    const productMap = new Map(
+      (productRes.rows || []).map((row) => [Number(row.id), Number(row.price)])
+    );
+    if (productMap.size !== productIds.length) {
+      return json(404, { error: "One or more products were not found." });
+    }
+    for (const item of normalizedItems) {
+      const dbPriceCents = Number(productMap.get(item.productId));
+      if (!Number.isFinite(dbPriceCents)) {
+        return json(400, { error: `Invalid price for product ${item.productId}.` });
+      }
+    }
+
+    const allowPriceOverride = Boolean(authUser);
+    const pricedItems = normalizedItems.map((item) => {
+      const dbPriceCents = Number(productMap.get(item.productId));
+      const overrideCents = allowPriceOverride && Number.isFinite(item.price)
+        ? Math.max(0, toCents(item.price))
+        : null;
+      const unitPriceCents = Number.isFinite(overrideCents) ? overrideCents : dbPriceCents;
+      return { ...item, unitPriceCents };
+    });
+    const discountCents = allowPriceOverride ? Math.max(0, toCents(discount || 0)) : 0;
+    const itemsTotalCents = pricedItems.reduce(
+      (sum, item) => sum + item.unitPriceCents * item.quantity,
+      0
+    );
+    const totalAmountCents = Math.max(0, itemsTotalCents - discountCents);
 
     await client.query('BEGIN'); // Start transaction
 
@@ -250,6 +291,7 @@ export async function handler(event) {
     const orderNumber = `ORD-${dateStamp}-${String(nextNumber).padStart(3, "0")}`;
 
     // 2. Create the Order
+    const orderStatus = authUser ? status || "pending" : "pending";
     const orderRes = await client.query(
       `INSERT INTO "order" (
          "organizationId",
@@ -275,7 +317,7 @@ export async function handler(event) {
         orderNumber,
         customerId,
         customerName,
-        status || 'pending',
+        orderStatus,
         deliveryMethod || 'delivery',
         normalizedDelivery,
         normalizedPickup,
@@ -288,9 +330,9 @@ export async function handler(event) {
     const orderId = orderRes.rows[0].id;
 
     // 3. Process each item
-    for (const item of items) {
-      const quantity = parseInt(item.quantity, 10);
-      const unitPriceCents = toCents(item.price);
+    for (const item of pricedItems) {
+      const quantity = item.quantity;
+      const unitPriceCents = item.unitPriceCents;
       const lineTotal = unitPriceCents * quantity;
 
       // Add to orderItem table
@@ -351,7 +393,7 @@ export async function handler(event) {
           deliveryMethod: deliveryMethod || "delivery",
           deliveryDetails: normalizedDelivery,
           pickupDetails: normalizedPickup,
-          itemsCount: items.length,
+          itemsCount: pricedItems.length,
         }),
       });
     } catch (err) {
@@ -366,7 +408,7 @@ export async function handler(event) {
           customerName,
           customerPhone,
           totalAmountCents,
-          itemsCount: items.length,
+          itemsCount: pricedItems.length,
           deliveryMethod: deliveryMethod || "delivery",
           deliveryDetails: normalizedDelivery,
           pickupDetails: normalizedPickup,

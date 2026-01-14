@@ -7,12 +7,22 @@ import "dotenv/config";
 import { Client } from "pg";
 import {
   ensureAuditColumns,
-  resolveActor,
   backfillAuditDefaults,
-  normalizeActor,
 } from "./auditHelpers.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 export async function handler(event) {
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Methods": "POST,OPTIONS",
+      },
+      body: "",
+    };
+  }
   // 1. Only allow POST requests
   if (event.httpMethod !== "POST") {
     return {
@@ -77,13 +87,20 @@ export async function handler(event) {
   try {
     await client.connect();
     await ensureAuditColumns(client);
-    const actor = await resolveActor(
-      client,
-      normalizeActor({ userId, userName, userEmail })
-    );
-    if (actor.userId) {
-      await backfillAuditDefaults(client, actor.userId);
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "Unauthorized" }),
+      };
     }
+    const organizationId = authUser.organizationId;
+    const actor = {
+      userId: authUser.id,
+      userName: authUser.fullName,
+      userEmail: authUser.email,
+    };
+    await backfillAuditDefaults(client, actor.userId, organizationId);
     
     // Start a transaction
     await client.query('BEGIN');
@@ -96,10 +113,15 @@ export async function handler(event) {
           "lastUpdatedByUserId" = COALESCE($3, "lastUpdatedByUserId"),
           "lastUpdatedAt" = NOW(),
           "updatedAt" = NOW()
-      WHERE "id" = $2
+      WHERE "id" = $2 AND "organizationId" = $4
       RETURNING "id", "stock", "lastUpdatedAt", "lastUpdatedByUserId";
     `;
-    const updateResult = await client.query(updateProductQuery, [stockDelta, productId, actor.userId]);
+    const updateResult = await client.query(updateProductQuery, [
+      stockDelta,
+      productId,
+      actor.userId,
+      organizationId,
+    ]);
 
     if (updateResult.rowCount === 0) {
       await client.query('ROLLBACK');
@@ -114,6 +136,7 @@ export async function handler(event) {
     // This prevents PostgreSQL from converting them to lowercase or tripping on keywords.
     const insertMovementQuery = `
       INSERT INTO "stockMovement" (
+        "organizationId",
         "productId", 
         "type", 
         "quantity", 
@@ -126,10 +149,11 @@ export async function handler(event) {
         "performedByEmail",
         "createdAt"
       )
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8, $9, $10, NOW())
     `;
     
     await client.query(insertMovementQuery, [
+        organizationId,
         productId, 
         type, 
         productQuantity, 

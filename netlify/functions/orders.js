@@ -2,15 +2,9 @@
 // Filename: orders.js
 import "dotenv/config";
 import { Client } from "pg";
-import {
-  ensureAuditColumns,
-  backfillAuditDefaults,
-  findDefaultAdmin,
-  resolveActor,
-  normalizeActor,
-} from "./auditHelpers.js";
+import { ensureAuditColumns, backfillAuditDefaults } from "./auditHelpers.js";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
-import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -65,7 +59,7 @@ export async function handler(event = {}) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
       },
       body: "",
@@ -81,6 +75,10 @@ export async function handler(event = {}) {
     await client.connect();
     await ensureAuditColumns(client);
     await ensureOrderColumns(client);
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
     let payload = null;
     if (event.httpMethod === "PUT") {
       try {
@@ -89,11 +87,8 @@ export async function handler(event = {}) {
         return json(400, { error: "Invalid JSON body." });
       }
     }
-    const organizationId = await resolveOrganizationId(client, event, payload);
-    const admin = await findDefaultAdmin(client, organizationId);
-    if (admin?.id) {
-      await backfillAuditDefaults(client, admin.id, organizationId);
-    }
+    const organizationId = authUser.organizationId;
+    await backfillAuditDefaults(client, authUser.id, organizationId);
 
     if (event.httpMethod === "GET") {
       const orderId = Number(event.queryStringParameters?.orderId);
@@ -183,7 +178,11 @@ export async function handler(event = {}) {
       return json(400, { error: "Cannot reopen a cancelled order. Create a new order instead." });
     }
 
-    const actor = await resolveActor(client, normalizeActor(payload), organizationId);
+    const actor = {
+      userId: authUser.id,
+      userName: authUser.fullName,
+      userEmail: authUser.email,
+    };
 
     await client.query("BEGIN");
     try {

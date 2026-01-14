@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
-import { ensureAuditColumns, findDefaultAdmin, backfillAuditDefaults } from "./auditHelpers.js";
+import { ensureAuditColumns, backfillAuditDefaults } from "./auditHelpers.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -55,7 +56,7 @@ export async function handler(event = {}) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
       },
       body: "",
@@ -69,12 +70,14 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser.organizationId;
     await ensureAuditColumns(client);
     await ensureEmployeeProfileTable(client);
-    const admin = await findDefaultAdmin(client);
-    if (admin?.id) {
-      await backfillAuditDefaults(client, admin.id);
-    }
+    await backfillAuditDefaults(client, authUser.id, organizationId);
 
     if (event.httpMethod === "GET") {
       const staff = await client.query(
@@ -99,21 +102,28 @@ export async function handler(event = {}) {
         LEFT JOIN LATERAL (
           SELECT COUNT(*)::int AS orders
           FROM "order" o
-          WHERE u.id = COALESCE(o."assignedUserId", o."createdByUserId")
+          WHERE o."organizationId" = $1
+            AND (u.id = COALESCE(o."assignedUserId", o."createdByUserId")
              OR u.id = o."updatedByUserId"
+            )
         ) order_stats ON true
         LEFT JOIN LATERAL (
           SELECT COUNT(*)::int AS bookings
           FROM "booking" b
-          WHERE u.id = COALESCE(b."assignedUserId", b."createdByUserId")
+          WHERE b."organizationId" = $1
+            AND (u.id = COALESCE(b."assignedUserId", b."createdByUserId")
              OR u.id = b."updatedByUserId"
+            )
         ) booking_stats ON true
         LEFT JOIN LATERAL (
           SELECT COUNT(*)::int AS movements
           FROM "stockMovement" sm
-          WHERE u.id = sm."performedByUserId"
+          WHERE sm."organizationId" = $1
+            AND u.id = sm."performedByUserId"
         ) stock_stats ON true
-        ORDER BY u."fullName" ASC NULLS LAST, u.id ASC`
+        WHERE u."organizationId" = $1
+        ORDER BY u."fullName" ASC NULLS LAST, u.id ASC`,
+        [organizationId]
       );
       return json(200, staff.rows || []);
     }
@@ -135,8 +145,10 @@ export async function handler(event = {}) {
     }
 
     const currentRes = await client.query(
-      `SELECT "firstName", "lastName", role FROM "user" WHERE id = $1`,
-      [id]
+      `SELECT "firstName", "lastName", role
+       FROM "user"
+       WHERE id = $1 AND "organizationId" = $2`,
+      [id, organizationId]
     );
     if (currentRes.rowCount === 0) {
       return json(404, { error: "Employee not found." });
@@ -172,8 +184,9 @@ export async function handler(event = {}) {
     if (userUpdates.length) {
       userUpdates.push(`"updatedAt" = NOW()`);
       userValues.push(id);
+      userValues.push(organizationId);
       await client.query(
-        `UPDATE "user" SET ${userUpdates.join(", ")} WHERE id = $${userIndex}`,
+        `UPDATE "user" SET ${userUpdates.join(", ")} WHERE id = $${userIndex} AND "organizationId" = $${userIndex + 1}`,
         userValues
       );
     }
@@ -246,8 +259,8 @@ export async function handler(event = {}) {
         p."emergencyContactPhone"
       FROM "user" u
       LEFT JOIN "employeeProfile" p ON p."userId" = u.id
-      WHERE u.id = $1`,
-      [id]
+      WHERE u.id = $1 AND u."organizationId" = $2`,
+      [id, organizationId]
     );
 
     return json(200, updated.rows[0]);

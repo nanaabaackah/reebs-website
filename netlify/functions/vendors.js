@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -58,7 +59,7 @@ export async function handler(event = {}) {
       statusCode: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
       },
       body: "",
@@ -72,9 +73,26 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
+    const organizationId = authUser.organizationId;
     await ensureVendorTable(client);
+    const orgColumnRes = await client.query(
+      `SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'vendor'
+         AND column_name = 'organizationId'
+       LIMIT 1`
+    );
+    const hasOrganizationId = orgColumnRes.rowCount > 0;
 
     if (event.httpMethod === "GET") {
+      const params = [];
+      const whereClause = hasOrganizationId ? `WHERE v."organizationId" = $1` : "";
+      if (hasOrganizationId) params.push(organizationId);
       const result = await client.query(
         `SELECT
           v.id,
@@ -100,9 +118,12 @@ export async function handler(event = {}) {
             ARRAY_AGG(DISTINCT name ORDER BY name) AS product_names
           FROM "product"
           WHERE "vendorId" IS NOT NULL
+            ${hasOrganizationId ? `AND "organizationId" = $1` : ""}
           GROUP BY "vendorId"
         ) p ON p."vendorId" = v.id
-        ORDER BY v.name ASC`
+        ${whereClause}
+        ORDER BY v.name ASC`,
+        params
       );
       return json(200, result.rows || []);
     }
@@ -136,10 +157,24 @@ export async function handler(event = {}) {
 
       const result = await client.query(
         `INSERT INTO "vendor"
-          (name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", notes, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+          (${hasOrganizationId ? `"organizationId", ` : ""}name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", notes, "createdAt", "updatedAt")
+         VALUES (${hasOrganizationId ? `$1, ` : ""}$${hasOrganizationId ? 2 : 1}, $${hasOrganizationId ? 3 : 2}, $${hasOrganizationId ? 4 : 3}, $${hasOrganizationId ? 5 : 4}, $${hasOrganizationId ? 6 : 5}, $${hasOrganizationId ? 7 : 6}, $${hasOrganizationId ? 8 : 7}, $${hasOrganizationId ? 9 : 8}, $${hasOrganizationId ? 10 : 9}, $${hasOrganizationId ? 11 : 10}, NOW(), NOW())
          RETURNING id, name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", notes, "createdAt", "updatedAt"`,
-        [name, contactName, email, phone, mobileMoneyNumber, address, bankName, bankAccount, leadTimeDays, notes]
+        hasOrganizationId
+          ? [
+              organizationId,
+              name,
+              contactName,
+              email,
+              phone,
+              mobileMoneyNumber,
+              address,
+              bankName,
+              bankAccount,
+              leadTimeDays,
+              notes,
+            ]
+          : [name, contactName, email, phone, mobileMoneyNumber, address, bankName, bankAccount, leadTimeDays, notes]
       );
 
       return json(200, result.rows[0]);
@@ -177,11 +212,14 @@ export async function handler(event = {}) {
     updates.push(`"updatedAt" = NOW()`);
 
     values.push(id);
+    if (hasOrganizationId) {
+      values.push(organizationId);
+    }
 
     const result = await client.query(
       `UPDATE "vendor"
        SET ${updates.join(", ")}
-       WHERE id = $${index}
+       WHERE id = $${index}${hasOrganizationId ? ` AND "organizationId" = $${index + 1}` : ""}
        RETURNING id, name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", notes, "createdAt", "updatedAt"`,
       values
     );
