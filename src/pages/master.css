@@ -17862,6 +17862,60 @@ body.dark-mode .invoice-terms {
   }
 }
 
+@media (max-width: 640px) {
+  .invoice-table-wrapper {
+    overflow-x: visible;
+  }
+
+  .invoice-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .invoice-table thead {
+    display: none;
+  }
+
+  .invoice-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .invoice-table tr {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.75);
+  }
+
+  .invoice-table td {
+    border-bottom: none;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .invoice-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    opacity: 0.65;
+  }
+
+  .invoice-logo {
+    width: 90px;
+    height: 90px;
+  }
+
+  [data-theme="dark"] .invoice-table tr {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(15, 20, 30, 0.85);
+  }
+}
+
 @media print {
   .no-print,
   .invoicing-sidebar,

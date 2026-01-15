@@ -1225,10 +1225,10 @@ function AdminInvoicing() {
                       <tbody>
                         {(displayInvoice.items || []).map((item) => (
                           <tr key={item.id}>
-                            <td>{item.name || "Item"}</td>
-                            <td>{item.quantity}</td>
-                            <td>{formatCurrency(item.unitPrice)}</td>
-                            <td>{formatCurrency(item.total)}</td>
+                            <td data-label="Description">{item.name || "Item"}</td>
+                            <td data-label="Qty">{item.quantity}</td>
+                            <td data-label="Unit Price">{formatCurrency(item.unitPrice)}</td>
+                            <td data-label="Total">{formatCurrency(item.total)}</td>
                           </tr>
                         ))}
                       </tbody>
