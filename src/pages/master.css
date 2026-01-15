@@ -17755,6 +17755,11 @@ body.dark-mode .invoice-terms {
   .invoicing-controls {
     align-items: flex-start;
   }
+
+  .invoice-preview-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -17793,11 +17798,6 @@ body.dark-mode .invoice-terms {
   .invoicing-secondary {
     width: 100%;
     justify-content: center;
-  }
-
-  .invoice-preview-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .invoicing-list-item {
