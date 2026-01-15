@@ -18044,3 +18044,81 @@ body.dark-mode .invoice-terms {
     margin: 6rem auto;
   }
 }
+
+/* Light mode: add borders for cards and inputs across apps */
+:root:not([data-theme="dark"]) :is(
+  .glass-card,
+  .post-card,
+  .cookie-preference-card,
+  .suggested-card,
+  .about-card,
+  .login-card,
+  .policy-hero-card,
+  .policy-card,
+  .policy-third-card,
+  .cart-hero-card,
+  .cart-summary-card,
+  .cart-empty-card,
+  .checkout-card,
+  .checkout-option-card,
+  .checkout-modal-card,
+  .checkout-empty-card,
+  .shop-hero-card,
+  .shop-popular-card,
+  .shop-card,
+  .rent-card,
+  .rental-hero-card,
+  .rental-detail-card,
+  .rental-similar-card,
+  .bouncy-card,
+  .gallery-card,
+  .gallery-carousel-card,
+  .faq-hero-card,
+  .faq-card,
+  .contact-hero-card,
+  .contact-card,
+  .contact-form-card,
+  .contact-map-card,
+  .booking-hero-card,
+  .booking-form-card,
+  .booking-rental-card,
+  .admin-card,
+  .admin-analytics-card,
+  .admin-kpi-card,
+  .admin-kpi-link-card,
+  .inventory-card,
+  .order-customer-card,
+  .crm-card,
+  .crm-detail-card,
+  .accounting-kpi-card,
+  .accounting-kanban-card,
+  .agenda-card,
+  .bookings-card,
+  .bookings-kanban-card,
+  .expenses-total-card,
+  .expenses-card,
+  .hr-card,
+  .hr-employee-card,
+  .documents-card,
+  .documents-upload-card,
+  .timesheet-card,
+  .vendors-profile-card,
+  .maintenance-card,
+  .delivery-route-card,
+  .roles-card,
+  .settings-user-card,
+  .orders-card,
+  .orders-kanban-card,
+  .invoice-paper
+) {
+  outline: 1px solid rgba(31, 37, 48, 0.18);
+  outline-offset: -1px;
+}
+
+:root:not([data-theme="dark"]) :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea
+) {
+  border: 1px solid rgba(31, 37, 48, 0.22);
+}
