@@ -17455,6 +17455,11 @@ body.dark-mode .delivery-list-item {
   gap: 16px;
 }
 
+.invoice-preview-actions {
+  display: none;
+  gap: 10px;
+}
+
 .invoicing-balance {
   border: 1px solid var(--glass-border);
   border-radius: 16px;
@@ -17542,6 +17547,11 @@ body.dark-mode .delivery-list-item {
 
 .invoice-billing {
   margin: 18px 0;
+}
+
+.invoice-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .invoice-table {
@@ -17785,6 +17795,11 @@ body.dark-mode .invoice-terms {
     justify-content: center;
   }
 
+  .invoice-preview-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
   .invoicing-list-item {
     flex-direction: column;
     align-items: flex-start;
@@ -17805,6 +17820,8 @@ body.dark-mode .invoice-terms {
 
   .invoice-paper {
     padding: 16px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .invoice-header {
@@ -17817,16 +17834,12 @@ body.dark-mode .invoice-terms {
     height: 110px;
   }
 
-  .invoice-table {
-    display: block;
-    overflow-x: auto;
+  .invoice-table-wrapper {
     -webkit-overflow-scrolling: touch;
   }
 
-  .invoice-table thead,
-  .invoice-table tbody {
-    display: table;
-    width: 100%;
+  .invoice-table {
+    min-width: 520px;
   }
 
   .invoice-totals {

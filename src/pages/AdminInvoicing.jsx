@@ -1149,17 +1149,36 @@ function AdminInvoicing() {
                     <strong>{formatCurrency(balanceDue)}</strong>
                     <p className="invoicing-muted">Total: {formatCurrency(totalDue)}</p>
                   </div>
-                  {isBooking && (
-                    <div className="invoicing-progress">
-                      <span style={{ width: `${depositPct}%` }} />
-                    </div>
-                  )}
-                </div>
+                {isBooking && (
+                  <div className="invoicing-progress">
+                    <span style={{ width: `${depositPct}%` }} />
+                  </div>
+                )}
+              </div>
 
-                <div className="invoice-paper">
-                  <div className="invoice-header">
-                    <div className="invoice-brand"> 
-                      <div>
+              <div className="invoice-preview-actions no-print">
+                <button
+                  type="button"
+                  className="invoicing-primary"
+                  onClick={buildPdf}
+                  disabled={!displayInvoice || pdfLoading}
+                >
+                  <FontAwesomeIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
+                </button>
+                <button
+                  type="button"
+                  className="invoicing-secondary"
+                  onClick={saveToDocuments}
+                  disabled={!displayInvoice || savingDoc}
+                >
+                  <FontAwesomeIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
+                </button>
+              </div>
+
+              <div className="invoice-paper">
+                <div className="invoice-header">
+                  <div className="invoice-brand"> 
+                    <div>
                         <img className="invoice-logo" src={COMPANY.logo} alt="Reebs logo" />
                         <h2>{COMPANY.name}</h2>
                         <p>{COMPANY.location}</p>
@@ -1193,26 +1212,28 @@ function AdminInvoicing() {
                     <p>{displayInvoice.customer?.email || "-"}</p>
                   </div>
 
-                  <table className="invoice-table">
-                    <thead>
-                      <tr>
-                        <th>Description</th>
-                        <th>Qty</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(displayInvoice.items || []).map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.name || "Item"}</td>
-                          <td>{item.quantity}</td>
-                          <td>{formatCurrency(item.unitPrice)}</td>
-                          <td>{formatCurrency(item.total)}</td>
+                  <div className="invoice-table-wrapper">
+                    <table className="invoice-table">
+                      <thead>
+                        <tr>
+                          <th>Description</th>
+                          <th>Qty</th>
+                          <th>Unit Price</th>
+                          <th>Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(displayInvoice.items || []).map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.name || "Item"}</td>
+                            <td>{item.quantity}</td>
+                            <td>{formatCurrency(item.unitPrice)}</td>
+                            <td>{formatCurrency(item.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
                   <div className="invoice-terms">
                     {displayInvoice.type === "booking" ? (
