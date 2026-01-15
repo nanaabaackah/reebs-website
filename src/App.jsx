@@ -60,6 +60,12 @@ function RequireAuth({ children }) {
 }
 
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+const PORTAL_HOST = "portal.reebspartythemes.com";
+
+const isPortalHost = () => {
+  if (typeof window === "undefined") return false;
+  return window.location.hostname === PORTAL_HOST;
+};
 
 function MobileRestricted({ children }) {
   const [isMobileView, setIsMobileView] = useState(
@@ -86,6 +92,17 @@ function MobileRestricted({ children }) {
   return children;
 }
 
+function PortalGate({ children }) {
+  const location = useLocation();
+  if (isPortalHost()) {
+    const path = location.pathname || "/";
+    const isAllowed = path === "/login" || path.startsWith("/admin");
+    if (!isAllowed) {
+      return <Navigate to="/admin" replace />;
+    }
+  }
+  return children;
+}
 
 function AppLayout() {
   const [cartOpen, setCartOpen] = useState(false);
@@ -102,6 +119,7 @@ function AppLayout() {
      <CartProvider>
         <Navbar onCartToggle={() => setCartOpen(true)} />
        
+          <PortalGate>
           <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -157,6 +175,7 @@ function AppLayout() {
                 element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
               />
           </Routes>
+          </PortalGate>
           <CartOverlay 
             open={cartOpen} 
             onClose={() => setCartOpen(false)} 
