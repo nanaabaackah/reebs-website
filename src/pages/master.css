@@ -17747,6 +17747,108 @@ body.dark-mode .invoice-terms {
   }
 }
 
+@media (max-width: 720px) {
+  .invoicing-page {
+    padding: 36px 14px 60px;
+  }
+
+  .invoicing-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoicing-controls {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .invoicing-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .invoicing-tabs button {
+    flex: 1 1 160px;
+    text-align: center;
+  }
+
+  .invoicing-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .invoicing-primary,
+  .invoicing-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .invoicing-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoicing-list-item > div {
+    width: 100%;
+  }
+
+  .invoicing-balance {
+    grid-template-columns: 1fr;
+  }
+
+  .invoicing-balance-total {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .invoice-paper {
+    padding: 16px;
+  }
+
+  .invoice-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-logo {
+    width: 110px;
+    height: 110px;
+  }
+
+  .invoice-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .invoice-table thead,
+  .invoice-table tbody {
+    display: table;
+    width: 100%;
+  }
+
+  .invoice-totals {
+    max-width: 100%;
+  }
+
+  .invoice-expenses li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-waiver-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-waiver-line {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
 @media print {
   .no-print,
   .invoicing-sidebar,
