@@ -689,10 +689,11 @@ function AdminInvoicing() {
     : 0;
   const totalDue = toNumber(summary?.grandTotal, 0);
   const deposit = Math.min(Math.max(depositRaw, 0), totalDue);
-  const balanceDue = Math.max(totalDue - deposit, 0);
-  const depositPct = totalDue > 0 ? Math.min((deposit / totalDue) * 100, 100) : 0;
-
   const statusValue = (currentMeta.status || "unpaid").toLowerCase();
+  const isPaid = statusValue === "paid";
+  const effectiveDeposit = isPaid ? totalDue : deposit;
+  const balanceDue = isPaid ? 0 : Math.max(totalDue - deposit, 0);
+  const depositPct = totalDue > 0 ? Math.min((effectiveDeposit / totalDue) * 100, 100) : 0;
 
   const createPdfDoc = async () => {
     if (!displayInvoice) return null;
@@ -815,7 +816,7 @@ function AdminInvoicing() {
     if (isBooking) {
       doc.setFontSize(10);
       doc.text("Deposit:", totalsX + 4, totalsY + 24);
-      doc.text(formatPdfCurrency(deposit), pageWidth - margin, totalsY + 24, { align: "right" });
+      doc.text(formatPdfCurrency(effectiveDeposit), pageWidth - margin, totalsY + 24, { align: "right" });
       doc.text("Balance Due:", totalsX + 4, totalsY + 30);
       doc.text(formatPdfCurrency(balanceDue), pageWidth - margin, totalsY + 30, { align: "right" });
     }
@@ -1251,7 +1252,7 @@ function AdminInvoicing() {
                       <>
                         <div className="invoice-total-row">
                           <span>Deposit</span>
-                          <span>{formatCurrency(deposit)}</span>
+                          <span>{formatCurrency(effectiveDeposit)}</span>
                         </div>
                         <div className="invoice-total-row">
                           <span>Balance Due</span>
