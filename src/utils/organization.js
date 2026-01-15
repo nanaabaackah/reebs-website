@@ -4,6 +4,24 @@ const parseOrganizationId = (value) => {
   return parsed;
 };
 
+const DEFAULT_BACKEND_BASE_URL = "https://portal.reebspartythemes.com";
+
+const getBackendBaseUrl = () => {
+  const envBase = import.meta.env?.VITE_BACKEND_BASE_URL;
+  const trimmed = typeof envBase === "string" ? envBase.trim() : "";
+  if (trimmed) return trimmed.replace(/\/+$/, "");
+  return DEFAULT_BACKEND_BASE_URL;
+};
+
+const BACKEND_BASE_URL = getBackendBaseUrl();
+const BACKEND_ORIGIN = (() => {
+  try {
+    return new URL(BACKEND_BASE_URL).origin;
+  } catch {
+    return null;
+  }
+})();
+
 const getStoredUser = () => {
   if (typeof window === "undefined") return null;
   const raw =
@@ -41,14 +59,35 @@ export const getOrganizationId = () => {
   return parseOrganizationId(params.get("organizationId"));
 };
 
+const isNetlifyFunctionRequest = (url) => {
+  if (typeof window === "undefined") return false;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.pathname.startsWith("/.netlify/functions/");
+  } catch {
+    return false;
+  }
+};
+
+const resolveBackendUrl = (url) => {
+  if (typeof url !== "string") return url;
+  if (!url.startsWith("/.netlify/functions/")) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (!BACKEND_BASE_URL) return url;
+  try {
+    return new URL(url, BACKEND_BASE_URL).toString();
+  } catch {
+    return url;
+  }
+};
+
 const shouldAttachOrganizationId = (url) => {
   if (typeof window === "undefined") return false;
   try {
     const parsed = new URL(url, window.location.origin);
-    return (
-      parsed.origin === window.location.origin &&
-      parsed.pathname.startsWith("/.netlify/functions/")
-    );
+    if (!parsed.pathname.startsWith("/.netlify/functions/")) return false;
+    if (parsed.origin === window.location.origin) return true;
+    return BACKEND_ORIGIN ? parsed.origin === BACKEND_ORIGIN : false;
   } catch {
     return false;
   }
@@ -69,13 +108,16 @@ export const patchOrganizationFetch = () => {
   const originalFetch = window.fetch.bind(window);
 
   window.fetch = (input, init) => {
-    const organizationId = getOrganizationId();
-    const token = getAuthToken();
     const url = typeof input === "string" ? input : input?.url;
-    if (!url || !shouldAttachOrganizationId(url)) {
+    if (!url || !isNetlifyFunctionRequest(url)) {
       return originalFetch(input, init);
     }
-    const nextUrl = organizationId ? appendOrganizationId(url, organizationId) : url;
+
+    const resolvedUrl = resolveBackendUrl(url);
+    const shouldAttach = shouldAttachOrganizationId(resolvedUrl);
+    const organizationId = shouldAttach ? getOrganizationId() : null;
+    const token = shouldAttach ? getAuthToken() : null;
+    const nextUrl = organizationId ? appendOrganizationId(resolvedUrl, organizationId) : resolvedUrl;
     const baseHeaders = input instanceof Request ? input.headers : init?.headers;
     const headers = new Headers(baseHeaders || {});
     if (organizationId && !headers.has("x-organization-id")) {

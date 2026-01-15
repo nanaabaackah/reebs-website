@@ -23,7 +23,7 @@ node scripts/hashManagerPin.js 123456
 ```
 
 Expo app config:
-- `EXPO_PUBLIC_API_BASE_URL` (default: `http://localhost:8888`)
+- `EXPO_PUBLIC_API_BASE_URL` (default: `https://portal.reebspartythemes.com`)
 - `expo.extra.apiBaseUrl` in `mobile/app.json` for production
 - `expo.extra.expoProjectId` in `mobile/app.json` for push tokens
 
@@ -44,7 +44,7 @@ npx expo run:android
 Then set the Expo project ID in `mobile/app.json`:
 ```json
 "extra": {
-  "apiBaseUrl": "https://your-site.netlify.app",
+  "apiBaseUrl": "https://portal.reebspartythemes.com",
   "expoProjectId": "YOUR_EXPO_PROJECT_ID"
 }
 ```
