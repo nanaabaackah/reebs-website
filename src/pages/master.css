@@ -8874,6 +8874,11 @@ body.admin-readonly .admin-header-actions, body.admin-readonly .admin-view-toggl
   display: none !important;
 }
 
+body.admin-readonly .invoice-preview-actions .invoicing-primary,
+body.admin-readonly .invoice-preview-actions .invoicing-secondary {
+  display: inline-flex !important;
+}
+
 body.admin-readonly .admin-table tbody tr,
 body.admin-readonly .inventory-card,
 body.admin-readonly .vendors-list-item {
