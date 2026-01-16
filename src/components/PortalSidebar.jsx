@@ -10,9 +10,11 @@ import {
   faClipboardList,
   faFileInvoiceDollar,
   faFileLines,
+  faGlobe,
   faHome,
   faMoneyCheckDollar,
   faMoon,
+  faPenToSquare,
   faShieldAlt,
   faSliders,
   faStore,
@@ -29,6 +31,7 @@ import {
 
 import "./PortalSidebar.css";
 import useThemeMode from "../hooks/useThemeMode";
+import { WEBSITE_URL } from "../utils/website";
 
 const DEFAULT_APPS = [
   {
@@ -36,6 +39,13 @@ const DEFAULT_APPS = [
     path: "/admin",
     matchPaths: ["/admin"],
     icon: faHome,
+  },
+  {
+    label: "Website",
+    path: WEBSITE_URL,
+    icon: faGlobe,
+    external: true,
+    description: "Open the public website",
   },
   {
     label: "Inventory",
@@ -129,6 +139,12 @@ const DEFAULT_APPS = [
     path: "/admin/marketing",
     icon: faBullhorn,
   },
+  {
+    label: "Template mode",
+    path: "/admin/website-template",
+    icon: faPenToSquare,
+    matchPaths: ["/admin/website-template"],
+  },
 ];
 
 const normalizePath = (pathname) => {
@@ -145,6 +161,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
   const isActive = (app) => {
+    if (app.external) return false;
     const matchPaths = app.matchPaths ?? [app.path];
     return matchPaths.some((path) => {
       if (!path) return false;
@@ -170,14 +187,33 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       </div>
       <nav className="portal-sidebar__nav" aria-label="Portal apps">
         <ul>
-          {apps.map((app) => (
-            <li key={app.label} className={isActive(app) ? "is-active" : undefined}>
-              <Link to={app.path} className="portal-sidebar__link">
-                <FontAwesomeIcon icon={app.icon} />
-                <span>{app.label}</span>
-              </Link>
-            </li>
-          ))}
+          {apps.map((app) => {
+            const active = isActive(app);
+            const commonClass = ["portal-sidebar__link", active ? "is-active" : "", app.external ? "portal-sidebar__link--external" : ""]
+              .filter(Boolean)
+              .join(" ");
+            return (
+              <li key={app.label} className={active ? "is-active" : undefined}>
+                {app.external ? (
+                  <a
+                    href={app.path}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={commonClass}
+                    aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
+                  >
+                    <FontAwesomeIcon icon={app.icon} />
+                    <span>{app.label}</span>
+                  </a>
+                ) : (
+                  <Link to={app.path} className={commonClass}>
+                    <FontAwesomeIcon icon={app.icon} />
+                    <span>{app.label}</span>
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </nav>
       <div className="portal-sidebar__theme-toggle">

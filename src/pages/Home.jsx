@@ -8,12 +8,15 @@ import TypingEffect from '/src/components/TypingEffect';
 import CookieBanner from '/src/components/CookieBanner';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
+import { DEFAULT_TEMPLATE_CONFIG, useTemplateConfig } from '../context/TemplateConfigContext';
 
 function Home() {
     const [suggestedRentals, setSuggestedRentals] = useState([]);
     const [suggestedProducts, setSuggestedProducts] = useState([]);
     const [heroVideoSrc, setHeroVideoSrc] = useState(null);
     const [heroVideoLoaded, setHeroVideoLoaded] = useState(false);
+    const { config } = useTemplateConfig();
+    const templateSettings = { ...DEFAULT_TEMPLATE_CONFIG, ...config };
 
     useEffect(() => {
         let isMounted = true;
@@ -104,22 +107,28 @@ function Home() {
                     </div>
                     <div className="hero-grid">
                         <div className="hero-copy">
-                            <p className="hero-kicker">Party rentals, decor, and supplies across Ghana</p>
-                            <h1 id="home-hero-heading">REEBS Party Themes</h1>
+                            <p className="hero-kicker">{templateSettings.heroKicker}</p>
+                            <h1 id="home-hero-heading">{templateSettings.heroHeading}</h1>
                             <h2 id="home-tagline" className="hero-tagline">
-                                <span className="sr-only">We promise less hassle, more fun!</span>
+                                <span className="sr-only">{templateSettings.heroTagline}</span>
                                 <TypingEffect
-                                    text="We promise less hassle, more fun!"
+                                    text={templateSettings.heroTagline}
                                     speed={120}
                                     ariaHidden
                                     className="hero-typing"
                                 />
                             </h2>
-                            <p className="hero-sub">Bouncy castles, party planning, balloons, and curated party boxes delivered or set up for you.</p>
+                            <p className="hero-sub">{templateSettings.heroSub}</p>
                             <div className="hero-ctas" aria-label="heading-buttons">
-                                <Link className="hero-btn hero-btn-primary" to="/rentals">View Rentals</Link>
-                                <Link className="hero-btn hero-btn-ghost" to="/shop">Explore Our Shop</Link>
-                                <Link className="hero-btn hero-btn-link" to="/contact">Talk to Us</Link>
+                                <Link className="hero-btn hero-btn-primary" to="/rentals">
+                                    {templateSettings.heroPrimaryCta}
+                                </Link>
+                                <Link className="hero-btn hero-btn-ghost" to="/shop">
+                                    {templateSettings.heroSecondaryCta}
+                                </Link>
+                                <Link className="hero-btn hero-btn-link" to="/contact">
+                                    {templateSettings.heroTertiaryCta}
+                                </Link>
                             </div>
                             <div className="hero-stats" aria-label="Highlights">
                                 <div>

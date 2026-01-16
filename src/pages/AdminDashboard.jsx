@@ -24,9 +24,12 @@ import {
   faTimes,
   faClock,
   faBullhorn,
+  faGlobe,
+  faPenToSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import "./master.css";
 import { useAuth } from "../components/AuthContext";
+import { WEBSITE_URL } from "../utils/website";
 
 const formatCurrency = (amount) => {
   try {
@@ -297,6 +300,20 @@ function AdminDashboard() {
   };
 
   const apps = [
+    {
+      label: "Website",
+      path: WEBSITE_URL,
+      icon: faGlobe,
+      roles: ["admin", "manager", "staff", "warehouse", "driver", "sales"],
+      external: true,
+      description: "Open the public website",
+    },
+    {
+      label: "Template mode",
+      path: "/admin/website-template",
+      icon: faPenToSquare,
+      roles: ["admin", "manager"],
+    },
     { label: "Inventory", path: "/admin/inventory", icon: faBoxOpen, roles: ["admin", "staff", "warehouse", "manager"] },
     { label: "Vendors", path: "/admin/vendors", icon: faTruck, roles: ["admin", "manager"] },
     { label: "Delivery", path: "/admin/delivery", icon: faRoute, roles: ["admin", "staff", "manager", "driver"] },
@@ -789,12 +806,27 @@ function AdminDashboard() {
         <section className="admin-app-grid">
           {visibleApps.map((app) => (
             <div className="admin-app-slot" key={app.path}>
-              <Link to={app.path} className="admin-app-link">
-                <span className="admin-app-icon" aria-hidden="true">
-                  <FontAwesomeIcon icon={app.icon} />
-                </span>
-                <h2>{app.label}</h2>
-              </Link>
+              {app.external ? (
+                <a
+                  href={app.path}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="admin-app-link admin-app-link--external"
+                  aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
+                >
+                  <span className="admin-app-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={app.icon} />
+                  </span>
+                  <h2>{app.label}</h2>
+                </a>
+              ) : (
+                <Link to={app.path} className="admin-app-link">
+                  <span className="admin-app-icon" aria-hidden="true">
+                    <FontAwesomeIcon icon={app.icon} />
+                  </span>
+                  <h2>{app.label}</h2>
+                </Link>
+              )}
             </div>
           ))}
         </section>

@@ -45,8 +45,10 @@ import AdminVendors from './pages/AdminVendors';
 import AdminMaintenance from './pages/AdminMaintenance';
 import AdminDelivery from './pages/AdminDelivery';
 import AdminMarketing from './pages/AdminMarketing';
+import WebsiteTemplateEditor from './pages/WebsiteTemplateEditor';
 import Login from './pages/Login';
 import AuthProvider, { useAuth } from './components/AuthContext';
+import { TemplateConfigProvider } from './context/TemplateConfigContext';
 
 function RequireAuth({ children }) {
   const { user, authReady } = useAuth();
@@ -171,34 +173,40 @@ function AppLayout() {
         path="/admin/marketing"
         element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
       />
+      <Route
+        path="/admin/website-template"
+        element={<RequireAuth><WebsiteTemplateEditor /></RequireAuth>}
+      />
     </Routes>
   );
 
   return (
     <AuthProvider>
-      <CartProvider>
-        <PortalGate>
-          {showPortalSidebar ? (
-            <div className="portal-app-shell">
-              <PortalSidebar />
-              <div className="portal-app-content">{routeTree}</div>
-            </div>
-          ) : (
-            <>
-              <Navbar onCartToggle={() => setCartOpen(true)} />
-              {routeTree}
-            </>
-          )}
-        </PortalGate>
-        <CartOverlay
-          open={cartOpen}
-          onClose={() => setCartOpen(false)}
-          convertPrice={(p) => p}
-          formatCurrency={(p) => p}
-        />
-        <BackToTop />
-        <Footer />
-      </CartProvider>
+      <TemplateConfigProvider>
+        <CartProvider>
+          <PortalGate>
+            {showPortalSidebar ? (
+              <div className="portal-app-shell">
+                <PortalSidebar />
+                <div className="portal-app-content">{routeTree}</div>
+              </div>
+            ) : (
+              <>
+                <Navbar onCartToggle={() => setCartOpen(true)} />
+                {routeTree}
+              </>
+            )}
+          </PortalGate>
+          <CartOverlay
+            open={cartOpen}
+            onClose={() => setCartOpen(false)}
+            convertPrice={(p) => p}
+            formatCurrency={(p) => p}
+          />
+          <BackToTop />
+          <Footer />
+        </CartProvider>
+      </TemplateConfigProvider>
     </AuthProvider>
   );
 }
