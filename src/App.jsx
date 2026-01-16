@@ -6,6 +6,7 @@ import { CartProvider } from "./components/CartContext";
 import Navbar from "./components/Navbar";
 import CartOverlay from "./components/CartOverlay";
 import BackToTop from "./components/BackToTop";
+import PortalSidebar from "./components/PortalSidebar";
 
 import Footer from './components/Footer';
 
@@ -110,84 +111,95 @@ function AppLayout() {
 
   useEffect(() => {
     if (location.hash) return;
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname]);
 
+  const showPortalSidebar = isPortalHost() && location.pathname.startsWith("/admin");
+
+  const routeTree = (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/delivery-policy" element={<DeliveryPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
+      <Route path="/Cart" element={<Cart />} />
+      <Route path="/Checkout" element={<Checkout />} />
+      <Route path="/About" element={<About />} />
+      <Route path="/Shop" element={<Shop />} />
+      <Route path="/Rentals/:slug" element={<RentalItem />} />
+      <Route path="/Rentals" element={<Rentals />} />
+      <Route path="/Gallery" element={<Gallery />} />
+      <Route path="/faq" element={<FAQ />} />
+      <Route path="/Contact" element={<Contact />} />
+      <Route path="/Book" element={<Book />} />
+      <Route path="/admin" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
+      <Route path="/admin/inventory" element={<RequireAuth><Admin /></RequireAuth>} />
+      <Route path="/admin/orders" element={<RequireAuth><OrdersList /></RequireAuth>} />
+      <Route path="/admin/orders/new" element={<RequireAuth><OrderBuilder /></RequireAuth>} />
+      <Route path="/admin/crm" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+      <Route path="/admin/users" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+      <Route path="/admin/employees" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+      <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
+      <Route path="/admin/schedule" element={<RequireAuth><AdminScheduler /></RequireAuth>} />
+      <Route path="/admin/accounting" element={<RequireAuth><AdminAccounting /></RequireAuth>} />
+      <Route path="/admin/expenses" element={<RequireAuth><AdminExpenses /></RequireAuth>} />
+      <Route
+        path="/admin/hr"
+        element={<RequireAuth><MobileRestricted><AdminHR /></MobileRestricted></RequireAuth>}
+      />
+      <Route
+        path="/admin/documents"
+        element={<RequireAuth><MobileRestricted><AdminDocuments /></MobileRestricted></RequireAuth>}
+      />
+      <Route path="/admin/timesheets" element={<RequireAuth><AdminTimesheets /></RequireAuth>} />
+      <Route path="/admin/vendors" element={<RequireAuth><AdminVendors /></RequireAuth>} />
+      <Route path="/admin/maintenance" element={<RequireAuth><AdminMaintenance /></RequireAuth>} />
+      <Route path="/admin/delivery" element={<RequireAuth><AdminDelivery /></RequireAuth>} />
+      <Route
+        path="/admin/roles"
+        element={<RequireAuth><MobileRestricted><AdminRoles /></MobileRestricted></RequireAuth>}
+      />
+      <Route
+        path="/admin/settings"
+        element={<RequireAuth><MobileRestricted><AdminSettings /></MobileRestricted></RequireAuth>}
+      />
+      <Route path="/admin/customers" element={<RequireAuth><AdminCustomers /></RequireAuth>} />
+      <Route path="/admin/invoicing" element={<RequireAuth><AdminInvoicing /></RequireAuth>} />
+      <Route
+        path="/admin/marketing"
+        element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
+      />
+    </Routes>
+  );
+
   return (
-    <>
-     <AuthProvider>
-     <CartProvider>
-        <Navbar onCartToggle={() => setCartOpen(true)} />
-       
-          <PortalGate>
-          <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/refund-policy" element={<RefundPolicy />} />
-              <Route path="/delivery-policy" element={<DeliveryPolicy />} />
-              <Route path="/terms-of-service" element={<TermsOfService />} />
-              <Route path="/Cart" element={<Cart />} />
-              <Route path="/Checkout" element={<Checkout />} />
-              <Route path="/About" element={<About />} />
-              <Route path="/Shop" element={<Shop />} />
-              <Route path="/Rentals/:slug" element={<RentalItem />} />
-              <Route path="/Rentals" element={<Rentals />} />
-              <Route path="/Gallery" element={<Gallery />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/Contact" element={<Contact />} />
-              <Route path="/Book" element={<Book />} />
-              <Route path="/admin" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
-              <Route path="/admin/inventory" element={<RequireAuth><Admin /></RequireAuth>} />
-              <Route path="/admin/orders" element={<RequireAuth><OrdersList /></RequireAuth>} />
-              <Route path="/admin/orders/new" element={<RequireAuth><OrderBuilder /></RequireAuth>} />
-              <Route path="/admin/crm" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
-              <Route path="/admin/users" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
-              <Route path="/admin/employees" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
-              <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
-              <Route path="/admin/schedule" element={<RequireAuth><AdminScheduler /></RequireAuth>} />
-              <Route path="/admin/accounting" element={<RequireAuth><AdminAccounting /></RequireAuth>} />
-              <Route path="/admin/expenses" element={<RequireAuth><AdminExpenses /></RequireAuth>} />
-              <Route
-                path="/admin/hr"
-                element={<RequireAuth><MobileRestricted><AdminHR /></MobileRestricted></RequireAuth>}
-              />
-              <Route
-                path="/admin/documents"
-                element={<RequireAuth><MobileRestricted><AdminDocuments /></MobileRestricted></RequireAuth>}
-              />
-              <Route path="/admin/timesheets" element={<RequireAuth><AdminTimesheets /></RequireAuth>} />
-              <Route path="/admin/vendors" element={<RequireAuth><AdminVendors /></RequireAuth>} />
-              <Route path="/admin/maintenance" element={<RequireAuth><AdminMaintenance /></RequireAuth>} />
-              <Route path="/admin/delivery" element={<RequireAuth><AdminDelivery /></RequireAuth>} />
-              <Route
-                path="/admin/roles"
-                element={<RequireAuth><MobileRestricted><AdminRoles /></MobileRestricted></RequireAuth>}
-              />
-              <Route
-                path="/admin/settings"
-                element={<RequireAuth><MobileRestricted><AdminSettings /></MobileRestricted></RequireAuth>}
-              />
-              <Route path="/admin/customers" element={<RequireAuth><AdminCustomers /></RequireAuth>} />
-              <Route path="/admin/invoicing" element={<RequireAuth><AdminInvoicing /></RequireAuth>} />
-              <Route
-                path="/admin/marketing"
-                element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
-              />
-          </Routes>
-          </PortalGate>
-          <CartOverlay 
-            open={cartOpen} 
-            onClose={() => setCartOpen(false)} 
-            convertPrice={(p) => p} // pass your conversion fn
-            formatCurrency={(p) => p} // pass your format fn
-          />
-          <BackToTop />
+    <AuthProvider>
+      <CartProvider>
+        <PortalGate>
+          {showPortalSidebar ? (
+            <div className="portal-app-shell">
+              <PortalSidebar />
+              <div className="portal-app-content">{routeTree}</div>
+            </div>
+          ) : (
+            <>
+              <Navbar onCartToggle={() => setCartOpen(true)} />
+              {routeTree}
+            </>
+          )}
+        </PortalGate>
+        <CartOverlay
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          convertPrice={(p) => p}
+          formatCurrency={(p) => p}
+        />
+        <BackToTop />
         <Footer />
       </CartProvider>
-      </AuthProvider>
-      
-    </>
+    </AuthProvider>
   );
 }
 
