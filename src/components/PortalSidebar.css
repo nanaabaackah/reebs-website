@@ -244,19 +244,6 @@
 
 @media (max-width: 720px) {
   .portal-sidebar {
-    width: 48px;
-    padding: 0.5rem 0;
-  }
-
-  .portal-sidebar__toggle {
-    justify-content: center;
-  }
-
-  .portal-sidebar__theme-toggle {
-    display: none;
-  }
-
-  .portal-sidebar__nav {
     display: none;
   }
 }
