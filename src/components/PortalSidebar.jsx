@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
   faBullhorn,
-  faCalendarAlt,
   faCalendarDays,
   faChartLine,
   faClock,
@@ -13,9 +12,11 @@ import {
   faFileLines,
   faHome,
   faMoneyCheckDollar,
+  faMoon,
   faShieldAlt,
   faSliders,
   faStore,
+  faSun,
   faTools,
   faTruck,
   faUserGroup,
@@ -23,9 +24,11 @@ import {
   faUsers,
   faChevronLeft,
   faBoxesStacked,
+  faCalendarCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "./PortalSidebar.css";
+import useThemeMode from "../hooks/useThemeMode";
 
 const DEFAULT_APPS = [
   {
@@ -59,7 +62,7 @@ const DEFAULT_APPS = [
   {
     label: "Scheduling",
     path: "/admin/schedule",
-    icon: faCalendarAlt,
+    icon: faCalendarCheck,
   },
   {
     label: "Accounting",
@@ -137,6 +140,7 @@ const normalizePath = (pathname) => {
 function PortalSidebar({ apps = DEFAULT_APPS }) {
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
+  const { darkMode, toggleTheme } = useThemeMode();
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
@@ -164,9 +168,6 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           <span>{expanded ? "Collapse" : "Explore"}</span>
         </button>
       </div>
-      <div className="portal-sidebar__logo">
-        <img src="/imgs/reebs_logo.png" alt="REEBS Party Themes" loading="lazy" />
-      </div>
       <nav className="portal-sidebar__nav" aria-label="Portal apps">
         <ul>
           {apps.map((app) => (
@@ -179,6 +180,17 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           ))}
         </ul>
       </nav>
+      <div className="portal-sidebar__theme-toggle">
+        <button
+          type="button"
+          className="portal-sidebar__theme-toggle-btn"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
+        >
+          <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+          <span>{darkMode ? "Light mode" : "Dark mode"}</span>
+        </button>
+      </div>
     </aside>
   );
 }

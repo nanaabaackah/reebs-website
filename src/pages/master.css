@@ -8808,7 +8808,7 @@ body.admin-theme {
 
 .admin-shell {
   max-width: 1120px;
-  margin: 5rem auto;
+  margin: 2rem auto;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -9878,7 +9878,7 @@ body.admin-readonly .customers-search-input input {
 
 @media (max-width: 720px) {
   .admin-shell {
-    margin: 9rem auto;
+    margin: 2rem auto;
     gap: 24px;
   }
 
@@ -18217,7 +18217,7 @@ body.dark-mode .invoice-terms {
   .delivery-shell,
   .marketing-shell,
   .order-shell {
-    margin: 6rem auto;
+    margin: 2rem auto;
   }
 }
 

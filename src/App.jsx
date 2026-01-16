@@ -114,7 +114,7 @@ function AppLayout() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname]);
 
-  const showPortalSidebar = isPortalHost() && location.pathname.startsWith("/admin");
+  const showPortalSidebar = location.pathname.startsWith("/admin");
 
   const routeTree = (
     <Routes>

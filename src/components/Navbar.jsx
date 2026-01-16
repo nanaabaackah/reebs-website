@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faCaretDown, faHome, faShoppingCart, faMoon, faSun, faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays, faCaretDown, faHome, faMoon, faShoppingCart, faSearch, faSun, faUser } from '@fortawesome/free-solid-svg-icons';
 import './Navbar.css'; 
 import { useCart } from "./CartContext";
 import { useAuth } from "./AuthContext";
+import useThemeMode from "../hooks/useThemeMode";
 
 const Navbar = ({ onCartToggle }) => {
   const location = useLocation();
@@ -14,16 +15,7 @@ const Navbar = ({ onCartToggle }) => {
   const [showResults, setShowResults] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [showAuthMenu, setShowAuthMenu] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const stored = localStorage.getItem('reebs-theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-  const [hasUserThemePreference, setHasUserThemePreference] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return Boolean(localStorage.getItem('reebs-theme'));
-  });
+  const { darkMode, toggleTheme } = useThemeMode();
   const { cart } = useCart();
   const { user, logout, authReady } = useAuth();
 
@@ -51,32 +43,6 @@ const Navbar = ({ onCartToggle }) => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleMediaChange = (e) => {
-      if (!hasUserThemePreference) {
-        setDarkMode(e.matches);
-      }
-    };
-    media.addEventListener('change', handleMediaChange);
-    return () => media.removeEventListener('change', handleMediaChange);
-  }, [hasUserThemePreference]);
-
-  useEffect(() => {
-    const theme = darkMode ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    if (hasUserThemePreference) {
-      localStorage.setItem('reebs-theme', theme);
-    } else {
-      localStorage.removeItem('reebs-theme');
-    }
-  }, [darkMode, hasUserThemePreference]);
-
-  const toggleTheme = () => {
-    setHasUserThemePreference(true);
-    setDarkMode((prev) => !prev);
-  };
 
   const handleLogout = () => {
     logout(); // Clear the user state/local storage
