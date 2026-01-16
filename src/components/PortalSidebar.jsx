@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -27,11 +27,14 @@ import {
   faChevronLeft,
   faBoxesStacked,
   faCalendarCheck,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "./PortalSidebar.css";
 import useThemeMode from "../hooks/useThemeMode";
 import { WEBSITE_URL } from "../utils/website";
+
+const MOBILE_QUERY = "(max-width: 720px)";
 
 const DEFAULT_APPS = [
   {
@@ -156,9 +159,33 @@ const normalizePath = (pathname) => {
 function PortalSidebar({ apps = DEFAULT_APPS }) {
   const location = useLocation();
   const [expanded, setExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(MOBILE_QUERY).matches;
+  });
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const { darkMode, toggleTheme } = useThemeMode();
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const media = window.matchMedia(MOBILE_QUERY);
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    if (media.addEventListener) {
+      media.addEventListener("change", handleChange);
+    } else {
+      media.addListener(handleChange);
+    }
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", handleChange);
+      } else {
+        media.removeListener(handleChange);
+      }
+    };
+  }, []);
 
   const isActive = (app) => {
     if (app.external) return false;
@@ -173,49 +200,71 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     });
   };
 
+  const renderLinks = (context = "sidebar") => (
+    <ul className={`portal-sidebar__list portal-sidebar__list--${context}`}>
+      {apps.map((app) => {
+        const active = isActive(app);
+        const linkClasses = [
+          "portal-sidebar__link",
+          context === "overlay" ? "portal-sidebar__link--overlay" : "",
+          active ? "is-active" : "",
+          app.external ? "portal-sidebar__link--external" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        if (app.external) {
+          return (
+            <li key={app.label} className={active ? "is-active" : undefined}>
+              <a
+                href={app.path}
+                target="_blank"
+                rel="noreferrer"
+                className={linkClasses}
+                aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
+                onClick={() => isMobile && setOverlayOpen(false)}
+              >
+                <FontAwesomeIcon icon={app.icon} />
+                <span>{app.label}</span>
+              </a>
+            </li>
+          );
+        }
+        return (
+          <li key={app.label} className={active ? "is-active" : undefined}>
+            <Link
+              to={app.path}
+              className={linkClasses}
+              onClick={() => isMobile && overlayOpen && setOverlayOpen(false)}
+            >
+              <FontAwesomeIcon icon={app.icon} />
+              <span>{app.label}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
     <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
       <div className="portal-sidebar__toggle">
         <button
           type="button"
-          onClick={() => setExpanded((prev) => !prev)}
+          onClick={() => {
+            if (isMobile) {
+              setOverlayOpen(true);
+              return;
+            }
+            setExpanded((prev) => !prev);
+          }}
           className="portal-sidebar__toggle-btn"
+          aria-label={isMobile ? "Open menu" : "Toggle navigation"}
         >
           <FontAwesomeIcon icon={expanded ? faChevronLeft : faBars} />
-          <span>{expanded ? "Collapse" : "Explore"}</span>
+          {!isMobile && <span>{expanded ? "Collapse" : "Explore"}</span>}
         </button>
       </div>
-      <nav className="portal-sidebar__nav" aria-label="Portal apps">
-        <ul>
-          {apps.map((app) => {
-            const active = isActive(app);
-            const commonClass = ["portal-sidebar__link", active ? "is-active" : "", app.external ? "portal-sidebar__link--external" : ""]
-              .filter(Boolean)
-              .join(" ");
-            return (
-              <li key={app.label} className={active ? "is-active" : undefined}>
-                {app.external ? (
-                  <a
-                    href={app.path}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={commonClass}
-                    aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
-                  >
-                    <FontAwesomeIcon icon={app.icon} />
-                    <span>{app.label}</span>
-                  </a>
-                ) : (
-                  <Link to={app.path} className={commonClass}>
-                    <FontAwesomeIcon icon={app.icon} />
-                    <span>{app.label}</span>
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
       <div className="portal-sidebar__theme-toggle">
         <button
           type="button"
@@ -227,6 +276,37 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           <span>{darkMode ? "Light mode" : "Dark mode"}</span>
         </button>
       </div>
+      {isMobile && overlayOpen && (
+        <div
+          className="portal-sidebar__overlay"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setOverlayOpen(false)}
+        >
+          <div className="portal-sidebar__overlay-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="portal-sidebar__overlay-close"
+              onClick={() => setOverlayOpen(false)}
+              aria-label="Close menu"
+            >
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
+            <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
+            <div className="portal-sidebar__overlay-theme">
+              <button
+                type="button"
+                className="portal-sidebar__theme-toggle-btn"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
+              >
+                <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+                <span>{darkMode ? "Light mode" : "Dark mode"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
