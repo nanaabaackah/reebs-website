@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
@@ -28,10 +28,12 @@ import {
   faBoxesStacked,
   faCalendarCheck,
   faXmark,
+  faArrowRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "./PortalSidebar.css";
 import useThemeMode from "../hooks/useThemeMode";
+import { useAuth } from "./AuthContext";
 import { WEBSITE_URL } from "../utils/website";
 
 const MOBILE_QUERY = "(max-width: 720px)";
@@ -158,6 +160,7 @@ const normalizePath = (pathname) => {
 
 function PortalSidebar({ apps = DEFAULT_APPS }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -165,6 +168,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   });
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { darkMode, toggleTheme } = useThemeMode();
+  const { logout } = useAuth();
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
@@ -245,6 +249,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     </ul>
   );
 
+  const handleSignOut = () => {
+    logout();
+    if (isMobile) {
+      setOverlayOpen(false);
+    }
+    navigate("/login", { replace: true, state: { signedOut: true } });
+  };
+
   return (
     <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
       <div className="portal-sidebar__toggle">
@@ -265,6 +277,18 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         </button>
       </div>
       {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
+      {!isMobile && (
+        <div className="portal-sidebar__actions">
+          <button
+            type="button"
+            className="portal-sidebar__signout-btn"
+            onClick={handleSignOut}
+          >
+            <FontAwesomeIcon icon={faArrowRightFromBracket} />
+            <span>Sign out</span>
+          </button>
+        </div>
+      )}
       <div className="portal-sidebar__theme-toggle">
         <button
           type="button"
@@ -293,6 +317,16 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
               <FontAwesomeIcon icon={faXmark} />
             </button>
             <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
+            <div className="portal-sidebar__overlay-actions">
+              <button
+                type="button"
+                className="portal-sidebar__signout-btn"
+                onClick={handleSignOut}
+              >
+                <FontAwesomeIcon icon={faArrowRightFromBracket} />
+                <span>Sign out</span>
+              </button>
+            </div>
             <div className="portal-sidebar__overlay-theme">
               <button
                 type="button"
