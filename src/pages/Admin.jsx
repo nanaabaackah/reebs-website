@@ -52,6 +52,8 @@ const MOBILE_VIEW_QUERY = "(max-width: 720px)";
 const getIsMobileView = () =>
   typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
 
+const CAD_TAX_RATE = 0.13;
+
 function getInitialViewMode() {
   return "cards";
 }
@@ -110,8 +112,11 @@ function Admin() {
     specificCategory: "",
     description: "",
     purchasePriceGbp: "",
+    purchasePriceCad: "",
     conversionAccepted: false,
     conversionRate: null,
+    cadConversionAccepted: false,
+    cadConversionRate: null,
   };
   const [newItemRows, setNewItemRows] = useState([{ ...newItemTemplate }]);
   const { user } = useAuth();
@@ -123,6 +128,17 @@ function Admin() {
     if (!Number.isFinite(rawRate) || rawRate <= 0) return null;
     return 1 / rawRate;
   }, [rates]);
+  const cadToGbpRate = useMemo(() => {
+    const cadRate = Number(rates?.CAD);
+    const gbpRateRaw = Number(rates?.GBP);
+    if (!Number.isFinite(cadRate) || cadRate <= 0) return null;
+    if (!Number.isFinite(gbpRateRaw) || gbpRateRaw <= 0) return null;
+    return (1 / cadRate) * gbpRateRaw;
+  }, [rates]);
+  const cadToGbpWithTaxRate = useMemo(() => {
+    if (!cadToGbpRate) return null;
+    return cadToGbpRate * (1 + CAD_TAX_RATE);
+  }, [cadToGbpRate]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -602,6 +618,41 @@ function Admin() {
     );
   };
 
+  const handlePurchasePriceCadChange = (index, value) => {
+    setNewItemRows((prev) =>
+      prev.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              purchasePriceCad: value,
+              cadConversionAccepted: false,
+              cadConversionRate: null,
+            }
+          : row
+      )
+    );
+  };
+
+  const handleCadConversionAccept = (index, accepted) => {
+    setNewItemRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        if (!accepted || !cadToGbpWithTaxRate) {
+          return {
+            ...row,
+            cadConversionAccepted: false,
+            cadConversionRate: null,
+          };
+        }
+        return {
+          ...row,
+          cadConversionAccepted: true,
+          cadConversionRate: cadToGbpWithTaxRate,
+        };
+      })
+    );
+  };
+
   const categories = useMemo(() => {
     const set = new Set();
     items.forEach((item) => {
@@ -637,6 +688,21 @@ function Admin() {
       );
     });
   }, [gbpRate]);
+
+  useEffect(() => {
+    setNewItemRows((prev) => {
+      if (!prev.some((row) => row.cadConversionAccepted)) return prev;
+      return prev.map((row) =>
+        row.cadConversionAccepted
+          ? {
+              ...row,
+              cadConversionAccepted: false,
+              cadConversionRate: null,
+            }
+          : row
+      );
+    });
+  }, [cadToGbpWithTaxRate]);
 
   const detailPurchasePriceGbp = detailForm?.purchasePriceGbp;
   useEffect(() => {
@@ -689,6 +755,8 @@ function Admin() {
       const quantityValue = Number.parseInt(row.quantity || "0", 10) || 0;
       const hasPurchasePrice = row.purchasePriceGbp !== "" && row.purchasePriceGbp !== null;
       const purchasePriceValue = hasPurchasePrice ? Number(row.purchasePriceGbp) : null;
+      const hasCadPrice = row.purchasePriceCad !== "" && row.purchasePriceCad !== null;
+      const purchasePriceCadValue = hasCadPrice ? Number(row.purchasePriceCad) : null;
       if (!Number.isFinite(priceValue) || priceValue < 0) {
         setNewItemError(`Row ${i + 1}: Price must be zero or higher.`);
         return;
@@ -718,6 +786,27 @@ function Admin() {
         setNewItemError(`Row ${i + 1}: Conversion rate changed. Please accept again.`);
         return;
       }
+      if (hasCadPrice && (!Number.isFinite(purchasePriceCadValue) || purchasePriceCadValue < 0)) {
+        setNewItemError(`Row ${i + 1}: Purchase price (CAD) must be zero or higher.`);
+        return;
+      }
+      if (hasCadPrice && !cadToGbpWithTaxRate) {
+        setNewItemError(`Row ${i + 1}: CAD conversion rate is unavailable.`);
+        return;
+      }
+      if (hasCadPrice && (!row.cadConversionAccepted || !row.cadConversionRate)) {
+        setNewItemError(`Row ${i + 1}: Accept the CAD to GBP conversion.`);
+        return;
+      }
+      if (
+        hasCadPrice &&
+        row.cadConversionRate &&
+        cadToGbpWithTaxRate &&
+        Math.abs(row.cadConversionRate - cadToGbpWithTaxRate) > 0.0001
+      ) {
+        setNewItemError(`Row ${i + 1}: CAD conversion rate changed. Please accept again.`);
+        return;
+      }
     }
 
     setNewItemSaving(true);
@@ -729,6 +818,12 @@ function Admin() {
         const purchasePriceGbpValue = hasPurchasePrice ? Number(row.purchasePriceGbp) : null;
         const purchasePriceGhsValue =
           hasPurchasePrice && gbpRate ? purchasePriceGbpValue * gbpRate : null;
+        const hasCadPrice = row.purchasePriceCad !== "" && row.purchasePriceCad !== null;
+        const purchasePriceCadValue = hasCadPrice ? Number(row.purchasePriceCad) : null;
+        const purchasePriceGbpFromCadValue =
+          hasCadPrice && cadToGbpWithTaxRate
+            ? purchasePriceCadValue * cadToGbpWithTaxRate
+            : null;
         const response = await fetch("/.netlify/functions/inventory", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -744,6 +839,9 @@ function Admin() {
               : undefined,
             purchasePriceGhs: hasPurchasePrice
               ? Math.round(Number(purchasePriceGhsValue) * 100)
+              : undefined,
+            purchasePriceGbpFromCad: hasCadPrice
+              ? Math.round(Number(purchasePriceGbpFromCadValue) * 100)
               : undefined,
             currency: "GHS",
             userId: user?.id,
@@ -1744,6 +1842,52 @@ function Admin() {
                             onChange={(e) => handleConversionAccept(index, e.target.checked)}
                           />
                           Accept conversion at 1 GBP = GHS {gbpRate.toFixed(2)}
+                        </label>
+                      ) : (
+                        <p className="admin-purchase-note">
+                          Conversion rate unavailable. Try again in a moment.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  <label>
+                    Purchase price (CAD)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.purchasePriceCad}
+                      onChange={(e) => handlePurchasePriceCadChange(index, e.target.value)}
+                      placeholder="0.00"
+                    />
+                    {row.purchasePriceCad !== "" && row.purchasePriceCad !== null && (
+                      <span className="admin-purchase-cedis">
+                        <span>Converted price (GBP)</span>
+                        <strong>
+                          {cadToGbpWithTaxRate
+                            ? formatMoney(
+                                Number(row.purchasePriceCad) * cadToGbpWithTaxRate,
+                                "GBP"
+                              )
+                            : "Rate unavailable"}
+                        </strong>
+                      </span>
+                    )}
+                  </label>
+                  {row.purchasePriceCad !== "" && row.purchasePriceCad !== null && (
+                    <>
+                      {cadToGbpWithTaxRate ? (
+                        <label className="admin-checkbox admin-purchase-accept">
+                          <input
+                            type="checkbox"
+                            checked={
+                              row.cadConversionAccepted &&
+                              row.cadConversionRate === cadToGbpWithTaxRate
+                            }
+                            onChange={(e) => handleCadConversionAccept(index, e.target.checked)}
+                          />
+                          Accept conversion at 1 CAD (+13% tax) = GBP{" "}
+                          {cadToGbpWithTaxRate.toFixed(4)}
                         </label>
                       ) : (
                         <p className="admin-purchase-note">

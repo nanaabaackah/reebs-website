@@ -100,6 +100,7 @@ model Product {
 
   purchasePriceGhs  Int?            // CP (GHC) in pesewas
   purchasePriceGbp  Int?            // CP (BP) in pence
+  purchasePriceCad  Int?            // CP (CAD->GBP) in pence
   stockValue        Int?            // CALCULATED: stock * price
   saleValue         Int?            // HISTORICAL: Imported from Excel 'SALES VALUE'
   

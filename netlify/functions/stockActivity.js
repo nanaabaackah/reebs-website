@@ -2,7 +2,18 @@
 import "dotenv/config";
 import { Client } from "pg";
 
-export async function handler() {
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
+};
+
+export async function handler(event = {}) {
+  const method = (event.httpMethod || "GET").toUpperCase();
+  if (method === "OPTIONS") {
+    return { statusCode: 200, headers: corsHeaders, body: "" };
+  }
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -25,17 +36,14 @@ export async function handler() {
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ months: result.rows || [] }),
     };
   } catch (err) {
     console.error("❌ stockActivity error", err);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Failed to fetch stock activity" }),
     };
   } finally {

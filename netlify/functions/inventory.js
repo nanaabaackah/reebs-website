@@ -16,7 +16,7 @@ const corsHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
 };
 
 const allowedSources = ["CLOTHES", "TOYS", "RENTAL", "WATER"];
@@ -177,6 +177,7 @@ export async function handler(event = {}) {
           (p."price"::numeric / 100) AS price,
           (p."purchasePriceGbp"::numeric / 100) AS "purchasePriceGbp",
           (p."purchasePriceGhs"::numeric / 100) AS "purchasePriceGhs",
+          (p."purchasePriceGbpFromCad"::numeric / 100) AS "purchasePriceGbpFromCad",
           (p."stockValue"::numeric / 100) AS "stockValue",
           (p."saleValue"::numeric / 100) AS "saleValue",
           p.stock AS quantity,
@@ -359,8 +360,13 @@ export async function handler(event = {}) {
       payload.purchasePriceGbp ?? payload.purchasePriceGbpCents ?? payload.purchase_price_gbp;
     const purchasePriceGhsInput =
       payload.purchasePriceGhs ?? payload.purchasePriceGhsCents ?? payload.purchase_price_ghs;
+    const purchasePriceGbpFromCadInput =
+      payload.purchasePriceGbpFromCad ??
+      payload.purchasePriceGbpFromCadCents ??
+      payload.purchase_price_gbp_from_cad;
     const purchasePriceGbp = toCents(purchasePriceGbpInput);
     const purchasePriceGhs = toCents(purchasePriceGhsInput);
+    const purchasePriceGbpFromCad = toCents(purchasePriceGbpFromCadInput);
     const saleValueInput = payload.saleValue ?? payload.saleValueCents ?? payload.sale_value;
     const saleValue = toCents(saleValueInput);
     const stockValue = priceCents * stock;
@@ -402,6 +408,7 @@ export async function handler(event = {}) {
         "stock",
         "purchasePriceGbp",
         "purchasePriceGhs",
+        "purchasePriceGbpFromCad",
         "stockValue",
         "saleValue",
         "attendantsNeeded",
@@ -411,7 +418,7 @@ export async function handler(event = {}) {
         "lastUpdatedAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,true,$18,NOW(),NOW(),NOW())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,true,$19,NOW(),NOW(),NOW())
       ON CONFLICT ("organizationId", "sku") DO UPDATE
       SET "name" = EXCLUDED."name",
           "description" = EXCLUDED."description",
@@ -424,6 +431,7 @@ export async function handler(event = {}) {
           "stock" = EXCLUDED."stock",
           "purchasePriceGbp" = COALESCE(EXCLUDED."purchasePriceGbp", "product"."purchasePriceGbp"),
           "purchasePriceGhs" = COALESCE(EXCLUDED."purchasePriceGhs", "product"."purchasePriceGhs"),
+          "purchasePriceGbpFromCad" = COALESCE(EXCLUDED."purchasePriceGbpFromCad", "product"."purchasePriceGbpFromCad"),
           "stockValue" = COALESCE(EXCLUDED."stockValue", "product"."stockValue"),
           "saleValue" = COALESCE(EXCLUDED."saleValue", "product"."saleValue"),
           "attendantsNeeded" = COALESCE(EXCLUDED."attendantsNeeded", "product"."attendantsNeeded"),
@@ -444,6 +452,7 @@ export async function handler(event = {}) {
         (price::numeric / 100) AS price,
         ("purchasePriceGbp"::numeric / 100) AS "purchasePriceGbp",
         ("purchasePriceGhs"::numeric / 100) AS "purchasePriceGhs",
+        ("purchasePriceGbpFromCad"::numeric / 100) AS "purchasePriceGbpFromCad",
         ("stockValue"::numeric / 100) AS "stockValue",
         ("saleValue"::numeric / 100) AS "saleValue",
         stock AS quantity,
@@ -470,6 +479,7 @@ export async function handler(event = {}) {
       stock,
       purchasePriceGbp,
       purchasePriceGhs,
+      purchasePriceGbpFromCad,
       stockValue,
       saleValue,
       attendantsNeeded,

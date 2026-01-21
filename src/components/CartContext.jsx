@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { FALLBACK_RATES } from "./CurrencyContext";
 
 const CartContext = createContext();
 
@@ -12,8 +13,10 @@ export const CartProvider = ({ children }) => {
     () => localStorage.getItem("currency") || "GHS"
   );
 
-  const [rates, setRates] = useState({ GHS: 1 });
+  const [rates, setRates] = useState(FALLBACK_RATES);
   const apiKey = import.meta.env.VITE_CURRENCY_API_KEY;
+  const RATES_CACHE_KEY = "reebs_rates_cache_v1";
+  const RATES_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -25,6 +28,24 @@ export const CartProvider = ({ children }) => {
 
   // fetch exchange rates
   useEffect(() => {
+    const cached = (() => {
+      try {
+        const raw = localStorage.getItem(RATES_CACHE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cached?.rates) {
+      setRates({ ...FALLBACK_RATES, ...cached.rates });
+    }
+
+    const cacheFresh =
+      cached?.timestamp && Date.now() - Number(cached.timestamp) < RATES_CACHE_TTL_MS;
+
+    if (!apiKey || cacheFresh) return;
+
     async function fetchRates() {
       try {
         const response = await fetch(
@@ -32,7 +53,12 @@ export const CartProvider = ({ children }) => {
         );
         const data = await response.json();
         if (data.result === "success") {
-          setRates(data.conversion_rates);
+          const nextRates = { ...FALLBACK_RATES, ...data.conversion_rates };
+          setRates(nextRates);
+          localStorage.setItem(
+            RATES_CACHE_KEY,
+            JSON.stringify({ rates: nextRates, timestamp: Date.now() })
+          );
 
           if (!localStorage.getItem("currency")) {
             const region = navigator.language.split("-")[1];
@@ -48,11 +74,11 @@ export const CartProvider = ({ children }) => {
             setCurrency(defaultCurrency);
           }
         } else {
-          setRates({ GHS: 1 });
+          setRates(FALLBACK_RATES);
         }
       } catch (error) {
         console.error("Error fetching rates:", error);
-        setRates({ GHS: 1 });
+        setRates(FALLBACK_RATES);
       }
     }
     fetchRates();
