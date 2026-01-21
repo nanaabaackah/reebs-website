@@ -18745,6 +18745,94 @@ body.admin-theme .login-link {
 }
 
 body.admin-theme :is(
+  .customers-modal,
+  .admin-modal,
+  .orders-detail-modal,
+  .hr-overlay,
+  .admin-new-item-overlay
+) {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+body.admin-theme :is(
+  .customers-modal-panel,
+  .admin-modal-panel,
+  .orders-detail-panel,
+  .hr-modal,
+  .admin-detail-panel,
+  .admin-new-item-panel,
+  .bookings-detail-panel,
+  .crm-detail-panel,
+  .roles-detail
+) {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+body.admin-theme :is(.customers-modal-close, .admin-close, .hr-close) {
+  color: var(--muted);
+  opacity: 1;
+}
+
+body.admin-theme :is(.customers-modal-close, .admin-close, .hr-close):hover {
+  color: var(--ink);
+}
+
+body.admin-theme .admin-modal-thumb {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+body.admin-theme .orders-detail-body p {
+  border-bottom: 1px solid var(--border);
+}
+
+body.admin-theme .orders-action {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+body.admin-theme .orders-action-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+body.admin-theme .orders-detail-list li {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.admin-theme .orders-detail-thumb {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+body.admin-theme .map-popup {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme .lightbox {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+body.admin-theme .lightbox-img {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+body.admin-theme .lightbox-close {
+  color: var(--ink);
+}
+
+body.admin-theme :is(
   .settings-page,
   .expenses-page,
   .crm-page,
