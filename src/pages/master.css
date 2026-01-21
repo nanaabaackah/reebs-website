@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Buda:wght@300&family=Delius&family=Henny+Penny&family=Rubik+Doodle+Shadow&family=Stalemate&family=Sue+Ellen+Francisco&family=Syncopate:wght@400;700&family=Vibes&family=Zeyada&family=Moirai+One&family=Montserrat+Alternates:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 :root{
     --dark: #3a264a;
@@ -18440,4 +18440,306 @@ body.dark-mode .invoice-terms {
   textarea
 ) {
   border: 1px solid rgba(31, 37, 48, 0.22);
+}
+
+/* ERP admin reskin */
+body.admin-theme {
+  --ink: #15171a;
+  --muted: #5b6270;
+  --accent: #1d4ed8;
+  --accent-soft: rgba(29, 78, 216, 0.12);
+  --surface: #f2f4f8;
+  --card: #ffffff;
+  --border: #dfe3ea;
+  --radius: 14px;
+  --shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  --hero-gradient: linear-gradient(135deg, #ffffff 0%, #edf1ff 100%);
+  --glass-bg: var(--card);
+  --glass-border: var(--border);
+  --text-main: var(--ink);
+  --back: var(--accent);
+  --back2: #0f8a4c;
+  --back3: #b45309;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Trebuchet MS", sans-serif;
+}
+
+[data-theme="dark"] body.admin-theme {
+  --ink: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-soft: rgba(56, 189, 248, 0.16);
+  --surface: #0f172a;
+  --card: #111827;
+  --border: #1f2937;
+  --shadow: 0 16px 40px rgba(2, 6, 23, 0.45);
+  --hero-gradient: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+  --glass-bg: var(--card);
+  --glass-border: var(--border);
+  --text-main: var(--ink);
+  --back: var(--accent);
+  --back2: #22c55e;
+  --back3: #f59e0b;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+body.admin-theme .admin-page,
+body.admin-theme .admin-dashboard {
+  min-height: auto;
+  padding: 0;
+}
+
+body.admin-theme .admin-shell,
+body.admin-theme .admin-dashboard-shell,
+body.admin-theme .marketing-shell,
+body.admin-theme .template-editor-page.admin-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 1.5rem;
+}
+
+body.admin-theme .admin-header,
+body.admin-theme .admin-dashboard-header {
+  background: var(--hero-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme .admin-header h1,
+body.admin-theme .admin-dashboard-header h1 {
+  margin: 0.4rem 0 0.6rem;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+body.admin-theme .admin-eyebrow,
+body.admin-theme .admin-dashboard-eyebrow {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+body.admin-theme .admin-subtitle,
+body.admin-theme .admin-dashboard-subtitle {
+  color: var(--muted);
+}
+
+body.admin-theme .admin-breadcrumb {
+  color: var(--muted);
+}
+
+body.admin-theme .admin-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+body.admin-theme .admin-card,
+body.admin-theme .admin-table,
+body.admin-theme .admin-kpi,
+body.admin-theme .admin-analytics-card,
+body.admin-theme .admin-kpi-note,
+body.admin-theme .admin-kpi-detail,
+body.admin-theme .admin-kpi-card,
+body.admin-theme .admin-kpi-link-card,
+body.admin-theme .inventory-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme .admin-card-label,
+body.admin-theme .admin-kpi-label {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+body.admin-theme .admin-kpi-value {
+  font-size: 1.6rem;
+}
+
+body.admin-theme .admin-kpi-sub,
+body.admin-theme .admin-kpi-subtle {
+  color: var(--muted);
+  opacity: 1;
+}
+
+body.admin-theme .admin-table {
+  padding: 1.4rem;
+}
+
+body.admin-theme .admin-table table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+body.admin-theme .admin-table thead th {
+  color: var(--muted);
+  text-align: left;
+}
+
+body.admin-theme .admin-table tbody tr {
+  background: transparent;
+  box-shadow: none;
+}
+
+body.admin-theme .admin-table tbody td {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+body.admin-theme .admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+body.admin-theme .admin-table tbody tr td:first-child,
+body.admin-theme .admin-table tbody tr td:last-child {
+  border-radius: 0;
+}
+
+body.admin-theme .admin-refresh,
+body.admin-theme .admin-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+body.admin-theme .admin-secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+body.admin-theme .admin-refresh:hover,
+body.admin-theme .admin-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.12);
+}
+
+body.admin-theme .admin-kpi-retry {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+body.admin-theme .admin-kpi-note-action {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+body.admin-theme .admin-kpi-note-action:hover:not(:disabled) {
+  border-color: rgba(29, 78, 216, 0.35);
+  box-shadow: 0 10px 24px rgba(29, 78, 216, 0.12);
+}
+
+body.admin-theme .admin-search input,
+body.admin-theme .admin-select select,
+body.admin-theme .admin-form input,
+body.admin-theme .admin-form select,
+body.admin-theme .admin-form textarea {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+body.admin-theme .admin-search input:focus,
+body.admin-theme .admin-select select:focus,
+body.admin-theme .admin-form input:focus,
+body.admin-theme .admin-form select:focus,
+body.admin-theme .admin-form textarea:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+body.admin-theme .admin-chip {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+body.admin-theme .admin-chip.is-active {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--border);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+body.admin-theme .admin-progress,
+body.admin-theme .admin-split-bar,
+body.admin-theme .admin-velocity-bars {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+body.admin-theme .admin-progress span {
+  background: linear-gradient(90deg, var(--accent) 0%, #22c55e 100%);
+}
+
+body.admin-theme .admin-split-bar span {
+  background: var(--accent);
+}
+
+body.admin-theme .admin-split-bar span.rental {
+  background: #22c55e;
+}
+
+body.admin-theme .admin-velocity-bars span.in {
+  background: #22c55e;
+}
+
+body.admin-theme .admin-velocity-bars span.out {
+  background: var(--accent);
+}
+
+body.admin-theme .admin-error {
+  color: #b91c1c;
+}
+
+body.admin-theme .admin-success {
+  color: #0f8a4c;
+}
+
+body.admin-theme .login-page {
+  background: var(--surface);
+}
+
+body.admin-theme .login-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme .login-eyebrow {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+body.admin-theme .login-subtitle {
+  color: var(--muted);
+}
+
+body.admin-theme .login-form input {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+body.admin-theme .login-form input:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+body.admin-theme .login-button {
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+body.admin-theme .login-link {
+  color: var(--accent);
 }

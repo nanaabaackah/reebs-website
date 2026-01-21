@@ -1,12 +1,14 @@
 .portal-app-shell {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   min-height: 100vh;
+  background: var(--surface);
 }
 
 .portal-app-content {
-  flex: 1;
   min-height: 100vh;
   padding: 2rem;
+  background: var(--surface);
 }
 
 .portal-sidebar {
@@ -15,18 +17,54 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 50px;
+  width: 72px;
   min-height: 100vh;
-  padding: 1rem 0;
-  background: linear-gradient(180deg, #05060c, #101131);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.5rem 0.75rem;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  color: var(--muted);
   transition: width 0.3s ease, padding 0.3s ease;
 }
 
 .portal-sidebar.is-expanded {
-  width: 250px;
+  width: 240px;
   align-items: flex-start;
-  padding: 1rem;
+  padding: 1.5rem;
+}
+
+.portal-sidebar__brand {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+
+.portal-sidebar__brand-short {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.portal-sidebar__brand-full {
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.portal-sidebar.is-expanded .portal-sidebar__brand-short {
+  display: none;
+}
+
+.portal-sidebar:not(.is-expanded) .portal-sidebar__brand-full {
+  display: none;
 }
 
 .portal-sidebar__toggle {
@@ -37,17 +75,18 @@
 }
 
 .portal-sidebar__toggle-btn {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 0.95rem;
-  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 0.45rem 0.75rem;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
+  border-radius: 999px;
 }
 
 .portal-sidebar__nav {
@@ -76,9 +115,9 @@
   width: 100%;
   padding: 0.55rem 0.75rem;
   border-radius: 0.6rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   transition: background 0.2s ease, color 0.2s ease;
   letter-spacing: 0.01em;
   justify-content: flex-start;
@@ -86,7 +125,7 @@
 }
 
 .portal-sidebar__link svg {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .portal-sidebar__link span {
@@ -115,9 +154,9 @@
   transform: translate(0, -50%);
   padding: 0.35rem 0.75rem;
   border-radius: 0.45rem;
-  background: rgba(5, 6, 12, 0.95);
+  background: var(--card);
   font-size: 0.85rem;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.2);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -132,8 +171,8 @@
 
 .portal-sidebar__link:hover,
 .portal-sidebar__nav li.is-active .portal-sidebar__link {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .portal-sidebar__link--external {
@@ -145,12 +184,12 @@
 }
 
 .portal-sidebar__nav li.is-active .portal-sidebar__link svg {
-  color: #fff;
+  color: var(--accent);
 }
 
 .portal-sidebar__nav {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
 }
 
 .portal-sidebar__nav::-webkit-scrollbar {
@@ -158,7 +197,7 @@
 }
 
 .portal-sidebar__nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(148, 163, 184, 0.5);
   border-radius: 999px;
 }
 
@@ -174,38 +213,43 @@
 
 .portal-sidebar__theme-toggle-btn {
   width: 100%;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: none;
-  color: #fff;
+  background: var(--surface);
+  color: var(--muted);
   padding: 0.5rem 0.75rem;
   display: flex;
   gap: 0.75rem;
   align-items: center;
   justify-content: flex-start;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
+}
+
+.portal-sidebar__theme-toggle-btn:hover {
+  color: var(--ink);
 }
 
 .portal-sidebar__signout-btn {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: transparent;
+  color: var(--muted);
   padding: 0.5rem 0.75rem;
   display: flex;
   gap: 0.75rem;
   align-items: center;
   justify-content: flex-start;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .portal-sidebar__signout-btn:hover {
-  background: rgba(255, 90, 90, 0.18);
-  border-color: rgba(255, 90, 90, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #b91c1c;
 }
 
 .portal-sidebar__signout-btn span {
@@ -220,14 +264,7 @@
   transition: opacity 0.2s ease;
 }
 
-.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn span {
-  opacity: 0;
-  width: 0;
-  margin: 0;
-  padding: 0;
-  visibility: hidden;
-}
-
+.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn span,
 .portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn span {
   opacity: 0;
   width: 0;
@@ -244,7 +281,7 @@
 .portal-sidebar__overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 6, 12, 0.8);
+  background: rgba(15, 23, 42, 0.6);
   display: flex;
   justify-content: flex-end;
   z-index: 40;
@@ -252,7 +289,7 @@
 
 .portal-sidebar__overlay-content {
   width: min(320px, 100%);
-  background: #0b0d1c;
+  background: var(--card);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -264,7 +301,7 @@
 .portal-sidebar__overlay-close {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--ink);
   font-size: 1rem;
   align-self: flex-end;
   cursor: pointer;
@@ -279,12 +316,18 @@
 .portal-sidebar__overlay-theme {
   margin-top: auto;
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
 }
 
 .portal-sidebar__overlay-actions {
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 920px) {
+  .portal-app-content {
+    padding: 1.5rem;
+  }
 }
 
 @media (max-width: 720px) {

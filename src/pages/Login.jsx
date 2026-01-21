@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./master.css";
 import { useAuth } from "../components/AuthContext";
@@ -11,6 +11,11 @@ function Login() {
   const [form, setForm] = useState({ email: "", password: "", remember: true });
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
+
+  useEffect(() => {
+    document.body.classList.add("admin-theme");
+    return () => document.body.classList.remove("admin-theme");
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();

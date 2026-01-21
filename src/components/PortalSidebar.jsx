@@ -161,7 +161,7 @@ const normalizePath = (pathname) => {
 function PortalSidebar({ apps = DEFAULT_APPS }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia(MOBILE_QUERY).matches;
@@ -259,6 +259,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
 
   return (
     <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
+      <div className="portal-sidebar__brand">
+        <span className="portal-sidebar__brand-short">R</span>
+        <span className="portal-sidebar__brand-full">Reebs ERP</span>
+      </div>
       <div className="portal-sidebar__toggle">
         <button
           type="button"
