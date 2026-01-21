@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserPlus, faEnvelope, faPhone, faHistory, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faUserPlus,
+  faEnvelope,
+  faPhone,
+  faHistory,
+  faXmark,
+  faColumns,
+  faTableCells,
+  faClock,
+  faRotateRight,
+} from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
@@ -28,11 +38,46 @@ const formatDate = (value) => {
 
 const sanitizePhone = (value) => String(value || "").replace(/[^\d+]/g, "");
 
+const toNumber = (value, fallback = 0) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const getInitials = (name) => {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "NA";
+  const first = parts[0][0] || "";
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return `${first}${last}`.toUpperCase();
+};
+
+const getQuantile = (values, quantile) => {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const position = Math.floor((sorted.length - 1) * quantile);
+  return sorted[position] || 0;
+};
+
+const getLastTouch = (customer) => {
+  const value = customer?.updatedAt || customer?.createdAt;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const getDaysSince = (date) => {
+  if (!date) return Infinity;
+  const diff = Date.now() - date.getTime();
+  return diff / (1000 * 60 * 60 * 24);
+};
+
 function AdminCustomers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("board");
+  const [segmentFilter, setSegmentFilter] = useState("all");
+  const [sortKey, setSortKey] = useState("ltv");
   const [activeCustomer, setActiveCustomer] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -65,17 +110,111 @@ function AdminCustomers() {
     fetchCustomers();
   }, []);
 
+  const ltvValues = useMemo(
+    () =>
+      customers
+        .map((customer) => toNumber(customer.total_spent) + toNumber(customer.total_rented))
+        .filter((value) => value > 0),
+    [customers]
+  );
+
+  const vipThreshold = useMemo(() => getQuantile(ltvValues, 0.8), [ltvValues]);
+  const loyalThreshold = useMemo(() => getQuantile(ltvValues, 0.6), [ltvValues]);
+
+  const enrichedCustomers = useMemo(
+    () =>
+      customers.map((customer) => {
+        const ltv = toNumber(customer.total_spent) + toNumber(customer.total_rented);
+        const activity = toNumber(customer.orders) + toNumber(customer.bookings);
+        const lastTouch = getLastTouch(customer);
+        const daysSince = getDaysSince(lastTouch);
+        let segment = "nurture";
+        if (activity === 0 && ltv === 0) {
+          segment = "prospect";
+        } else if ((vipThreshold > 0 && ltv >= vipThreshold) || activity >= 10) {
+          segment = "loyal";
+        } else if (daysSince > 120) {
+          segment = "risk";
+        } else if (activity >= 3 || (loyalThreshold > 0 && ltv >= loyalThreshold)) {
+          segment = "active";
+        }
+        const stage = segment === "nurture" ? "active" : segment;
+        return {
+          ...customer,
+          ltv,
+          activity,
+          lastTouch,
+          daysSince,
+          segment,
+          stage,
+        };
+      }),
+    [customers, loyalThreshold, vipThreshold]
+  );
+
   const filtered = useMemo(() => {
     const needle = searchTerm.trim().toLowerCase();
-    if (!needle) return customers;
-    return customers.filter((customer) => {
-      return (
+    return enrichedCustomers.filter((customer) => {
+      const matchesQuery =
+        !needle ||
         String(customer.name || "").toLowerCase().includes(needle) ||
         String(customer.email || "").toLowerCase().includes(needle) ||
-        String(customer.phone || "").toLowerCase().includes(needle)
-      );
+        String(customer.phone || "").toLowerCase().includes(needle);
+      if (!matchesQuery) return false;
+      if (segmentFilter === "all") return true;
+      return customer.segment === segmentFilter;
     });
-  }, [customers, searchTerm]);
+  }, [enrichedCustomers, searchTerm, segmentFilter]);
+
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    if (sortKey === "name") {
+      list.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    } else if (sortKey === "activity") {
+      list.sort((a, b) => b.activity - a.activity);
+    } else if (sortKey === "recent") {
+      list.sort((a, b) => (b.lastTouch?.getTime() || 0) - (a.lastTouch?.getTime() || 0));
+    } else {
+      list.sort((a, b) => b.ltv - a.ltv);
+    }
+    return list;
+  }, [filtered, sortKey]);
+
+  const totals = useMemo(() => {
+    const totalRevenue = enrichedCustomers.reduce((sum, customer) => sum + customer.ltv, 0);
+    const activeCount = enrichedCustomers.filter((customer) => customer.activity > 0).length;
+    const atRiskCount = enrichedCustomers.filter((customer) => customer.segment === "risk").length;
+    const now = Date.now();
+    const newCount = enrichedCustomers.filter((customer) => {
+      const created = new Date(customer.createdAt || 0);
+      if (Number.isNaN(created.getTime())) return false;
+      return now - created.getTime() <= 1000 * 60 * 60 * 24 * 30;
+    }).length;
+    return {
+      totalRevenue,
+      activeCount,
+      atRiskCount,
+      newCount,
+      avgLtv: enrichedCustomers.length ? totalRevenue / enrichedCustomers.length : 0,
+    };
+  }, [enrichedCustomers]);
+
+  const segmentCounts = useMemo(() => {
+    return enrichedCustomers.reduce(
+      (acc, customer) => {
+        acc[customer.segment] += 1;
+        return acc;
+      },
+      { prospect: 0, nurture: 0, active: 0, loyal: 0, risk: 0 }
+    );
+  }, [enrichedCustomers]);
+
+  const boardColumns = [
+    { id: "prospect", label: "Prospects", segments: ["prospect"] },
+    { id: "active", label: "Active", segments: ["active", "nurture"] },
+    { id: "loyal", label: "Loyal", segments: ["loyal"] },
+    { id: "risk", label: "At risk", segments: ["risk"] },
+  ];
 
   const openDetail = async (customer) => {
     setActiveCustomer(customer);
@@ -120,66 +259,289 @@ function AdminCustomers() {
         <header className="crm-header">
           <div>
             <p className="crm-eyebrow">Customer CRM</p>
-            <h1>Customer CRM</h1>
-            <p className="crm-subtitle">Manage relationships, loyalty, and lifetime value across rentals and retail.</p>
+            <h1>Customer relationships</h1>
+            <p className="crm-subtitle">
+              Track the full customer journey, from first inquiry to loyal repeat renter.
+            </p>
           </div>
-          <button type="button" className="crm-primary" onClick={() => setCreateOpen(true)}>
-            <FontAwesomeIcon icon={faUserPlus} /> Add Customer
-          </button>
+          <div className="crm-header-actions">
+            <button type="button" className="crm-secondary" onClick={fetchCustomers} disabled={loading}>
+              <FontAwesomeIcon icon={faRotateRight} /> Refresh
+            </button>
+            <button type="button" className="crm-primary" onClick={() => setCreateOpen(true)}>
+              <FontAwesomeIcon icon={faUserPlus} /> Add Customer
+            </button>
+          </div>
         </header>
 
-        <div className="crm-search">
-          <input
-            type="text"
-            placeholder="Search by name, email or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+        <section className="crm-kpi-grid">
+          <article className="crm-kpi-card">
+            <p className="crm-kpi-label">Total customers</p>
+            <h3 className="crm-kpi-value">{enrichedCustomers.length}</h3>
+            <span className="crm-kpi-sub">{totals.newCount} new in 30 days</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p className="crm-kpi-label">Active relationships</p>
+            <h3 className="crm-kpi-value">{totals.activeCount}</h3>
+            <span className="crm-kpi-sub">{segmentCounts.prospect} prospects</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p className="crm-kpi-label">Lifetime revenue</p>
+            <h3 className="crm-kpi-value">{formatMoney(totals.totalRevenue)}</h3>
+            <span className="crm-kpi-sub">Avg LTV {formatMoney(totals.avgLtv)}</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p className="crm-kpi-label">Needs follow-up</p>
+            <h3 className="crm-kpi-value">{segmentCounts.risk}</h3>
+            <span className="crm-kpi-sub">At-risk accounts</span>
+          </article>
+        </section>
+
+        <section className="crm-controls">
+          <label className="crm-search">
+            <span>Search</span>
+            <input
+              type="text"
+              placeholder="Name, email, or phone"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </label>
+          <div className="crm-filters">
+            <label className="crm-filter">
+              <span>Segment</span>
+              <select value={segmentFilter} onChange={(e) => setSegmentFilter(e.target.value)}>
+                <option value="all">All segments</option>
+                <option value="prospect">Prospects</option>
+                <option value="nurture">Nurture</option>
+                <option value="active">Active</option>
+                <option value="loyal">Loyal</option>
+                <option value="risk">At risk</option>
+              </select>
+            </label>
+            <label className="crm-filter">
+              <span>Sort by</span>
+              <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
+                <option value="ltv">Lifetime value</option>
+                <option value="activity">Activity volume</option>
+                <option value="recent">Last touch</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+            </label>
+          </div>
+          <div className="crm-view-toggle" role="tablist" aria-label="CRM views">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "board"}
+              className={viewMode === "board" ? "is-active" : ""}
+              onClick={() => setViewMode("board")}
+            >
+              <FontAwesomeIcon icon={faColumns} /> Board
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "list"}
+              className={viewMode === "list" ? "is-active" : ""}
+              onClick={() => setViewMode("list")}
+            >
+              <FontAwesomeIcon icon={faTableCells} /> List
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "timeline"}
+              className={viewMode === "timeline" ? "is-active" : ""}
+              onClick={() => setViewMode("timeline")}
+            >
+              <FontAwesomeIcon icon={faClock} /> Timeline
+            </button>
+          </div>
+          <p className="crm-count">
+            Showing {sorted.length} of {enrichedCustomers.length} customers
+          </p>
+        </section>
 
         {loading && <p className="crm-muted">Loading customers...</p>}
         {!loading && error && <p className="crm-error">{error}</p>}
 
-        {!loading && !error && (
-          <div className="crm-grid">
-            {filtered.map((customer) => (
-              <div key={customer.id} className="crm-card">
-                <div className="crm-card-head">
-                  <h3>{customer.name}</h3>
-                  <span className="crm-badge">Client #{customer.id}</span>
-                </div>
-                <div className="crm-details">
-                  <p><FontAwesomeIcon icon={faEnvelope} /> {customer.email || "No email"}</p>
-                  <p><FontAwesomeIcon icon={faPhone} /> {customer.phone || "No phone"}</p>
-                </div>
-                <div className="crm-stats">
-                  <div>
-                    <span>Orders</span>
-                    <strong>{customer.orders}</strong>
+        {!loading && !error && viewMode === "board" && (
+          <div className="crm-board">
+            {boardColumns.map((column) => {
+              const columnCustomers = sorted.filter((customer) => column.segments.includes(customer.stage));
+              return (
+                <section key={column.id} className="crm-column">
+                  <div className="crm-column-head">
+                    <h3>{column.label}</h3>
+                    <span>{columnCustomers.length}</span>
                   </div>
-                  <div>
-                    <span>Bookings</span>
-                    <strong>{customer.bookings}</strong>
+                  <div className="crm-column-list">
+                    {columnCustomers.map((customer) => (
+                      <article key={customer.id} className="crm-card crm-card--compact">
+                        <div className="crm-card-top">
+                          <div className="crm-profile">
+                            <div className="crm-avatar">{getInitials(customer.name)}</div>
+                            <div>
+                              <h4>{customer.name || "Unnamed"}</h4>
+                              <span className="crm-meta">Client #{customer.id}</span>
+                            </div>
+                          </div>
+                          <span className={`crm-tag is-${customer.segment}`}>
+                            {customer.segment === "risk"
+                              ? "At risk"
+                              : customer.segment === "loyal"
+                              ? "Loyal"
+                              : customer.segment === "prospect"
+                              ? "Prospect"
+                              : customer.segment === "nurture"
+                              ? "Nurture"
+                              : "Active"}
+                          </span>
+                        </div>
+                        <div className="crm-card-body">
+                          <p>
+                            <FontAwesomeIcon icon={faEnvelope} /> {customer.email || "No email"}
+                          </p>
+                          <p>
+                            <FontAwesomeIcon icon={faPhone} /> {customer.phone || "No phone"}
+                          </p>
+                        </div>
+                        <div className="crm-metrics">
+                          <div>
+                            <span>Orders</span>
+                            <strong>{toNumber(customer.orders)}</strong>
+                          </div>
+                          <div>
+                            <span>Bookings</span>
+                            <strong>{toNumber(customer.bookings)}</strong>
+                          </div>
+                          <div>
+                            <span>LTV</span>
+                            <strong>{formatMoney(customer.ltv)}</strong>
+                          </div>
+                        </div>
+                        <div className="crm-actions">
+                          {customer.phone && (
+                            <>
+                              <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
+                                <FontAwesomeIcon icon={faPhone} /> Call
+                              </a>
+                              <a
+                                href={`https://wa.me/${sanitizePhone(customer.phone)}`}
+                                className="crm-action"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <FontAwesomeIcon icon={faWhatsapp} /> WhatsApp
+                              </a>
+                            </>
+                          )}
+                          <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
+                            <FontAwesomeIcon icon={faHistory} /> View profile
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                    {!columnCustomers.length && <p className="crm-muted">No customers in this stage.</p>}
                   </div>
-                </div>
-                <div className="crm-actions">
-                  {customer.phone && (
-                    <>
-                      <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
-                        <FontAwesomeIcon icon={faPhone} /> Call
-                      </a>
-                      <a href={`https://wa.me/${sanitizePhone(customer.phone)}`} className="crm-action" target="_blank" rel="noreferrer">
-                        <FontAwesomeIcon icon={faWhatsapp} /> WhatsApp
-                      </a>
-                    </>
-                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && !error && viewMode === "list" && (
+          <div className="crm-table">
+            <div className="crm-table-row crm-table-head">
+              <span>Customer</span>
+              <span>Segment</span>
+              <span>Orders</span>
+              <span>Bookings</span>
+              <span>LTV</span>
+              <span>Last touch</span>
+              <span>Actions</span>
+            </div>
+            {sorted.map((customer) => (
+              <div className="crm-table-row" key={customer.id}>
+                <span className="crm-table-strong">
+                  {customer.name || "Unnamed"}
+                  <span className="crm-meta">Client #{customer.id}</span>
+                </span>
+                <span className={`crm-tag is-${customer.segment}`}>
+                  {customer.segment === "risk"
+                    ? "At risk"
+                    : customer.segment === "loyal"
+                    ? "Loyal"
+                    : customer.segment === "prospect"
+                    ? "Prospect"
+                    : customer.segment === "nurture"
+                    ? "Nurture"
+                    : "Active"}
+                </span>
+                <span>{toNumber(customer.orders)}</span>
+                <span>{toNumber(customer.bookings)}</span>
+                <span className="crm-table-strong">{formatMoney(customer.ltv)}</span>
+                <span>{customer.lastTouch ? formatDate(customer.lastTouch) : "-"}</span>
+                <span className="crm-table-actions">
                   <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
-                    <FontAwesomeIcon icon={faHistory} /> View Profile
+                    View
                   </button>
-                </div>
+                </span>
               </div>
             ))}
-            {!filtered.length && <p className="crm-muted">No customers found.</p>}
+            {!sorted.length && <p className="crm-muted">No customers found.</p>}
+          </div>
+        )}
+
+        {!loading && !error && viewMode === "timeline" && (
+          <div className="crm-timeline">
+            {sorted.map((customer) => {
+              const nextStep =
+                customer.segment === "risk"
+                  ? "Follow up with a check-in"
+                  : customer.segment === "prospect"
+                  ? "Send welcome + pricing deck"
+                  : customer.segment === "loyal"
+                  ? "Offer VIP renewal"
+                  : "Schedule a monthly touchpoint";
+              return (
+                <div key={customer.id} className="crm-timeline-row">
+                  <div className="crm-avatar">{getInitials(customer.name)}</div>
+                  <div>
+                    <div className="crm-timeline-head">
+                      <h4>{customer.name || "Unnamed"}</h4>
+                      <span>{customer.lastTouch ? formatDate(customer.lastTouch) : "-"}</span>
+                    </div>
+                    <p className="crm-muted">
+                      {customer.email || "No email"} · {customer.phone || "No phone"}
+                    </p>
+                    <div className="crm-timeline-meta">
+                      <span className={`crm-tag is-${customer.segment}`}>
+                        {customer.segment === "risk"
+                          ? "At risk"
+                          : customer.segment === "loyal"
+                          ? "Loyal"
+                          : customer.segment === "prospect"
+                          ? "Prospect"
+                          : customer.segment === "nurture"
+                          ? "Nurture"
+                          : "Active"}
+                      </span>
+                      <span>{customer.activity} touches</span>
+                      <span>LTV {formatMoney(customer.ltv)}</span>
+                    </div>
+                    <div className="crm-timeline-actions">
+                      <span className="crm-next-step">{nextStep}</span>
+                      <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
+                        Open record
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!sorted.length && <p className="crm-muted">No customers found.</p>}
           </div>
         )}
       </div>
