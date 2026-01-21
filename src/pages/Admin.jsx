@@ -627,6 +627,12 @@ function Admin() {
               purchasePriceCad: value,
               cadConversionAccepted: false,
               cadConversionRate: null,
+              purchasePriceGbp:
+                value !== "" && cadToGbpWithTaxRate
+                  ? (Number(value) * cadToGbpWithTaxRate).toFixed(2)
+                  : row.purchasePriceGbp,
+              conversionAccepted: false,
+              conversionRate: null,
             }
           : row
       )
@@ -1817,6 +1823,7 @@ function Admin() {
                       type="number"
                       min="0"
                       step="0.01"
+                      disabled={row.purchasePriceCad !== "" && row.purchasePriceCad !== null}
                       value={row.purchasePriceGbp}
                       onChange={(e) => handlePurchasePriceGbpChange(index, e.target.value)}
                       placeholder="0.00"
