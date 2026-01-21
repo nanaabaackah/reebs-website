@@ -18743,3 +18743,305 @@ body.admin-theme .login-button {
 body.admin-theme .login-link {
   color: var(--accent);
 }
+
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page,
+  .marketing-page
+) {
+  padding: 0;
+  color: var(--ink);
+}
+
+body.admin-theme :is(
+  .settings-shell,
+  .expenses-shell,
+  .crm-shell,
+  .customers-shell,
+  .orders-shell,
+  .invoicing-shell,
+  .timesheet-shell,
+  .scheduler-shell,
+  .hr-shell,
+  .delivery-shell,
+  .vendors-shell,
+  .maintenance-shell,
+  .roles-shell,
+  .documents-shell,
+  .accounting-shell,
+  .bookings-shell,
+  .marketing-shell
+) {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+body.admin-theme :is(
+  .settings-header,
+  .expenses-header,
+  .crm-header,
+  .customers-header,
+  .orders-header,
+  .invoicing-header,
+  .timesheet-header,
+  .scheduler-header,
+  .hr-header,
+  .delivery-header,
+  .vendors-header,
+  .maintenance-header,
+  .roles-header,
+  .documents-header,
+  .accounting-header,
+  .bookings-header
+) {
+  background: var(--hero-gradient);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme [class$="-eyebrow"] {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 0 0 0.4rem;
+}
+
+body.admin-theme [class$="-subtitle"],
+body.admin-theme [class$="-muted"] {
+  color: var(--muted);
+}
+
+body.admin-theme [class$="-card-label"] {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  margin: 0;
+}
+
+body.admin-theme [class$="-panel"],
+body.admin-theme [class$="-card"],
+body.admin-theme .invoice-paper {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+body.admin-theme [class$="-panel-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+body.admin-theme :is(button, a)[class$="-primary"],
+body.admin-theme .orders-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+body.admin-theme :is(button, a)[class$="-secondary"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+body.admin-theme :is(button, a)[class$="-primary"]:disabled,
+body.admin-theme :is(button, a)[class$="-secondary"]:disabled,
+body.admin-theme .orders-create[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+body.admin-theme :is(
+  .settings-tabs,
+  .scheduler-seg
+) {
+  background: var(--surface);
+  padding: 0.2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 0.2rem;
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+body.admin-theme :is(.settings-tabs, .scheduler-seg) button {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+body.admin-theme :is(.settings-tabs, .scheduler-seg) button.is-active {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) select,
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) textarea {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+}
+
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) input:focus,
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) select:focus,
+body.admin-theme :is(
+  .settings-page,
+  .expenses-page,
+  .crm-page,
+  .customers-page,
+  .orders-page,
+  .invoicing-page,
+  .timesheet-page,
+  .scheduler-page,
+  .hr-page,
+  .delivery-page,
+  .vendors-page,
+  .maintenance-page,
+  .roles-page,
+  .documents-page,
+  .accounting-page,
+  .bookings-page
+) textarea:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
