@@ -58,16 +58,16 @@ const DEFAULT_APPS = [
     icon: faBoxesStacked,
   },
   {
+    label: "CRM",
+    path: "/admin/crm",
+    matchPaths: ["/admin/crm", "/admin/customers"],
+    icon: faUserGroup,
+  },
+  {
     label: "Orders",
     path: "/admin/orders",
     matchPaths: ["/admin/orders", "/admin/orders/new"],
     icon: faClipboardList,
-  },
-  {
-    label: "CRM",
-    path: "/admin/crm",
-    matchPaths: ["/admin/crm", "/admin/users", "/admin/employees"],
-    icon: faUsers,
   },
   {
     label: "Bookings",
@@ -85,6 +85,17 @@ const DEFAULT_APPS = [
     icon: faChartLine,
   },
   {
+    label: "Invoicing",
+    path: "/admin/invoicing",
+    icon: faFileInvoiceDollar,
+  },
+  {
+    label: "Directory",
+    path: "/admin/directory",
+    matchPaths: ["/admin/directory", "/admin/users", "/admin/employees"],
+    icon: faUsers,
+  },
+  {
     label: "Expenses",
     path: "/admin/expenses",
     icon: faMoneyCheckDollar,
@@ -93,16 +104,6 @@ const DEFAULT_APPS = [
     label: "Human Resources",
     path: "/admin/hr",
     icon: faUserTie,
-  },
-  {
-    label: "Documents",
-    path: "/admin/documents",
-    icon: faFileLines,
-  },
-  {
-    label: "Timesheets",
-    path: "/admin/timesheets",
-    icon: faClock,
   },
   {
     label: "Vendors",
@@ -120,29 +121,29 @@ const DEFAULT_APPS = [
     icon: faTruck,
   },
   {
-    label: "Roles",
+    label: "Documents",
+    path: "/admin/documents",
+    icon: faFileLines,
+  },
+  {
+    label: "Timesheets",
+    path: "/admin/timesheets",
+    icon: faClock,
+  },
+  {
+    label: "Users",
     path: "/admin/roles",
     icon: faShieldAlt,
-  },
-  {
-    label: "Settings",
-    path: "/admin/settings",
-    icon: faSliders,
-  },
-  {
-    label: "Customers",
-    path: "/admin/customers",
-    icon: faUserGroup,
-  },
-  {
-    label: "Invoicing",
-    path: "/admin/invoicing",
-    icon: faFileInvoiceDollar,
   },
   {
     label: "Marketing",
     path: "/admin/marketing",
     icon: faBullhorn,
+  },
+  {
+    label: "Settings",
+    path: "/admin/settings",
+    icon: faSliders,
   },
   {
     label: "Template mode",

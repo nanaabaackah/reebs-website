@@ -64,6 +64,34 @@ function RequireAuth({ children }) {
 
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
 const PORTAL_HOST = "portal.reebspartythemes.com";
+const DEFAULT_TITLE = "REEBS Party Themes";
+
+const getAdminTitle = (pathname) => {
+  if (pathname === "/admin") return "Dashboard";
+  if (pathname.startsWith("/admin/orders/new")) return "Order Builder";
+  if (pathname.startsWith("/admin/orders")) return "Orders";
+  if (pathname.startsWith("/admin/inventory")) return "Inventory";
+  if (pathname.startsWith("/admin/crm")) return "CRM";
+  if (pathname.startsWith("/admin/directory")) return "Directory";
+  if (pathname.startsWith("/admin/users")) return "Directory";
+  if (pathname.startsWith("/admin/employees")) return "Directory";
+  if (pathname.startsWith("/admin/bookings")) return "Bookings";
+  if (pathname.startsWith("/admin/schedule")) return "Scheduling";
+  if (pathname.startsWith("/admin/accounting")) return "Accounting";
+  if (pathname.startsWith("/admin/expenses")) return "Expenses";
+  if (pathname.startsWith("/admin/hr")) return "Human Resources";
+  if (pathname.startsWith("/admin/documents")) return "Documents";
+  if (pathname.startsWith("/admin/timesheets")) return "Timesheets";
+  if (pathname.startsWith("/admin/vendors")) return "Vendors";
+  if (pathname.startsWith("/admin/maintenance")) return "Maintenance";
+  if (pathname.startsWith("/admin/delivery")) return "Delivery";
+  if (pathname.startsWith("/admin/roles")) return "Roles";
+  if (pathname.startsWith("/admin/settings")) return "Settings";
+  if (pathname.startsWith("/admin/invoicing")) return "Invoicing";
+  if (pathname.startsWith("/admin/marketing")) return "Marketing";
+  if (pathname.startsWith("/admin/website-template")) return "Website Template";
+  return "Portal";
+};
 
 const isPortalHost = () => {
   if (typeof window === "undefined") return false;
@@ -116,6 +144,15 @@ function AppLayout() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (location.pathname.startsWith("/admin")) {
+      document.title = `Portal | ${getAdminTitle(location.pathname)}`;
+      return;
+    }
+    document.title = DEFAULT_TITLE;
+  }, [location.pathname]);
+
   const showPortalSidebar = location.pathname.startsWith("/admin");
 
   const routeTree = (
@@ -140,7 +177,9 @@ function AppLayout() {
       <Route path="/admin/inventory" element={<RequireAuth><Admin /></RequireAuth>} />
       <Route path="/admin/orders" element={<RequireAuth><OrdersList /></RequireAuth>} />
       <Route path="/admin/orders/new" element={<RequireAuth><OrderBuilder /></RequireAuth>} />
-      <Route path="/admin/crm" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+      <Route path="/admin/directory" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
+      <Route path="/admin/crm" element={<RequireAuth><AdminCustomers /></RequireAuth>} />
+      <Route path="/admin/customers" element={<Navigate to="/admin/crm" replace />} />
       <Route path="/admin/users" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
       <Route path="/admin/employees" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
       <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
@@ -167,7 +206,6 @@ function AppLayout() {
         path="/admin/settings"
         element={<RequireAuth><MobileRestricted><AdminSettings /></MobileRestricted></RequireAuth>}
       />
-      <Route path="/admin/customers" element={<RequireAuth><AdminCustomers /></RequireAuth>} />
       <Route path="/admin/invoicing" element={<RequireAuth><AdminInvoicing /></RequireAuth>} />
       <Route
         path="/admin/marketing"
