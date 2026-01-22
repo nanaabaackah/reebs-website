@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
@@ -15,6 +16,7 @@ const defaultConfig = {
 
 function AdminSettings() {
   const { user, updateUser } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("profile");
   const [profileForm, setProfileForm] = useState({ firstName: "", lastName: "", password: "" });
   const [profileStatus, setProfileStatus] = useState("");
@@ -31,6 +33,18 @@ function AdminSettings() {
 
   const roleKey = (user?.role || "staff").toLowerCase();
   const isAdmin = roleKey === "admin";
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requestedTab = params.get("tab");
+    const allowedTabs = new Set(["profile", "users", "config"]);
+    if (!allowedTabs.has(requestedTab)) return;
+    if (requestedTab === "users" && !isAdmin) {
+      setActiveTab("profile");
+      return;
+    }
+    setActiveTab(requestedTab);
+  }, [location.search, isAdmin]);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");

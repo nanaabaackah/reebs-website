@@ -323,14 +323,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         <div className="portal-sidebar__user-menu">
           {isAuthenticated && (
             <Link
-              to="/admin/settings"
+              to="/admin/settings?tab=profile"
               className="portal-sidebar__user-link"
               onClick={() => {
                 setUserMenuOpen(false);
                 if (isMobile) setOverlayOpen(false);
               }}
             >
-              User settings
+              Profile settings
             </Link>
           )}
           <button
