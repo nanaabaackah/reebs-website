@@ -25,6 +25,7 @@ import {
   faUserTie,
   faUsers,
   faChevronLeft,
+  faChevronDown,
   faBoxesStacked,
   faCalendarCheck,
   faXmark,
@@ -169,11 +170,25 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     return window.matchMedia(MOBILE_QUERY).matches;
   });
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { darkMode, toggleTheme } = useThemeMode();
   const { user, logout, authReady } = useAuth();
   const isAuthenticated = Boolean(user);
   const authLabel = isAuthenticated ? "Sign out" : "Sign in";
   const authIcon = isAuthenticated ? faArrowRightFromBracket : faArrowRightToBracket;
+  const displayName =
+    user?.name ||
+    user?.fullName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.email ||
+    "Guest";
+  const displayEmail = user?.email || (authReady ? "Not signed in" : "Loading...");
+  const userInitials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "GU";
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
@@ -195,6 +210,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [location.pathname]);
 
   const isActive = (app) => {
     if (app.external) return false;
@@ -230,7 +249,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
                 rel="noreferrer"
                 className={linkClasses}
                 aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
-                onClick={() => isMobile && setOverlayOpen(false)}
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  if (isMobile) setOverlayOpen(false);
+                }}
               >
                 <FontAwesomeIcon icon={app.icon} />
                 <span>{app.label}</span>
@@ -243,7 +265,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             <Link
               to={app.path}
               className={linkClasses}
-              onClick={() => isMobile && overlayOpen && setOverlayOpen(false)}
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (isMobile && overlayOpen) setOverlayOpen(false);
+              }}
             >
               <FontAwesomeIcon icon={app.icon} />
               <span>{app.label}</span>
@@ -256,6 +281,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
 
   const handleSignOut = () => {
     logout();
+    setUserMenuOpen(false);
     if (isMobile) {
       setOverlayOpen(false);
     }
@@ -264,6 +290,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
 
   const handleAuthAction = () => {
     if (!isAuthenticated) {
+      setUserMenuOpen(false);
       if (isMobile) {
         setOverlayOpen(false);
       }
@@ -273,12 +300,72 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     handleSignOut();
   };
 
+  const renderUserSection = (context = "sidebar") => (
+    <div className={`portal-sidebar__user portal-sidebar__user--${context}`}>
+      <button
+        type="button"
+        className="portal-sidebar__user-button"
+        onClick={() => setUserMenuOpen((prev) => !prev)}
+        aria-expanded={userMenuOpen}
+        aria-label="Open user menu"
+      >
+        <span className="portal-sidebar__user-avatar">{userInitials}</span>
+        <span className="portal-sidebar__user-info">
+          <span className="portal-sidebar__user-name">{displayName}</span>
+          <span className="portal-sidebar__user-email">{displayEmail}</span>
+        </span>
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`portal-sidebar__user-caret ${userMenuOpen ? "is-open" : ""}`}
+        />
+      </button>
+      {userMenuOpen && (
+        <div className="portal-sidebar__user-menu">
+          {isAuthenticated && (
+            <Link
+              to="/admin/settings"
+              className="portal-sidebar__user-link"
+              onClick={() => {
+                setUserMenuOpen(false);
+                if (isMobile) setOverlayOpen(false);
+              }}
+            >
+              User settings
+            </Link>
+          )}
+          <button
+            type="button"
+            className="portal-sidebar__theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
+            title={darkMode ? "Light mode" : "Dark mode"}
+          >
+            <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+            <span>{darkMode ? "Light mode" : "Dark mode"}</span>
+          </button>
+          <button
+            type="button"
+            className="portal-sidebar__signout-btn"
+            onClick={handleAuthAction}
+            aria-label={authLabel}
+            title={authLabel}
+            disabled={!authReady}
+          >
+            <FontAwesomeIcon icon={authIcon} />
+            <span>{authLabel}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
       <div className="portal-sidebar__brand">
         <span className="portal-sidebar__brand-short">R</span>
         <span className="portal-sidebar__brand-full">Reebs ERP</span>
       </div>
+      {!isMobile && renderUserSection()}
       <div className="portal-sidebar__toggle">
         <button
           type="button"
@@ -297,31 +384,6 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         </button>
       </div>
       {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
-      <div className="portal-sidebar__actions">
-        <button
-          type="button"
-          className="portal-sidebar__signout-btn"
-          onClick={handleAuthAction}
-          aria-label={authLabel}
-          title={authLabel}
-          disabled={!authReady}
-        >
-          <FontAwesomeIcon icon={authIcon} />
-          <span>{authLabel}</span>
-        </button>
-      </div>
-      <div className="portal-sidebar__theme-toggle">
-        <button
-          type="button"
-          className="portal-sidebar__theme-toggle-btn"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
-          title={darkMode ? "Light mode" : "Dark mode"}
-        >
-          <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-          <span>{darkMode ? "Light mode" : "Dark mode"}</span>
-        </button>
-      </div>
       {isMobile && overlayOpen && (
         <div
           className="portal-sidebar__overlay"
@@ -338,32 +400,8 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             >
               <FontAwesomeIcon icon={faXmark} />
             </button>
+            {renderUserSection("overlay")}
             <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
-            <div className="portal-sidebar__overlay-actions">
-              <button
-                type="button"
-                className="portal-sidebar__signout-btn"
-                onClick={handleAuthAction}
-                aria-label={authLabel}
-                title={authLabel}
-                disabled={!authReady}
-              >
-                <FontAwesomeIcon icon={authIcon} />
-                <span>{authLabel}</span>
-              </button>
-            </div>
-            <div className="portal-sidebar__overlay-theme">
-              <button
-                type="button"
-                className="portal-sidebar__theme-toggle-btn"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
-                title={darkMode ? "Light mode" : "Dark mode"}
-              >
-                <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-                <span>{darkMode ? "Light mode" : "Dark mode"}</span>
-              </button>
-            </div>
           </div>
         </div>
       )}

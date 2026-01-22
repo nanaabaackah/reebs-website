@@ -74,6 +74,104 @@
   justify-content: center;
 }
 
+.portal-sidebar__user {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.portal-sidebar__user-button {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.65rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.portal-sidebar__user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.portal-sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.portal-sidebar__user-name {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portal-sidebar__user-email {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portal-sidebar__user-caret {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.portal-sidebar__user-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.portal-sidebar__user-menu {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.portal-sidebar__user-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.portal-sidebar__user-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .portal-sidebar__toggle-btn {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -278,6 +376,24 @@
   justify-content: center;
 }
 
+.portal-sidebar:not(.is-expanded) .portal-sidebar__user-info {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  visibility: hidden;
+}
+
+.portal-sidebar:not(.is-expanded) .portal-sidebar__user-caret {
+  display: none;
+}
+
+.portal-sidebar:not(.is-expanded) .portal-sidebar__user-button {
+  justify-content: center;
+  padding: 0.6rem;
+}
+
 .portal-sidebar__list {
   margin: 0;
   padding: 0;
@@ -301,21 +417,43 @@
   gap: 1rem;
   max-height: 100vh;
   overflow-y: auto;
+  box-shadow: -18px 0 40px rgba(15, 23, 42, 0.2);
 }
 
 .portal-sidebar__overlay-close {
-  background: transparent;
-  border: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 0.95rem;
   align-self: flex-end;
   cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portal-sidebar__overlay-close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .portal-sidebar__list--overlay {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.portal-sidebar__link--overlay {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.portal-sidebar__link--overlay:hover,
+.portal-sidebar__nav li.is-active .portal-sidebar__link--overlay {
+  border-color: var(--accent);
 }
 
 .portal-sidebar__overlay-theme {
@@ -327,6 +465,19 @@
 .portal-sidebar__overlay-actions {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
+}
+
+.portal-sidebar__user--overlay {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.portal-sidebar__user--overlay .portal-sidebar__user-button {
+  background: var(--surface);
+}
+
+.portal-sidebar__user--overlay .portal-sidebar__user-menu {
+  background: var(--surface);
 }
 
 @media (max-width: 920px) {
@@ -384,12 +535,12 @@
   }
 
   .portal-sidebar__toggle {
-    width: auto;
     margin-bottom: 0;
+    width: auto;
+    justify-content: center;
   }
 
   .portal-sidebar__toggle-btn {
-    width: auto;
     padding: 0.4rem 0.6rem;
   }
 
@@ -397,25 +548,15 @@
     display: none;
   }
 
-  .portal-sidebar__actions {
-    width: auto;
-    margin-top: 0;
-    margin-left: auto;
-  }
-
-  .portal-sidebar__theme-toggle {
-    width: auto;
-    margin-top: 0;
-  }
-
-  .portal-sidebar__signout-btn,
-  .portal-sidebar__theme-toggle-btn {
-    padding: 0.4rem 0.55rem;
-  }
-
-  .portal-sidebar__signout-btn span,
-  .portal-sidebar__theme-toggle-btn span,
   .portal-sidebar__toggle span {
     display: none;
+  }
+
+  .portal-sidebar__user {
+    margin-bottom: 0;
+  }
+
+  .portal-sidebar__user-menu {
+    margin-bottom: 0.5rem;
   }
 }
