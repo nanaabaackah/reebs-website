@@ -16748,6 +16748,7 @@ body.dark-mode .delivery-list-item {
 
 .customers-table tbody tr {
   background: transparent;
+  font-size: 0.65rem;
 }
 
 .customers-table tbody td {
