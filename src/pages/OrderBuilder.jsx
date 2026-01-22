@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./master.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
@@ -29,6 +29,8 @@ const normalizeCurrency = (currency) => {
   const trimmed = currency.trim();
   return trimmed ? trimmed.toUpperCase() : "GBP";
 };
+
+const normalizeCode = (value) => (value || "").toString().trim().toLowerCase();
 
 const formatCurrency = (amount, currency = "GBP") => {
   const normalizedCurrency = normalizeCurrency(currency);
@@ -63,11 +65,21 @@ function OrderBuilder() {
   const [success, setSuccess] = useState("");
   const [orderDiscount, setOrderDiscount] = useState("");
   const [discountType, setDiscountType] = useState("amount");
+  const [scanFeedback, setScanFeedback] = useState(null);
+  const scanTimeoutRef = useRef(null);
   const { user } = useAuth();
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
     return () => document.body.classList.remove("admin-theme");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -110,6 +122,28 @@ function OrderBuilder() {
     fetchAll();
   }, []);
 
+  const findProductByCode = (code) => {
+    const normalized = normalizeCode(code);
+    if (!normalized) return null;
+    return (
+      products.find((product) => {
+        const barcode = normalizeCode(product?.barcode);
+        const sku = normalizeCode(product?.sku);
+        return (barcode && barcode === normalized) || (sku && sku === normalized);
+      }) || null
+    );
+  };
+
+  const pushScanFeedback = (type, message) => {
+    setScanFeedback({ type, message });
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+    scanTimeoutRef.current = setTimeout(() => {
+      setScanFeedback(null);
+    }, 2500);
+  };
+
   const filteredCustomers = useMemo(() => {
     const query = customerQuery.trim().toLowerCase();
     if (!query) return customers;
@@ -133,7 +167,8 @@ function OrderBuilder() {
     return list.filter((item) => {
       return (
         item.name?.toLowerCase().includes(query) ||
-        item.sku?.toLowerCase().includes(query)
+        item.sku?.toLowerCase().includes(query) ||
+        item.barcode?.toLowerCase().includes(query)
       );
     });
   }, [products, productQuery]);
@@ -195,6 +230,22 @@ function OrderBuilder() {
         },
       ];
     });
+  };
+
+  const handleProductScan = (event) => {
+    if (event.key !== "Enter") return;
+    const rawValue = event.currentTarget.value || "";
+    const trimmedValue = rawValue.trim();
+    if (!trimmedValue) return;
+    const match = findProductByCode(trimmedValue);
+    if (!match) {
+      pushScanFeedback("error", `No product found for "${trimmedValue}".`);
+      return;
+    }
+    event.preventDefault();
+    addToCart(match);
+    setProductQuery("");
+    pushScanFeedback("success", `Added ${match.name || match.sku || match.barcode || "item"}.`);
   };
 
   const updateCartQuantity = (productId, nextValue) => {
@@ -356,14 +407,20 @@ function OrderBuilder() {
                 <span>{products.length} items</span>
               </div>
               <label className="order-field">
-                Search products
+                Search or scan products
                 <input
                   type="text"
                   value={productQuery}
                   onChange={(event) => setProductQuery(event.target.value)}
-                  placeholder="Search by name or SKU"
+                  onKeyDown={handleProductScan}
+                  placeholder="Search by name, SKU, or barcode"
                 />
               </label>
+              {scanFeedback && (
+                <p className={scanFeedback.type === "error" ? "order-error" : "order-success"}>
+                  {scanFeedback.message}
+                </p>
+              )}
               <div className="order-product-list">
                 {filteredProducts.map((product) => {
                   const stock = getQuantity(product);
@@ -372,7 +429,8 @@ function OrderBuilder() {
                       <div>
                         <h4>{product.name || "Untitled"}</h4>
                         <p>
-                          {product.sku ? `SKU ${product.sku}` : "No SKU"} · Stock {stock}
+                          {product.sku ? `SKU ${product.sku}` : "No SKU"}
+                          {product.barcode ? ` · Barcode ${product.barcode}` : ""} · Stock {stock}
                         </p>
                       </div>
                       <div className="order-product-actions">

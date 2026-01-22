@@ -88,6 +88,119 @@
   margin-bottom: 1rem;
 }
 
+.portal-sidebar__notifications {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.portal-sidebar__notifications-toggle {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  position: relative;
+}
+
+.portal-sidebar__notifications-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.portal-sidebar__notifications-title span {
+  white-space: nowrap;
+}
+
+.portal-sidebar__notifications-count {
+  margin-left: auto;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.portal-sidebar__notifications-caret {
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.portal-sidebar__notifications-caret.is-open {
+  transform: rotate(180deg);
+}
+
+.portal-sidebar__notifications-body {
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+  background: var(--card);
+  padding: 0.6rem;
+}
+
+.portal-sidebar__notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.portal-sidebar__notification-item {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.portal-sidebar__notification-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.portal-sidebar__notification-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.portal-sidebar__notification-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.portal-sidebar__notification-time {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.portal-sidebar__notifications-muted,
+.portal-sidebar__notifications-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.portal-sidebar__notifications-error {
+  color: var(--back3);
+  font-weight: 600;
+}
+
 .portal-sidebar__user-button {
   width: 100%;
   border: 1px solid var(--border);
@@ -391,6 +504,26 @@
   visibility: hidden;
 }
 
+.portal-sidebar:not(.is-expanded) .portal-sidebar__notifications-body,
+.portal-sidebar:not(.is-expanded) .portal-sidebar__notifications-title span,
+.portal-sidebar:not(.is-expanded) .portal-sidebar__notifications-caret {
+  display: none;
+}
+
+.portal-sidebar:not(.is-expanded) .portal-sidebar__notifications-toggle {
+  justify-content: center;
+  padding: 0.6rem;
+}
+
+.portal-sidebar:not(.is-expanded) .portal-sidebar__notifications-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  padding: 2px 6px;
+  font-size: 0.65rem;
+  display: inline-flex;
+}
+
 .portal-sidebar:not(.is-expanded) .portal-sidebar__user-caret {
   display: none;
 }
@@ -485,6 +618,17 @@
 }
 
 .portal-sidebar__user--overlay .portal-sidebar__user-menu {
+  background: var(--surface);
+}
+
+.portal-sidebar__notifications--overlay {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.portal-sidebar__notifications--overlay .portal-sidebar__notifications-body,
+.portal-sidebar__notifications--overlay .portal-sidebar__notifications-toggle,
+.portal-sidebar__notifications--overlay .portal-sidebar__notification-item {
   background: var(--surface);
 }
 

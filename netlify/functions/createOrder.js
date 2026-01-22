@@ -10,6 +10,7 @@ import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
 import { requireUser } from "./_shared/userAuth.js";
+import { normalizeOrdersToPickup } from "./_shared/normalizeOrders.js";
 
 const formatAmount = (cents) => {
   const value = Number(cents);
@@ -172,8 +173,9 @@ export async function handler(event) {
   }
 
   const safeJson = (value) => (value && typeof value === "object" ? value : null);
-  const normalizedDelivery = safeJson(deliveryDetails);
-  const normalizedPickup = safeJson(pickupDetails);
+  const normalizedPickup = safeJson(pickupDetails) || safeJson(deliveryDetails);
+  const normalizedDelivery = null;
+  const normalizedMethod = "pickup";
   const ensureOrderColumns = async (dbClient) => {
     const statements = [
       `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "deliveryDetails" JSONB`,
@@ -203,6 +205,7 @@ export async function handler(event) {
       : await resolveOrganizationId(client, event, payload);
     await ensureAuditColumns(client);
     await ensureOrderColumns(client);
+    await normalizeOrdersToPickup(client, organizationId);
 
     const actor = authUser
       ? { userId: authUser.id, userName: authUser.fullName, userEmail: authUser.email }
@@ -318,7 +321,7 @@ export async function handler(event) {
         customerId,
         customerName,
         orderStatus,
-        deliveryMethod || 'delivery',
+        normalizedMethod,
         normalizedDelivery,
         normalizedPickup,
         totalAmountCents,
@@ -390,7 +393,7 @@ export async function handler(event) {
           customerName,
           customerPhone,
           totalAmountCents,
-          deliveryMethod: deliveryMethod || "delivery",
+          deliveryMethod: normalizedMethod,
           deliveryDetails: normalizedDelivery,
           pickupDetails: normalizedPickup,
           itemsCount: pricedItems.length,
@@ -409,7 +412,7 @@ export async function handler(event) {
           customerPhone,
           totalAmountCents,
           itemsCount: pricedItems.length,
-          deliveryMethod: deliveryMethod || "delivery",
+          deliveryMethod: normalizedMethod,
           deliveryDetails: normalizedDelivery,
           pickupDetails: normalizedPickup,
         })

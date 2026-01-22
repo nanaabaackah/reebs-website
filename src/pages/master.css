@@ -11212,9 +11212,9 @@ button.admin-kpi-card {
 }
 
 .order-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  gap: 12px;
+  align-items: start;
   padding-top: 12px;
   font-size: 1.1rem;
 }
@@ -11224,6 +11224,10 @@ button.admin-kpi-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.order-total-right {
+  align-items: flex-start;
 }
 
 .order-discount-input {
@@ -17227,6 +17231,34 @@ body.dark-mode .delivery-list-item {
 
 .orders-detail-body p {
   margin: 4px 0;
+}
+
+.orders-detail-edit {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+
+.orders-detail-edit label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.orders-detail-edit input,
+.orders-detail-edit select,
+.orders-detail-edit textarea {
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 8px 10px;
+  color: inherit;
+}
+
+.orders-detail-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .orders-detail-items {

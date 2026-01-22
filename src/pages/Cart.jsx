@@ -73,7 +73,7 @@ const Cart = () => {
             </div>
           </div>
           <div className="hero-card-perks">
-            <span><FontAwesomeIcon icon={faTruck} /> Same-day delivery options</span>
+            <span><FontAwesomeIcon icon={faTruck} /> In-store pickup only</span>
             <span><FontAwesomeIcon icon={faLock} /> Secure checkout</span>
             <span><FontAwesomeIcon icon={faGift} /> We pack with care</span>
           </div>
@@ -200,7 +200,7 @@ const Cart = () => {
               <div className="summary-head">
                 <p className="kicker">Summary</p>
                 <h3>Ready to book?</h3>
-                <p className="muted">Taxes and delivery calculated at checkout.</p>
+                <p className="muted">Taxes and pickup timing confirmed at checkout.</p>
               </div>
               <div className="summary-rows">
                 <div className="summary-row">
@@ -214,7 +214,7 @@ const Cart = () => {
               </div>
               <div className="summary-perks">
                 <span><FontAwesomeIcon icon={faLock} /> Safe checkout</span>
-                <span><FontAwesomeIcon icon={faTruck} /> We deliver & pick up</span>
+                <span><FontAwesomeIcon icon={faTruck} /> In-store pickup only</span>
                 <span><FontAwesomeIcon icon={faGift} /> Styled for fun</span>
               </div>
               <Link className="checkout-btn" to="/Checkout">Proceed to Checkout</Link>

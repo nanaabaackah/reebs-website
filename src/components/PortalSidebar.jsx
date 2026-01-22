@@ -26,6 +26,7 @@ import {
   faUsers,
   faChevronLeft,
   faChevronDown,
+  faBell,
   faBoxesStacked,
   faCalendarCheck,
   faXmark,
@@ -161,6 +162,33 @@ const normalizePath = (pathname) => {
   return trimmed || "/admin";
 };
 
+const NOTIFICATION_WINDOW_DAYS = 21;
+
+const toDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isRecent = (date, days = NOTIFICATION_WINDOW_DAYS) => {
+  if (!date) return false;
+  const diff = Date.now() - date.getTime();
+  return diff <= days * 24 * 60 * 60 * 1000;
+};
+
+const formatNotificationTime = (date) => {
+  if (!date) return "";
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((date - startOfDay) / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays > 1 && diffDays <= 6) return `In ${diffDays} days`;
+  if (diffDays < -1 && diffDays >= -6) return `${Math.abs(diffDays)}d ago`;
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+};
+
 function PortalSidebar({ apps = DEFAULT_APPS }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -171,6 +199,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   });
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(true);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const [notificationPayload, setNotificationPayload] = useState({ orders: [], bookings: [] });
   const { darkMode, toggleTheme } = useThemeMode();
   const { user, logout, authReady } = useAuth();
   const isAuthenticated = Boolean(user);
@@ -213,7 +245,55 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
 
   useEffect(() => {
     setUserMenuOpen(false);
+    setNotificationsOpen(true);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!authReady || !isAuthenticated) {
+      setNotificationPayload({ orders: [], bookings: [] });
+      setNotificationsError("");
+      setNotificationsLoading(false);
+      return;
+    }
+
+    let active = true;
+    const fetchNotifications = async () => {
+      setNotificationsLoading(true);
+      setNotificationsError("");
+      try {
+        const [ordersRes, bookingsRes] = await Promise.all([
+          fetch("/.netlify/functions/orders"),
+          fetch("/.netlify/functions/bookings"),
+        ]);
+        const [ordersData, bookingsData] = await Promise.all([
+          ordersRes.json().catch(() => null),
+          bookingsRes.json().catch(() => null),
+        ]);
+
+        if (!ordersRes.ok) throw new Error(ordersData?.error || "Failed to load orders.");
+        if (!bookingsRes.ok) throw new Error(bookingsData?.error || "Failed to load bookings.");
+
+        if (active) {
+          setNotificationPayload({
+            orders: Array.isArray(ordersData) ? ordersData : [],
+            bookings: Array.isArray(bookingsData) ? bookingsData : [],
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+        if (active) {
+          setNotificationsError(err.message || "Unable to load notifications.");
+        }
+      } finally {
+        if (active) setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+    return () => {
+      active = false;
+    };
+  }, [authReady, isAuthenticated]);
 
   const isActive = (app) => {
     if (app.external) return false;
@@ -300,6 +380,167 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     handleSignOut();
   };
 
+  const notifications = useMemo(() => {
+    if (!isAuthenticated || !user?.id) return [];
+    const userId = Number(user.id);
+    if (!Number.isFinite(userId)) return [];
+
+    const map = new Map();
+    const upsert = (key, entry) => {
+      const existing = map.get(key);
+      if (!existing || entry.priority > existing.priority) {
+        map.set(key, entry);
+      }
+    };
+
+    notificationPayload.orders.forEach((order) => {
+      const orderId = Number(order.id);
+      if (!Number.isFinite(orderId)) return;
+      const orderNumber = order.orderNumber || `#${orderId}`;
+      const date =
+        toDate(order.lastModifiedAt) ||
+        toDate(order.orderDate) ||
+        toDate(order.deliveryDate);
+      const assigned = Number(order.assignedUserId) === userId;
+      const updatedBy = Number(order.updatedByUserId) === userId;
+      const recent = isRecent(date);
+      const base = {
+        id: `order-${orderId}`,
+        type: "order",
+        date,
+        href: "/admin/orders",
+      };
+
+      if (assigned) {
+        upsert(base.id, {
+          ...base,
+          priority: 3,
+          title: `Order ${orderNumber} assigned to you`,
+          meta: order.customerName ? `Customer: ${order.customerName}` : "Assigned order",
+        });
+      } else if (recent) {
+        upsert(base.id, {
+          ...base,
+          priority: 2,
+          title: `New order ${orderNumber}`,
+          meta: order.customerName ? `Customer: ${order.customerName}` : "New order received",
+        });
+      } else if (updatedBy) {
+        upsert(base.id, {
+          ...base,
+          priority: 1,
+          title: `Order ${orderNumber} updated by you`,
+          meta: "Recent update",
+        });
+      }
+    });
+
+    notificationPayload.bookings.forEach((booking) => {
+      const bookingId = Number(booking.id);
+      if (!Number.isFinite(bookingId)) return;
+      const date =
+        toDate(booking.lastModifiedAt) ||
+        toDate(booking.createdAt) ||
+        toDate(booking.eventDate);
+      const assigned = Number(booking.assignedUserId) === userId;
+      const createdBy = Number(booking.createdByUserId) === userId;
+      const recent = isRecent(date);
+      const base = {
+        id: `booking-${bookingId}`,
+        type: "booking",
+        date,
+        href: "/admin/bookings",
+      };
+
+      if (assigned) {
+        upsert(base.id, {
+          ...base,
+          priority: 3,
+          title: `Booking #${bookingId} assigned to you`,
+          meta: booking.customerName ? `Client: ${booking.customerName}` : "Assigned booking",
+        });
+      } else if (recent) {
+        upsert(base.id, {
+          ...base,
+          priority: 2,
+          title: `New booking #${bookingId}`,
+          meta: booking.customerName ? `Client: ${booking.customerName}` : "New booking created",
+        });
+      } else if (createdBy) {
+        upsert(base.id, {
+          ...base,
+          priority: 1,
+          title: `Booking #${bookingId} created by you`,
+          meta: booking.customerName ? `Client: ${booking.customerName}` : "Created booking",
+        });
+      }
+    });
+
+    return [...map.values()]
+      .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))
+      .slice(0, 8);
+  }, [isAuthenticated, notificationPayload, user?.id]);
+
+  const renderNotifications = (context = "sidebar") => (
+    <div className={`portal-sidebar__notifications portal-sidebar__notifications--${context}`}>
+      <button
+        type="button"
+        className="portal-sidebar__notifications-toggle"
+        onClick={() => setNotificationsOpen((open) => !open)}
+        aria-expanded={notificationsOpen}
+        aria-label="Toggle notifications"
+      >
+        <span className="portal-sidebar__notifications-title">
+          <FontAwesomeIcon icon={faBell} />
+          <span>Notifications</span>
+        </span>
+        <span className="portal-sidebar__notifications-count">{notifications.length}</span>
+        <FontAwesomeIcon
+          icon={faChevronDown}
+          className={`portal-sidebar__notifications-caret ${notificationsOpen ? "is-open" : ""}`}
+        />
+      </button>
+      {notificationsOpen && (
+        <div className="portal-sidebar__notifications-body">
+          {!isAuthenticated && <p className="portal-sidebar__notifications-muted">Sign in to see updates.</p>}
+          {isAuthenticated && notificationsLoading && (
+            <p className="portal-sidebar__notifications-muted">Loading activity...</p>
+          )}
+          {isAuthenticated && !notificationsLoading && notificationsError && (
+            <p className="portal-sidebar__notifications-error">{notificationsError}</p>
+          )}
+          {isAuthenticated && !notificationsLoading && !notificationsError && notifications.length === 0 && (
+            <p className="portal-sidebar__notifications-muted">No recent activity.</p>
+          )}
+          {!notificationsLoading && !notificationsError && notifications.length > 0 && (
+            <ul className="portal-sidebar__notifications-list">
+              {notifications.map((note) => (
+                <li key={note.id} className="portal-sidebar__notification-item">
+                  <Link
+                    to={note.href}
+                    className="portal-sidebar__notification-link"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      if (isMobile && overlayOpen) setOverlayOpen(false);
+                    }}
+                  >
+                    <div>
+                      <span className="portal-sidebar__notification-title">{note.title}</span>
+                      <span className="portal-sidebar__notification-meta">{note.meta}</span>
+                    </div>
+                    <span className="portal-sidebar__notification-time">
+                      {formatNotificationTime(note.date)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   const renderUserSection = (context = "sidebar") => (
     <div className={`portal-sidebar__user portal-sidebar__user--${context}`}>
       <button
@@ -383,6 +624,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           {!isMobile && <span>{expanded ? "Collapse" : "Explore"}</span>}
         </button>
       </div>
+      {!isMobile && renderNotifications()}
       {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
       {isMobile && overlayOpen && (
         <div
@@ -401,6 +643,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
               <FontAwesomeIcon icon={faXmark} />
             </button>
             {renderUserSection("overlay")}
+            {renderNotifications("overlay")}
             <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
           </div>
         </div>

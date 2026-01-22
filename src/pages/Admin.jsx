@@ -106,6 +106,7 @@ function Admin() {
   const [actionItemId, setActionItemId] = useState(null);
   const newItemTemplate = {
     name: "",
+    barcode: "",
     price: "",
     quantity: "",
     sourceCategoryCode: "CLOTHES",
@@ -428,7 +429,10 @@ function Admin() {
       if (needle) {
         const name = (item.name || "").toLowerCase();
         const sku = (item.sku || "").toLowerCase();
-        if (!name.includes(needle) && !sku.includes(needle)) return false;
+        const barcode = (item.barcode || "").toLowerCase();
+        if (!name.includes(needle) && !sku.includes(needle) && !barcode.includes(needle)) {
+          return false;
+        }
       }
       if (filterCategory !== "all") {
         const cat = (getCategory(item) || "").toLowerCase();
@@ -745,6 +749,7 @@ function Admin() {
       .map((row) => ({
         ...row,
         name: row.name.trim(),
+        barcode: row.barcode.trim(),
         specificCategory: row.specificCategory.trim(),
         description: row.description.trim(),
       }))
@@ -835,6 +840,7 @@ function Admin() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: row.name,
+            barcode: row.barcode || undefined,
             price: Math.round(Number(row.price) * 100),
             stock: Number.parseInt(row.quantity || "0", 10) || 0,
             sourceCategoryCode: row.sourceCategoryCode,
@@ -889,6 +895,7 @@ function Admin() {
       id: item.id,
       name: item.name || "",
       sku: item.sku || "",
+      barcode: item.barcode || "",
       sourceCategoryCode: (item.sourceCategoryCode || item.sourcecategorycode || "CLOTHES")
         .toString()
         .toUpperCase(),
@@ -950,6 +957,7 @@ function Admin() {
         body: JSON.stringify({
           id: detailForm.id,
           name,
+          barcode: detailForm.barcode || undefined,
           price: priceValue,
           stock: stockValue,
           sourceCategoryCode: detailForm.sourceCategoryCode,
@@ -1211,7 +1219,7 @@ function Admin() {
                   type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Name or SKU"
+                  placeholder="Name, SKU, or barcode"
                 />
               </label>
               <label className="admin-select">
@@ -1359,7 +1367,15 @@ function Admin() {
                             <span className="admin-product-name">{item.name || "Untitled"}</span>
                           </div>
                         </td>
-                        <td>{item.sku || "-"}</td>
+                        <td>
+                          <span>{item.sku || "-"}</span>
+                          {item.barcode && (
+                            <>
+                              <br />
+                              <span>Barcode {item.barcode}</span>
+                            </>
+                          )}
+                        </td>
                         <td>{getCategory(item)}</td>
                         <td>
                           <div
@@ -1457,6 +1473,11 @@ function Admin() {
                                   <button type="button" onClick={() => copyToClipboard(item.sku || item.id)}>
                                     Copy SKU
                                   </button>
+                                  {item.barcode && (
+                                    <button type="button" onClick={() => copyToClipboard(item.barcode)}>
+                                      Copy barcode
+                                    </button>
+                                  )}
                                   <button type="button" onClick={() => copyToClipboard(item.id)}>
                                     Copy ID
                                   </button>
@@ -1591,6 +1612,11 @@ function Admin() {
                               <button type="button" onClick={() => copyToClipboard(item.sku || item.id)}>
                                 Copy SKU
                               </button>
+                              {item.barcode && (
+                                <button type="button" onClick={() => copyToClipboard(item.barcode)}>
+                                  Copy barcode
+                                </button>
+                              )}
                               <button type="button" onClick={() => copyToClipboard(item.id)}>
                                 Copy ID
                               </button>
@@ -1600,7 +1626,12 @@ function Admin() {
                       )}
                     </div>
                     <h4 className="inventory-card-title">{item.name || "Untitled"}</h4>
-                    <p className="inventory-card-sub">{item.sku || "No SKU"}</p>
+                    <p className="inventory-card-sub">
+                      {item.sku ? `SKU ${item.sku}` : "No SKU"}
+                    </p>
+                    {item.barcode && (
+                      <p className="inventory-card-sub">Barcode {item.barcode}</p>
+                    )}
                     <p className="inventory-card-sub">{getCategory(item)}</p>
                     <p className="inventory-card-sub">
                       Updated {formatDateTime(item.lastUpdatedAt || item.updatedAt)}
@@ -1806,6 +1837,15 @@ function Admin() {
                         placeholder="e.g., Blue Party Cups"
                       />
                     </label>
+                    <label>
+                      Barcode
+                      <input
+                        type="text"
+                        value={row.barcode}
+                        onChange={(e) => updateNewItemRow(index, "barcode", e.target.value)}
+                        placeholder="Scan code (optional)"
+                      />
+                    </label>
                   <label>
                     Price (GHS)
                     <input
@@ -1981,6 +2021,7 @@ function Admin() {
                 <h2>{detailForm.name || "Edit item"}</h2>
                 <p className="admin-modal-meta">
                   ID {detailForm.id} · SKU {detailForm.sku || "-"}
+                  {detailForm.barcode ? ` · Barcode ${detailForm.barcode}` : ""}
                 </p>
               </div>
               <div className="admin-detail-actions">
@@ -2052,6 +2093,15 @@ function Admin() {
                     type="text"
                     value={detailForm.specificCategory}
                     onChange={(event) => updateDetailForm("specificCategory", event.target.value)}
+                  />
+                </label>
+                <label>
+                  Barcode
+                  <input
+                    type="text"
+                    value={detailForm.barcode}
+                    onChange={(event) => updateDetailForm("barcode", event.target.value)}
+                    placeholder="Scan code (optional)"
                   />
                 </label>
                 <label>

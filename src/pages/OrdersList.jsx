@@ -97,9 +97,10 @@ const normalizeOrderItems = (order) => {
 const getFulfillmentDetails = (order) => {
   const pickup = isPickupOrder(order?.deliveryMethod);
   const details = pickup ? order?.pickupDetails : order?.deliveryDetails;
+  const fallbackDate = pickup ? null : order?.deliveryDate || null;
   return {
     pickup,
-    date: details?.date || order?.deliveryDate || null,
+    date: details?.date || fallbackDate,
     window: details?.window || null,
     address: details?.address || null,
     contact: details?.contact || null,
@@ -138,6 +139,14 @@ function OrdersList() {
   const pageSize = 10;
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
   const [detailOrder, setDetailOrder] = useState(null);
+  const [detailEditOpen, setDetailEditOpen] = useState(false);
+  const [detailEditSaving, setDetailEditSaving] = useState(false);
+  const [detailEditError, setDetailEditError] = useState("");
+  const [detailEditForm, setDetailEditForm] = useState({
+    date: "",
+    window: "",
+    notes: "",
+  });
   const [openMenuId, setOpenMenuId] = useState(null);
   const [menuPosition, setMenuPosition] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -181,6 +190,18 @@ function OrdersList() {
 
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (!detailOrder) return;
+    const details = getFulfillmentDetails(detailOrder);
+    setDetailEditForm({
+      date: details.date || "",
+      window: details.window || "",
+      notes: details.notes || "",
+    });
+    setDetailEditOpen(false);
+    setDetailEditError("");
+  }, [detailOrder]);
 
   const filteredOrders = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -433,6 +454,76 @@ function OrdersList() {
       setError(err.message || "Failed to update order.");
     } finally {
       setStatusUpdatingId(null);
+    }
+  };
+
+  const saveOrderDetails = async () => {
+    if (!detailOrder?.id) return;
+    setDetailEditSaving(true);
+    setDetailEditError("");
+    try {
+      const existingDetails =
+        detailOrder.pickupDetails && typeof detailOrder.pickupDetails === "object"
+          ? detailOrder.pickupDetails
+          : detailOrder.deliveryDetails && typeof detailOrder.deliveryDetails === "object"
+          ? detailOrder.deliveryDetails
+          : {};
+      const pickupDetails = {
+        ...existingDetails,
+        date: detailEditForm.date,
+        window: detailEditForm.window,
+        notes: detailEditForm.notes,
+      };
+      const response = await fetch("/.netlify/functions/orders", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: detailOrder.id,
+          pickupDetails,
+          userId: user?.id,
+          userName:
+            user?.fullName ||
+            user?.name ||
+            [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+            undefined,
+          userEmail: user?.email,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to update order.");
+      }
+      const nextPickup = payload?.pickupDetails || pickupDetails;
+      const nextDeliveryMethod = payload?.deliveryMethod || "pickup";
+      const nextLastModified = payload?.lastModifiedAt || detailOrder.lastModifiedAt;
+      setOrders((prev) =>
+        prev.map((row) =>
+          row.id === detailOrder.id
+            ? {
+                ...row,
+                pickupDetails: nextPickup,
+                deliveryMethod: nextDeliveryMethod,
+                lastModifiedAt: nextLastModified,
+              }
+            : row
+        )
+      );
+      setDetailOrder((prev) =>
+        prev && prev.id === detailOrder.id
+          ? {
+              ...prev,
+              pickupDetails: nextPickup,
+              deliveryMethod: nextDeliveryMethod,
+              lastModifiedAt: nextLastModified,
+            }
+          : prev
+      );
+      setDetailEditOpen(false);
+    } catch (err) {
+      console.error("Order update failed", err);
+      setDetailEditError(err.message || "Failed to update order.");
+    } finally {
+      setDetailEditSaving(false);
     }
   };
 
@@ -811,6 +902,14 @@ function OrdersList() {
                       <button
                         type="button"
                         className="orders-action"
+                        onClick={() => setDetailEditOpen((prev) => !prev)}
+                        disabled={detailEditSaving}
+                      >
+                        {detailEditOpen ? "Cancel edit" : "Edit order"}
+                      </button>
+                      <button
+                        type="button"
+                        className="orders-action"
                         onClick={() => updateOrderStatus(detailOrder, "paid")}
                         disabled={
                           statusUpdatingId === detailOrder.id ||
@@ -846,6 +945,14 @@ function OrdersList() {
                   <button
                     type="button"
                     className="orders-action"
+                    onClick={() => setDetailEditOpen((prev) => !prev)}
+                    disabled={detailEditSaving}
+                  >
+                    {detailEditOpen ? "Cancel edit" : "Edit order"}
+                  </button>
+                  <button
+                    type="button"
+                    className="orders-action"
                     onClick={() => updateOrderStatus(detailOrder, "paid")}
                     disabled={
                       statusUpdatingId === detailOrder.id ||
@@ -875,23 +982,83 @@ function OrdersList() {
                 <p>Total: {formatCurrency(detailOrder.total)}</p>
                 <p>Fulfillment: {(detailOrder.deliveryMethod || "delivery").toUpperCase()}</p>
                 <p>Order date: {formatDate(detailOrder.orderDate)}</p>
-                {(() => {
-                  const details = getFulfillmentDetails(detailOrder);
-                  const label = details.pickup ? "Pickup" : "Delivery";
-                  return (
-                    <>
-                      <p>{label} date: {details.date ? formatDate(details.date) : "-"}</p>
-                      <p>{label} window: {formatWindow(details.window)}</p>
-                      {!details.pickup && (
-                        <>
-                          <p>Address: {details.address || "-"}</p>
-                          <p>Contact: {details.contact || "-"}</p>
-                        </>
-                      )}
-                      {details.notes && <p>Notes: {details.notes}</p>}
-                    </>
-                  );
-                })()}
+                {detailEditOpen ? (
+                  <div className="orders-detail-edit">
+                    <label>
+                      Pickup date
+                      <input
+                        type="date"
+                        value={detailEditForm.date}
+                        onChange={(event) =>
+                          setDetailEditForm((prev) => ({ ...prev, date: event.target.value }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Pickup window
+                      <select
+                        value={detailEditForm.window}
+                        onChange={(event) =>
+                          setDetailEditForm((prev) => ({ ...prev, window: event.target.value }))
+                        }
+                      >
+                        <option value="">Select a window</option>
+                        {Object.entries(WINDOW_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Notes
+                      <textarea
+                        rows="3"
+                        value={detailEditForm.notes}
+                        onChange={(event) =>
+                          setDetailEditForm((prev) => ({ ...prev, notes: event.target.value }))
+                        }
+                      />
+                    </label>
+                    {detailEditError && <p className="orders-error">{detailEditError}</p>}
+                    <div className="orders-detail-edit-actions">
+                      <button
+                        type="button"
+                        className="orders-action orders-action-primary"
+                        onClick={saveOrderDetails}
+                        disabled={detailEditSaving}
+                      >
+                        {detailEditSaving ? "Saving..." : "Save changes"}
+                      </button>
+                      <button
+                        type="button"
+                        className="orders-action"
+                        onClick={() => setDetailEditOpen(false)}
+                        disabled={detailEditSaving}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  (() => {
+                    const details = getFulfillmentDetails(detailOrder);
+                    const label = details.pickup ? "Pickup" : "Delivery";
+                    return (
+                      <>
+                        <p>{label} date: {details.date ? formatDate(details.date) : "-"}</p>
+                        <p>{label} window: {formatWindow(details.window)}</p>
+                        {!details.pickup && (
+                          <>
+                            <p>Address: {details.address || "-"}</p>
+                            <p>Contact: {details.contact || "-"}</p>
+                          </>
+                        )}
+                        {details.notes && <p>Notes: {details.notes}</p>}
+                      </>
+                    );
+                  })()
+                )}
                 <p>Assigned To: {formatUser(detailOrder.assignedUserName)}</p>
                 <p>Last updated: {formatDateTime(detailOrder.lastModifiedAt)}</p>
                 <div className="orders-detail-items">

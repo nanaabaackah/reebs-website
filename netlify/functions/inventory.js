@@ -28,6 +28,11 @@ const statusColumnStatements = [
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMPTZ`,
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "deletedByUserId" INTEGER`,
 ];
+const barcodeColumnStatements = [
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "barcode" TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "product_barcode_org_unique"
+    ON "product" ("organizationId", "barcode")`,
+];
 
 const parseNumber = (value, fallback = 0) => {
   const num = Number(value);
@@ -82,6 +87,16 @@ const ensureProductStatusColumns = async (client) => {
       await client.query(statement);
     } catch (err) {
       console.warn("Product status column check failed:", err?.message || err);
+    }
+  }
+};
+
+const ensureProductBarcodeColumn = async (client) => {
+  for (const statement of barcodeColumnStatements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Product barcode column check failed:", err?.message || err);
     }
   }
 };
@@ -144,6 +159,7 @@ export async function handler(event = {}) {
     const organizationId = await resolveOrganizationId(client, event, payload);
     await ensureAuditColumns(client);
     await ensureProductStatusColumns(client);
+    await ensureProductBarcodeColumn(client);
     await ensureSourceCategoryValue(client, "WATER");
     const admin = await findDefaultAdmin(client, organizationId);
     if (admin?.id) {
@@ -167,6 +183,7 @@ export async function handler(event = {}) {
         SELECT 
           p.id,
           p.sku,
+          p."barcode" AS "barcode",
           p.name, 
           p.description, 
           p."sourceCategoryCode" AS "sourceCategoryCode",
@@ -326,6 +343,8 @@ export async function handler(event = {}) {
     ).toUpperCase();
     const specificCategory = sanitizeString(payload.specificCategory || payload.specificcategory || "", 120);
     const description = sanitizeString(payload.description || "", 400);
+    const barcodeInput = sanitizeString(payload.barcode || payload.scanCode || "", 120);
+    const barcode = barcodeInput || null;
     const currency = sanitizeString(payload.currency || "GHS", 8) || "GHS";
     const rate = sanitizeString(payload.rate || "", 80);
     const age = sanitizeString(payload.age || "", 80);
@@ -397,6 +416,7 @@ export async function handler(event = {}) {
       INSERT INTO "product" (
         "organizationId",
         "sku",
+        "barcode",
         "name",
         "description",
         "sourceCategoryCode",
@@ -418,9 +438,10 @@ export async function handler(event = {}) {
         "lastUpdatedAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,true,$19,NOW(),NOW(),NOW())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,true,$20,NOW(),NOW(),NOW())
       ON CONFLICT ("organizationId", "sku") DO UPDATE
-      SET "name" = EXCLUDED."name",
+      SET "barcode" = EXCLUDED."barcode",
+          "name" = EXCLUDED."name",
           "description" = EXCLUDED."description",
           "sourceCategoryCode" = EXCLUDED."sourceCategoryCode",
           "specificCategory" = EXCLUDED."specificCategory",
@@ -443,6 +464,7 @@ export async function handler(event = {}) {
       RETURNING 
         id,
         sku,
+        barcode,
         name,
         description,
         "sourceCategoryCode",
@@ -468,6 +490,7 @@ export async function handler(event = {}) {
     const result = await client.query(insertQuery, [
       organizationId,
       sku,
+      barcode,
       name,
       description || null,
       safeSource,
@@ -506,7 +529,7 @@ export async function handler(event = {}) {
       statusCode: isUniqueViolation ? 409 : 500,
       headers: corsHeaders,
       body: JSON.stringify({
-        error: isUniqueViolation ? "A product with that SKU already exists." : "Failed to process request.",
+        error: isUniqueViolation ? "A product with that SKU or barcode already exists." : "Failed to process request.",
         detail,
         code: err?.code || null,
       }),

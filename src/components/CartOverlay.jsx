@@ -148,7 +148,7 @@ function CartOverlay({ open, onClose }) {
                   <strong>{formatCurrency(subtotal)}</strong>
                 </div>
               </div>
-              <p className="cart-note">Taxes and delivery calculated at checkout.</p>
+              <p className="cart-note">Taxes and pickup timing confirmed at checkout.</p>
               <Link to="/Cart" onClick={onClose}>
                 <button className="checkout-btn">Proceed To Bag</button>
               </Link>

@@ -87,6 +87,7 @@ model Product {
   organizationId       Int @default(1)
   organization         Organization @relation(fields: [organizationId], references: [id])
   sku                  String
+  barcode              String?
   name                 String
   description          String?
   vendorId             Int?
@@ -132,6 +133,7 @@ model Product {
   shopItem             ShopItem?
   
   @@unique([organizationId, sku])
+  @@unique([organizationId, barcode])
   @@map("product")
 }
 

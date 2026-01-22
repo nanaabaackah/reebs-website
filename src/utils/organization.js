@@ -10,6 +10,9 @@ const getBackendBaseUrl = () => {
   const envBase = import.meta.env?.VITE_BACKEND_BASE_URL;
   const trimmed = typeof envBase === "string" ? envBase.trim() : "";
   if (trimmed) return trimmed.replace(/\/+$/, "");
+  if (import.meta.env?.DEV && typeof window !== "undefined") {
+    return window.location.origin;
+  }
   return DEFAULT_BACKEND_BASE_URL;
 };
 

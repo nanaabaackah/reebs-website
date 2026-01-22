@@ -112,7 +112,32 @@ const buildGhanaHolidays = (year) => {
     holidays.push({ name: "Eid al-Adha", date: parseIsoDate(eidDates.adha) });
   }
 
-  return holidays.filter((holiday) => holiday.date && !Number.isNaN(holiday.date.getTime()));
+  const normalized = holidays.filter(
+    (holiday) => holiday.date && !Number.isNaN(holiday.date.getTime())
+  );
+
+  const observed = [];
+  const seen = new Set();
+  normalized.forEach((holiday) => {
+    const key = dayKey(holiday.date);
+    if (key) seen.add(`${holiday.name}:${key}`);
+  });
+
+  normalized.forEach((holiday) => {
+    const weekday = holiday.date.getDay();
+    if (weekday === 6 || weekday === 0) {
+      const offset = weekday === 6 ? 2 : 1;
+      const observedDate = addDays(holiday.date, offset);
+      const observedKey = dayKey(observedDate);
+      const observedName = `${holiday.name} (Observed)`;
+      if (observedKey && !seen.has(`${observedName}:${observedKey}`)) {
+        observed.push({ name: observedName, date: observedDate });
+        seen.add(`${observedName}:${observedKey}`);
+      }
+    }
+  });
+
+  return [...normalized, ...observed];
 };
 
 const buildCalendarDays = (monthDate) => {

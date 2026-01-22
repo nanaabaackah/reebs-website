@@ -5,6 +5,7 @@ import { Client } from "pg";
 import { ensureAuditColumns, backfillAuditDefaults } from "./auditHelpers.js";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 import { requireUser } from "./_shared/userAuth.js";
+import { normalizeOrdersToPickup } from "./_shared/normalizeOrders.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -21,6 +22,8 @@ const normalizeStatus = (status) =>
 
 const isCancelledStatus = (status) =>
   ["cancelled", "canceled"].includes(normalizeStatus(status));
+
+const safeJson = (value) => (value && typeof value === "object" ? value : null);
 
 const withDeliveryTotals = (order) => {
   const baseTotal = Number(order?.total || 0);
@@ -88,6 +91,7 @@ export async function handler(event = {}) {
       }
     }
     const organizationId = authUser.organizationId;
+    await normalizeOrdersToPickup(client, organizationId);
     await backfillAuditDefaults(client, authUser.id, organizationId);
 
     if (event.httpMethod === "GET") {
@@ -153,12 +157,21 @@ export async function handler(event = {}) {
     }
 
     const orderId = Number(payload.id);
+    const hasStatusField = Object.prototype.hasOwnProperty.call(payload, "status");
     const nextStatus = normalizeStatus(payload.status);
+    const wantsStatusUpdate = hasStatusField && Boolean(nextStatus);
+    const hasPickupField =
+      Object.prototype.hasOwnProperty.call(payload, "pickupDetails") ||
+      Object.prototype.hasOwnProperty.call(payload, "deliveryDetails");
+    const normalizedPickup = safeJson(payload.pickupDetails ?? payload.deliveryDetails);
     if (!Number.isFinite(orderId)) {
       return json(400, { error: "Order id is required." });
     }
-    if (!nextStatus) {
+    if (hasStatusField && !nextStatus) {
       return json(400, { error: "Status is required." });
+    }
+    if (!wantsStatusUpdate && !hasPickupField) {
+      return json(400, { error: "No updates provided." });
     }
 
     const orderRes = await client.query(
@@ -171,10 +184,10 @@ export async function handler(event = {}) {
 
     const currentStatus = normalizeStatus(orderRes.rows[0].status);
     const orderNumber = orderRes.rows[0].orderNumber;
-    const cancelling = isCancelledStatus(nextStatus);
+    const cancelling = wantsStatusUpdate ? isCancelledStatus(nextStatus) : false;
     const alreadyCancelled = isCancelledStatus(currentStatus);
 
-    if (alreadyCancelled && !cancelling) {
+    if (wantsStatusUpdate && alreadyCancelled && !cancelling) {
       return json(400, { error: "Cannot reopen a cancelled order. Create a new order instead." });
     }
 
@@ -186,14 +199,29 @@ export async function handler(event = {}) {
 
     await client.query("BEGIN");
     try {
+      const updateParts = [];
+      const params = [];
+      if (wantsStatusUpdate) {
+        params.push(nextStatus);
+        updateParts.push(`status = $${params.length}`);
+      }
+      if (hasPickupField) {
+        params.push(normalizedPickup);
+        updateParts.push(`"deliveryMethod" = 'pickup'`);
+        updateParts.push(`"pickupDetails" = $${params.length}`);
+        updateParts.push(`"deliveryDetails" = NULL`);
+      }
+      params.push(actor.userId);
+      updateParts.push(`"updatedByUserId" = $${params.length}`);
+      updateParts.push(`"lastModifiedAt" = NOW()`);
+      updateParts.push(`"updatedAt" = NOW()`);
+      params.push(orderId, organizationId);
+
       await client.query(
         `UPDATE "order"
-         SET status = $1,
-             "updatedByUserId" = $2,
-             "lastModifiedAt" = NOW(),
-             "updatedAt" = NOW()
-         WHERE id = $3 AND "organizationId" = $4`,
-        [nextStatus, actor.userId, orderId, organizationId]
+         SET ${updateParts.join(", ")}
+         WHERE id = $${params.length - 1} AND "organizationId" = $${params.length}`,
+        params
       );
 
       if (cancelling && !alreadyCancelled) {
@@ -243,8 +271,14 @@ export async function handler(event = {}) {
         }
       }
 
+      const updatedRes = await client.query(
+        `SELECT id, status, "deliveryMethod", "deliveryDetails", "pickupDetails", "lastModifiedAt"
+         FROM "order"
+         WHERE id = $1 AND "organizationId" = $2`,
+        [orderId, organizationId]
+      );
       await client.query("COMMIT");
-      return json(200, { id: orderId, status: nextStatus });
+      return json(200, updatedRes.rows[0] || { id: orderId, status: nextStatus });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;

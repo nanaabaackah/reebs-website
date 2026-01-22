@@ -18,9 +18,23 @@ const TIME_WINDOW_OPTIONS = [
   { value: "5pm-7pm", label: "5:00pm – 7:00pm", endMinutes: 19 * 60 },
 ];
 
+const normalizeSource = (item) =>
+  (item?.sourceCategoryCode || item?.sourcecategorycode || "")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+const isRentalItem = (item) => {
+  const source = normalizeSource(item);
+  if (source) return source === "rental";
+  return (item?.sku || "").toString().toUpperCase().startsWith("REN");
+};
+
 const Checkout = () => {
   const { cart, convertPrice, formatCurrency, currency, clearCart } = useCart();
-  const [fulfillment, setFulfillment] = useState("delivery");
+  const [fulfillment, setFulfillment] = useState(() =>
+    cart.some((item) => !isRentalItem(item)) ? "pickup" : "delivery"
+  );
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState({ state: "idle", message: "" });
   const [orderSuccess, setOrderSuccess] = useState("");
@@ -76,8 +90,48 @@ const Checkout = () => {
     [cart, convertPrice]
   );
 
+  const pickupOnly = useMemo(
+    () => cart.some((item) => !isRentalItem(item)),
+    [cart]
+  );
+  const selectedFulfillment = pickupOnly ? "pickup" : fulfillment;
+  const fulfillmentCopy = pickupOnly
+    ? {
+        checkoutSub:
+          "Review your items and confirm the next steps. We will follow up with pickup details and payment options.",
+        confirmTitle: "We will confirm pickup and payment",
+        confirmHint:
+          "Checkout is handled manually for now. Reach out with your pickup date and window and we will send a payment link.",
+        stepTwoTitle: "Share pickup details",
+        stepTwoText: "Select a pickup date and window at our studio.",
+        stepFourTitle: "We confirm the pickup",
+        stepFourText: "Once payment is received, your pickup is locked in.",
+        fulfillmentTitle: "Pickup in store",
+        fulfillmentHint: "Shop items are pickup-only. Rentals can be delivered.",
+        summaryNote: "Taxes and pickup details are confirmed in the final invoice.",
+      }
+    : {
+        checkoutSub:
+          "Review your items and confirm the next steps. We will follow up with delivery details and payment options.",
+        confirmTitle: "We will confirm delivery and payment",
+        confirmHint:
+          "Checkout is handled manually for now. Reach out with your delivery date and location and we will send a payment link.",
+        stepTwoTitle: "Share delivery details",
+        stepTwoText: "Send your preferred delivery date, time, and venue.",
+        stepFourTitle: "We confirm the booking",
+        stepFourText: "Once payment is received, your delivery is locked in.",
+        fulfillmentTitle: "Delivery or pickup?",
+        fulfillmentHint: "Choose how you want to receive your items and fill in the details.",
+        summaryNote: "Taxes and delivery are confirmed in the final invoice.",
+      };
+
   const getItemImage = (item) =>
     item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
+
+  useEffect(() => {
+    if (!pickupOnly) return;
+    if (fulfillment !== "pickup") setFulfillment("pickup");
+  }, [pickupOnly, fulfillment]);
 
   useEffect(() => {
     const intervalId = setInterval(() => setNow(new Date()), 60000);
@@ -133,9 +187,9 @@ const Checkout = () => {
     if (!draftLoadedRef.current) return;
     if (paymentStatus.state === "success") return;
     const payload = {
-      fulfillment,
-      deliveryDetails,
-      pickupDetails,
+      fulfillment: selectedFulfillment,
+      deliveryDetails: selectedFulfillment === "delivery" ? deliveryDetails : null,
+      pickupDetails: selectedFulfillment === "pickup" ? pickupDetails : null,
       momoSameAsPhone,
       paymentDetails: {
         ...paymentDetails,
@@ -143,7 +197,14 @@ const Checkout = () => {
       },
     };
     window.localStorage.setItem(draftKey, JSON.stringify(payload));
-  }, [fulfillment, deliveryDetails, pickupDetails, paymentDetails, paymentStatus.state]);
+  }, [
+    selectedFulfillment,
+    deliveryDetails,
+    pickupDetails,
+    momoSameAsPhone,
+    paymentDetails,
+    paymentStatus.state,
+  ]);
 
   const isWindowDisabled = (selectedDate, option) => {
     if (!selectedDate || selectedDate !== today) return false;
@@ -262,13 +323,13 @@ const Checkout = () => {
     if (!phoneLengthOk) {
       return "Enter a valid phone number.";
     }
-    if (fulfillment === "delivery" && !deliveryDetails.address.trim()) {
+    if (selectedFulfillment === "delivery" && !deliveryDetails.address.trim()) {
       return "Add a delivery address.";
     }
-    if (fulfillment === "delivery" && !deliveryDetails.date) {
+    if (selectedFulfillment === "delivery" && !deliveryDetails.date) {
       return "Select a delivery date.";
     }
-    if (fulfillment === "pickup" && !pickupDetails.date) {
+    if (selectedFulfillment === "pickup" && !pickupDetails.date) {
       return "Select a pickup date.";
     }
     if (paymentDetails.method === "card") {
@@ -311,9 +372,9 @@ const Checkout = () => {
           price: item.price,
         })),
         status: "pending",
-        deliveryMethod: fulfillment,
-        deliveryDetails: fulfillment === "delivery" ? deliveryDetails : null,
-        pickupDetails: fulfillment === "pickup" ? pickupDetails : null,
+        deliveryMethod: selectedFulfillment,
+        deliveryDetails: selectedFulfillment === "delivery" ? deliveryDetails : null,
+        pickupDetails: selectedFulfillment === "pickup" ? pickupDetails : null,
         source: "checkout",
       };
 
@@ -350,9 +411,7 @@ const Checkout = () => {
         <div className="checkout-hero-copy">
           <p className="checkout-kicker">Checkout</p>
           <h1 id="checkout-heading">Finalize your bag</h1>
-          <p className="checkout-sub">
-            Review your items and confirm the next steps. We will follow up with delivery details and payment options.
-          </p>
+          <p className="checkout-sub">{fulfillmentCopy.checkoutSub}</p>
           <div className="checkout-highlights" aria-label="Order highlights">
             <span className="pill">{itemCount} {itemLabel}</span>
             <span className="pill pill-accent">Subtotal {formattedSubtotal}</span>
@@ -381,11 +440,8 @@ const Checkout = () => {
           <div className="checkout-card checkout-details">
             <div className="checkout-section">
               <p className="kicker">Next steps</p>
-              <h2>We will confirm delivery and payment</h2>
-              <p className="checkout-hint">
-                Checkout is handled manually for now. Reach out with your delivery date and location and we will send a
-                payment link.
-              </p>
+              <h2>{fulfillmentCopy.confirmTitle}</h2>
+              <p className="checkout-hint">{fulfillmentCopy.confirmHint}</p>
             </div>
             <div className="checkout-steps">
               <div className="checkout-step">
@@ -402,8 +458,8 @@ const Checkout = () => {
                   <FontAwesomeIcon icon={faTruckFast} />
                 </span>
                 <div>
-                  <h3>Share delivery details</h3>
-                  <p>Send your preferred delivery date, time, and venue.</p>
+                  <h3>{fulfillmentCopy.stepTwoTitle}</h3>
+                  <p>{fulfillmentCopy.stepTwoText}</p>
                 </div>
               </div>
               <div className="checkout-step">
@@ -420,36 +476,38 @@ const Checkout = () => {
                   <FontAwesomeIcon icon={faShieldHeart} />
                 </span>
                 <div>
-                  <h3>We confirm the booking</h3>
-                  <p>Once payment is received, your delivery is locked in.</p>
+                  <h3>{fulfillmentCopy.stepFourTitle}</h3>
+                  <p>{fulfillmentCopy.stepFourText}</p>
                 </div>
               </div>
             </div>
             <div className="checkout-section">
               <p className="kicker">Fulfillment</p>
-              <h2>Delivery or pickup?</h2>
-              <p className="checkout-hint">Choose how you want to receive your items and fill in the details.</p>
+              <h2>{fulfillmentCopy.fulfillmentTitle}</h2>
+              <p className="checkout-hint">{fulfillmentCopy.fulfillmentHint}</p>
             </div>
             <div className="checkout-option-card" role="group" aria-label="Fulfillment method">
-              <label className={`checkout-option ${fulfillment === "delivery" ? "is-active" : ""}`}>
-                <input
-                  type="radio"
-                  name="fulfillment"
-                  value="delivery"
-                  checked={fulfillment === "delivery"}
-                  onChange={() => setFulfillment("delivery")}
-                />
-                <span>
-                  <strong>Delivery</strong>
-                  <small>Share your address and preferred time window.</small>
-                </span>
-              </label>
-              <label className={`checkout-option ${fulfillment === "pickup" ? "is-active" : ""}`}>
+              {!pickupOnly && (
+                <label className={`checkout-option ${selectedFulfillment === "delivery" ? "is-active" : ""}`}>
+                  <input
+                    type="radio"
+                    name="fulfillment"
+                    value="delivery"
+                    checked={selectedFulfillment === "delivery"}
+                    onChange={() => setFulfillment("delivery")}
+                  />
+                  <span>
+                    <strong>Delivery</strong>
+                    <small>Share your address and preferred time window.</small>
+                  </span>
+                </label>
+              )}
+              <label className={`checkout-option ${selectedFulfillment === "pickup" ? "is-active" : ""}`}>
                 <input
                   type="radio"
                   name="fulfillment"
                   value="pickup"
-                  checked={fulfillment === "pickup"}
+                  checked={selectedFulfillment === "pickup"}
                   onChange={() => setFulfillment("pickup")}
                 />
                 <span>
@@ -458,7 +516,7 @@ const Checkout = () => {
                 </span>
               </label>
             </div>
-            {fulfillment === "delivery" ? (
+            {selectedFulfillment === "delivery" ? (
               <div className="checkout-form" aria-label="Delivery details">
                 <div className="checkout-field">
                   <label htmlFor="delivery-address">Delivery address</label>
@@ -621,10 +679,10 @@ const Checkout = () => {
               </div>
               <div className="checkout-total-row">
                 <span>Fulfillment</span>
-                <strong>{fulfillment === "delivery" ? "Delivery" : "Pickup"}</strong>
+                <strong>{selectedFulfillment === "delivery" ? "Delivery" : "Pickup"}</strong>
               </div>
             </div>
-            <p className="checkout-note">Taxes and delivery are confirmed in the final invoice.</p>
+            <p className="checkout-note">{fulfillmentCopy.summaryNote}</p>
           </aside>
         </section>
       )}
