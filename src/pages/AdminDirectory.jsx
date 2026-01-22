@@ -1,9 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./master.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faRotateRight, faXmark, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faRotateRight, faXmark, faPen, faEye } from "@fortawesome/free-solid-svg-icons";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import roleColors from "../utils/roleColors";
+
+const formatMoney = (value, currency = "GHS") => {
+  try {
+    return new Intl.NumberFormat("en-GH", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value || 0);
+  } catch (err) {
+    return `${currency} ${Math.round(value || 0)}`;
+  }
+};
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -14,6 +26,17 @@ const formatDate = (value) => {
     month: "short",
     year: "numeric",
   });
+};
+
+const formatLeadTime = (value) => {
+  const days = Number(value);
+  if (!Number.isFinite(days) || days <= 0) return "Not set";
+  return `${days} day${days === 1 ? "" : "s"}`;
+};
+
+const toNumber = (value, fallback = 0) => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
 };
 
 const tabs = [
@@ -34,6 +57,7 @@ function AdminDirectory() {
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [page, setPage] = useState(0);
   const pageSize = 10;
   const [loading, setLoading] = useState(true);
@@ -44,6 +68,11 @@ function AdminDirectory() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [detailTab, setDetailTab] = useState("");
 
   const [userForm, setUserForm] = useState({ firstName: "", lastName: "", password: "", role: "Staff" });
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", phone: "" });
@@ -56,25 +85,38 @@ function AdminDirectory() {
   const totalRecords = useMemo(() => {
     if (activeTab === "customers") return customers.length;
     if (activeTab === "users") return users.length;
+    if (activeTab === "vendors") return vendors.length;
     return 0;
-  }, [activeTab, customers.length, users.length]);
+  }, [activeTab, customers.length, users.length, vendors.length]);
 
   const fetchAll = async () => {
     setLoading(true);
     setError("");
     try {
-      const [usersRes, customersRes] = await Promise.all([
+      const [usersRes, customersRes, vendorsRes] = await Promise.all([
         fetch("/.netlify/functions/users"),
         fetch("/.netlify/functions/customers"),
+        fetch("/.netlify/functions/vendors"),
       ]);
-      if (!usersRes.ok || !customersRes.ok) {
-        throw new Error("Failed to fetch directory data.");
+      const [usersData, customersData, vendorsData] = await Promise.all([
+        usersRes.json().catch(() => null),
+        customersRes.json().catch(() => null),
+        vendorsRes.json().catch(() => null),
+      ]);
+      const errors = [];
+      if (!usersRes.ok) errors.push(usersData?.error || "Failed to load users.");
+      if (!customersRes.ok) errors.push(customersData?.error || "Failed to load customers.");
+      if (!vendorsRes.ok) errors.push(vendorsData?.error || "Failed to load vendors.");
+      if (errors.length) {
+        setError(errors.join(" "));
       }
-      const [usersData, customersData] = await Promise.all([usersRes.json(), customersRes.json()]);
+
       const safeUsers = Array.isArray(usersData) ? usersData : [];
       const safeCustomers = Array.isArray(customersData) ? customersData : [];
+      const safeVendors = Array.isArray(vendorsData) ? vendorsData : [];
       setUsers([...safeUsers].sort((a, b) => (a.fullName || "").localeCompare(b.fullName || "")));
       setCustomers([...safeCustomers].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+      setVendors([...safeVendors].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
     } catch (err) {
       console.error("Directory fetch failed", err);
       setError("We couldn't load directory data right now.");
@@ -90,7 +132,7 @@ function AdminDirectory() {
 
   const currentList = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const list = activeTab === "customers" ? customers : users;
+    const list = activeTab === "customers" ? customers : activeTab === "vendors" ? vendors : users;
     if (!needle) return list;
 
     if (activeTab === "customers") {
@@ -99,6 +141,18 @@ function AdminDirectory() {
           customer.name?.toLowerCase().includes(needle) ||
           customer.email?.toLowerCase().includes(needle) ||
           customer.phone?.toLowerCase().includes(needle)
+        );
+      });
+    }
+
+    if (activeTab === "vendors") {
+      return list.filter((vendor) => {
+        return (
+          vendor.name?.toLowerCase().includes(needle) ||
+          vendor.contactName?.toLowerCase().includes(needle) ||
+          vendor.email?.toLowerCase().includes(needle) ||
+          vendor.phone?.toLowerCase().includes(needle) ||
+          vendor.address?.toLowerCase().includes(needle)
         );
       });
     }
@@ -112,11 +166,15 @@ function AdminDirectory() {
       );
     });
     return filtered;
-  }, [activeTab, customers, users, query]);
+  }, [activeTab, customers, users, vendors, query]);
 
   useEffect(() => {
     setPage(0);
-  }, [activeTab, query, customers.length, users.length]);
+    setDetailOpen(false);
+    setDetailRecord(null);
+    setDetailLoading(false);
+    setDetailError("");
+  }, [activeTab, query, customers.length, users.length, vendors.length]);
 
   const pageCount = Math.max(1, Math.ceil(currentList.length / pageSize));
   const clampedPage = Math.min(page, pageCount - 1);
@@ -160,6 +218,42 @@ function AdminDirectory() {
     setModalOpen(false);
     setEditing(null);
     setSaveError("");
+  };
+
+  const openDetail = async (row) => {
+    setDetailOpen(true);
+    setDetailError("");
+    setDetailRecord(null);
+    setDetailTab(activeTab);
+
+    if (activeTab === "customers") {
+      setDetailLoading(true);
+      try {
+        const res = await fetch(`/.netlify/functions/customers?id=${row.id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Failed to load customer details.");
+        setDetailRecord(data);
+      } catch (err) {
+        console.error("Customer detail fetch failed", err);
+        setDetailError(err.message || "Failed to load customer details.");
+      } finally {
+        setDetailLoading(false);
+      }
+      return;
+    }
+
+    if (activeTab === "vendors") {
+      setDetailRecord(row);
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setDetailRecord(null);
+    setDetailLoading(false);
+    setDetailError("");
+    setDetailTab("");
   };
 
   const save = async (event) => {
@@ -252,10 +346,17 @@ function AdminDirectory() {
     activeTab === "customers"
       ? "Manage client contact details and history."
       : activeTab === "vendors"
-        ? "Vendor support coming soon."
+        ? "Track vendor contacts, coverage, and lead times."
         : "Manage staff, admin accounts, and roles.";
 
   const canMutate = activeTab !== "vendors";
+  const columnCount = activeTab === "customers" ? 7 : activeTab === "vendors" ? 7 : 5;
+  const searchPlaceholder =
+    activeTab === "customers"
+      ? "Search name, email, phone"
+      : activeTab === "vendors"
+        ? "Search name, contact, email"
+        : "Search name, email, role";
 
   return (
     <div className="customers-page">
@@ -304,7 +405,7 @@ function AdminDirectory() {
                   type="text"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search name, email, role"
+                  placeholder={searchPlaceholder}
                 />
                 {query && (
                   <button
@@ -323,11 +424,7 @@ function AdminDirectory() {
           {loading && <p className="customers-status">Loading directory...</p>}
           {!loading && error && <p className="customers-error">{error}</p>}
 
-          {!loading && !error && activeTab === "vendors" && (
-            <p className="customers-status">Vendor management is not enabled yet.</p>
-          )}
-
-          {!loading && !error && activeTab !== "vendors" && (
+          {!loading && !error && (
             <div className="customers-table-wrapper">
               <table className="customers-table">
                 <thead>
@@ -336,7 +433,20 @@ function AdminDirectory() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Phone</th>
+                      <th>Orders</th>
+                      <th>Bookings</th>
+                      <th>Lifetime</th>
                       <th>Created</th>
+                      <th aria-label="Actions" />
+                    </tr>
+                  ) : activeTab === "vendors" ? (
+                    <tr>
+                      <th>Name</th>
+                      <th>Contact</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Products</th>
+                      <th>Lead time</th>
                       <th aria-label="Actions" />
                     </tr>
                   ) : (
@@ -351,9 +461,6 @@ function AdminDirectory() {
                 </thead>
                 <tbody>
                   {paginatedList.map((row) => {
-                    const displayRole = row.role || "Staff";
-                    const roleKey = displayRole.toLowerCase();
-                    const colorClass = roleColors[roleKey] || "blue";
                     return (
                       <tr key={`${activeTab}-${row.id}`}>
                         {activeTab === "customers" ? (
@@ -361,36 +468,89 @@ function AdminDirectory() {
                             <td>{row.name || "-"}</td>
                             <td>{row.email || "-"}</td>
                             <td>{row.phone || "-"}</td>
+                            <td>{row.orders ?? 0}</td>
+                            <td>{row.bookings ?? 0}</td>
+                            <td>{formatMoney(toNumber(row.total_spent) + toNumber(row.total_rented))}</td>
                             <td>{formatDate(row.createdAt)}</td>
+                          </>
+                        ) : activeTab === "vendors" ? (
+                          <>
+                            <td>{row.name || "-"}</td>
+                            <td>{row.contactName || "-"}</td>
+                            <td>{row.email || "-"}</td>
+                            <td>{row.phone || "-"}</td>
+                            <td>{row.products ?? 0}</td>
+                            <td>{formatLeadTime(row.leadTimeDays)}</td>
                           </>
                         ) : (
                           <>
-                            <td>{row.email || "-"}</td>
-                            <td>
-                              {row.fullName || row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "-"}
-                            </td>
-                            <td>
-                              <span className={`pill ${colorClass}`}>{displayRole}</span>
-                            </td>
-                            <td>{formatDate(row.createdAt)}</td>
+                            {(() => {
+                              const displayRole = row.role || "Staff";
+                              const roleKey = displayRole.toLowerCase();
+                              const colorClass = roleColors[roleKey] || "blue";
+                              return (
+                                <>
+                                  <td>{row.email || "-"}</td>
+                                  <td>
+                                    {row.fullName || row.name || [row.firstName, row.lastName].filter(Boolean).join(" ") || "-"}
+                                  </td>
+                                  <td>
+                                    <span className={`pill ${colorClass}`}>{displayRole}</span>
+                                  </td>
+                                  <td>{formatDate(row.createdAt)}</td>
+                                </>
+                              );
+                            })()}
                           </>
                         )}
                         <td className="directory-actions">
-                          <button
-                            type="button"
-                            className="directory-edit"
-                            onClick={() => openEditModal(row)}
-                          >
-                            <FontAwesomeIcon icon={faPen} />
-                            Edit
-                          </button>
+                          {activeTab === "customers" && (
+                            <>
+                              <button
+                                type="button"
+                                className="directory-edit"
+                                onClick={() => openDetail(row)}
+                              >
+                                <FontAwesomeIcon icon={faEye} />
+                                View
+                              </button>
+                              <button
+                                type="button"
+                                className="directory-edit"
+                                onClick={() => openEditModal(row)}
+                              >
+                                <FontAwesomeIcon icon={faPen} />
+                                Edit
+                              </button>
+                            </>
+                          )}
+                          {activeTab === "vendors" && (
+                            <button
+                              type="button"
+                              className="directory-edit"
+                              onClick={() => openDetail(row)}
+                            >
+                              <FontAwesomeIcon icon={faEye} />
+                              View
+                            </button>
+                          )}
+                          {activeTab === "users" && (
+                            <button
+                              type="button"
+                              className="directory-edit"
+                              onClick={() => openEditModal(row)}
+                            >
+                              <FontAwesomeIcon icon={faPen} />
+                              Edit
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                   {!currentList.length && (
                     <tr>
-                      <td colSpan={5} className="customers-empty">
+                      <td colSpan={columnCount} className="customers-empty">
                         {query ? "No matching records." : "No records found."}
                       </td>
                     </tr>
@@ -549,6 +709,112 @@ function AdminDirectory() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {detailOpen && (
+        <div className="customers-modal" role="dialog" aria-modal="true">
+          <div className="customers-modal-panel crm-detail-panel">
+            <header>
+              <div>
+                <p className="customers-eyebrow">
+                  {detailTab === "customers" ? "Customer profile" : "Vendor profile"}
+                </p>
+                <h2>
+                  {detailTab === "customers"
+                    ? detailRecord?.customer?.name || "Customer details"
+                    : detailRecord?.name || "Vendor details"}
+                </h2>
+                {detailTab === "customers" && (
+                  <p className="crm-muted">
+                    {detailRecord?.customer?.email || "No email"} · {detailRecord?.customer?.phone || "No phone"}
+                  </p>
+                )}
+                {detailTab === "vendors" && (
+                  <p className="crm-muted">
+                    {detailRecord?.contactName || "No contact"} · {detailRecord?.email || "No email"}
+                  </p>
+                )}
+              </div>
+              <button type="button" className="customers-modal-close" onClick={closeDetail} aria-label="Close">
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </header>
+
+            {detailLoading && <p className="crm-muted">Loading details...</p>}
+            {!detailLoading && detailError && <p className="crm-error">{detailError}</p>}
+            {!detailLoading && !detailError && detailTab === "customers" && detailRecord && (
+              <div className="crm-detail-grid">
+                <div className="crm-detail-card">
+                  <h4>Customer summary</h4>
+                  <p>Orders: {detailRecord.totals?.orders ?? 0}</p>
+                  <p>Bookings: {detailRecord.totals?.bookings ?? 0}</p>
+                  <p>Retail spent: {formatMoney(detailRecord.totals?.totalSpent ?? 0)}</p>
+                  <p>Rental spent: {formatMoney(detailRecord.totals?.totalRented ?? 0)}</p>
+                </div>
+                <div className="crm-detail-card">
+                  <h4>Recent orders</h4>
+                  {detailRecord.orders?.length ? (
+                    <ul>
+                      {detailRecord.orders.slice(0, 5).map((order) => (
+                        <li key={`order-${order.id}`}>
+                          {order.orderNumber || `Order #${order.id}`} · {formatDate(order.orderDate)} ·{" "}
+                          {formatMoney(order.total_with_delivery ?? order.total_amount)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="crm-muted">No orders yet.</p>
+                  )}
+                </div>
+                <div className="crm-detail-card">
+                  <h4>Recent bookings</h4>
+                  {detailRecord.bookings?.length ? (
+                    <ul>
+                      {detailRecord.bookings.slice(0, 5).map((booking) => (
+                        <li key={`booking-${booking.id}`}>
+                          Booking #{booking.id} · {formatDate(booking.eventDate)} ·{" "}
+                          {formatMoney(booking.totalAmount)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="crm-muted">No bookings yet.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {!detailLoading && !detailError && detailTab === "vendors" && detailRecord && (
+              <div className="crm-detail-grid">
+                <div className="crm-detail-card">
+                  <h4>Vendor summary</h4>
+                  <p>Contact: {detailRecord.contactName || "Not set"}</p>
+                  <p>Email: {detailRecord.email || "Not set"}</p>
+                  <p>Phone: {detailRecord.phone || "Not set"}</p>
+                  <p>Lead time: {formatLeadTime(detailRecord.leadTimeDays)}</p>
+                </div>
+                <div className="crm-detail-card">
+                  <h4>Products</h4>
+                  {detailRecord.productNames?.length ? (
+                    <ul>
+                      {detailRecord.productNames.slice(0, 8).map((name) => (
+                        <li key={name}>{name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="crm-muted">No products linked yet.</p>
+                  )}
+                </div>
+                <div className="crm-detail-card">
+                  <h4>Payments & notes</h4>
+                  <p>Mobile money: {detailRecord.mobileMoneyNumber || "Not set"}</p>
+                  <p>Bank: {detailRecord.bankName || "Not set"}</p>
+                  <p>Account: {detailRecord.bankAccount || "Not set"}</p>
+                  <p>{detailRecord.notes || "No notes yet."}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

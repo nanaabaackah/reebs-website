@@ -89,6 +89,9 @@ function AdminDashboard() {
   const [selectedUserStat, setSelectedUserStat] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [lowStockModalOpen, setLowStockModalOpen] = useState(false);
+  const [directoryStats, setDirectoryStats] = useState({ customers: 0, vendors: 0 });
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState("");
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches
   );
@@ -242,9 +245,42 @@ function AdminDashboard() {
     }
   }, [normalizeStats]);
 
+  const fetchDirectoryStats = useCallback(async () => {
+    setDirectoryLoading(true);
+    setDirectoryError("");
+    try {
+      const [customersRes, vendorsRes] = await Promise.all([
+        fetch("/.netlify/functions/customers"),
+        fetch("/.netlify/functions/vendors"),
+      ]);
+      const [customersData, vendorsData] = await Promise.all([
+        customersRes.json().catch(() => null),
+        vendorsRes.json().catch(() => null),
+      ]);
+
+      if (!customersRes.ok) {
+        throw new Error(customersData?.error || "Failed to load customers.");
+      }
+      if (!vendorsRes.ok) {
+        throw new Error(vendorsData?.error || "Failed to load vendors.");
+      }
+
+      setDirectoryStats({
+        customers: Array.isArray(customersData) ? customersData.length : 0,
+        vendors: Array.isArray(vendorsData) ? vendorsData.length : 0,
+      });
+    } catch (err) {
+      console.error("Failed to load directory KPIs", err);
+      setDirectoryError(err.message || "Unable to load directory KPIs.");
+    } finally {
+      setDirectoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStats();
-  }, [fetchStats]);
+    fetchDirectoryStats();
+  }, [fetchStats, fetchDirectoryStats]);
 
   useEffect(() => {
     setUserDetails({ orders: [], bookings: [], stockMovements: [] });
@@ -271,6 +307,8 @@ function AdminDashboard() {
   const retailRevenue = stats?.retailRevenue ?? 0;
   const rentalRevenue = stats?.rentalRevenue ?? 0;
   const revenueTotal = retailRevenue + rentalRevenue || 1;
+  const customerCount = directoryStats.customers ?? 0;
+  const vendorCount = directoryStats.vendors ?? 0;
   const revenueSplit = {
     retailPct: Math.round((retailRevenue / revenueTotal) * 100),
     rentalPct: Math.round((rentalRevenue / revenueTotal) * 100),
@@ -293,6 +331,7 @@ function AdminDashboard() {
 
   const refreshDashboard = () => {
     fetchStats();
+    fetchDirectoryStats();
     if (showPersonalKpis) {
       const includeDetails = Boolean(selectedUserStat || userDetailsLoaded);
       fetchUserStats(includeDetails);
@@ -568,6 +607,30 @@ function AdminDashboard() {
                     <p className="admin-kpi-label">Net after expenses</p>
                     <h3 className="admin-kpi-value">{formatCurrency(netAfterExpenses)}</h3>
                     <span className="admin-kpi-sub">Sales minus OPEX</span>
+                  </Link>
+                </div>
+                <div className="admin-kpi-grid">
+                  <Link to="/admin/crm" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Customers</p>
+                    <h3 className="admin-kpi-value">{customerCount}</h3>
+                    <span className="admin-kpi-sub">
+                      {directoryError
+                        ? "Customer data unavailable"
+                        : directoryLoading
+                          ? "Loading directory..."
+                          : "Total customers"}
+                    </span>
+                  </Link>
+                  <Link to="/admin/vendors" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Vendors</p>
+                    <h3 className="admin-kpi-value">{vendorCount}</h3>
+                    <span className="admin-kpi-sub">
+                      {directoryError
+                        ? "Vendor data unavailable"
+                        : directoryLoading
+                          ? "Loading directory..."
+                          : "Total vendors"}
+                    </span>
                   </Link>
                 </div>
                 <div className="admin-kpi-grid">

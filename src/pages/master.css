@@ -16661,7 +16661,10 @@ body.dark-mode .delivery-list-item {
 }
 
 .directory-actions {
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .directory-edit {
