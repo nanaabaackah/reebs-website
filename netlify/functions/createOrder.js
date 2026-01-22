@@ -117,6 +117,40 @@ const json = (statusCode, body, extraHeaders = {}) => ({
   body: JSON.stringify(body),
 });
 
+const pickAutoAssignee = async (client, organizationId) => {
+  try {
+    const result = await client.query(
+      `SELECT
+         u.id,
+         COALESCE(o.open_orders, 0) + COALESCE(b.open_bookings, 0) AS load
+       FROM "user" u
+       LEFT JOIN (
+         SELECT "assignedUserId" AS user_id, COUNT(*) AS open_orders
+         FROM "order"
+         WHERE "organizationId" = $1
+           AND LOWER(status) NOT IN ('completed', 'delivered', 'cancelled', 'canceled')
+         GROUP BY "assignedUserId"
+       ) o ON o.user_id = u.id
+       LEFT JOIN (
+         SELECT "assignedUserId" AS user_id, COUNT(*) AS open_bookings
+         FROM "booking"
+         WHERE "organizationId" = $1
+           AND LOWER(status) NOT IN ('completed', 'cancelled', 'canceled')
+         GROUP BY "assignedUserId"
+       ) b ON b.user_id = u.id
+       WHERE u."organizationId" = $1
+         AND LOWER(u.role) IN ('admin', 'manager', 'staff', 'sales')
+       ORDER BY load ASC, u."updatedAt" DESC
+       LIMIT 1`,
+      [organizationId]
+    );
+    return result.rows?.[0]?.id || null;
+  } catch (err) {
+    console.warn("Auto-assign lookup failed:", err?.message || err);
+    return null;
+  }
+};
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -225,6 +259,7 @@ export async function handler(event) {
     if (actor.userId) {
       await backfillAuditDefaults(client, actor.userId, organizationId);
     }
+    const assignedUserId = actor.userId || await pickAutoAssignee(client, organizationId);
 
     const productIds = [...new Set(normalizedItems.map((item) => item.productId))];
     const productRes = await client.query(
@@ -325,7 +360,7 @@ export async function handler(event) {
         normalizedDelivery,
         normalizedPickup,
         totalAmountCents,
-        actor.userId,
+        assignedUserId,
         actor.userId,
         actor.userId,
       ]
@@ -424,7 +459,7 @@ export async function handler(event) {
       message: "Order created successfully",
       orderId,
       orderNumber,
-      assignedUserId: actor.userId,
+      assignedUserId,
       updatedByUserId: actor.userId,
     });
   } catch (err) {

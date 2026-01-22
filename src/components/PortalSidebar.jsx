@@ -86,6 +86,7 @@ const DEFAULT_APPS = [
     label: "Accounting",
     path: "/admin/accounting",
     icon: faChartLine,
+    roles: ["admin", "manager"],
   },
   {
     label: "Invoicing",
@@ -107,6 +108,7 @@ const DEFAULT_APPS = [
     label: "Human Resources",
     path: "/admin/hr",
     icon: faUserTie,
+    roles: ["admin", "manager"],
   },
   {
     label: "Vendors",
@@ -127,6 +129,7 @@ const DEFAULT_APPS = [
     label: "Documents",
     path: "/admin/documents",
     icon: faFileLines,
+    roles: ["admin", "manager"],
   },
   {
     label: "Timesheets",
@@ -137,22 +140,26 @@ const DEFAULT_APPS = [
     label: "Users",
     path: "/admin/roles",
     icon: faShieldAlt,
+    roles: ["admin", "manager"],
   },
   {
     label: "Marketing",
     path: "/admin/marketing",
     icon: faBullhorn,
+    roles: ["admin", "manager"],
   },
   {
     label: "Settings",
     path: "/admin/settings",
     icon: faSliders,
+    roles: ["admin", "manager"],
   },
   {
     label: "Template mode",
     path: "/admin/website-template",
     icon: faPenToSquare,
     matchPaths: ["/admin/website-template"],
+    roles: ["admin"],
   },
 ];
 
@@ -203,9 +210,11 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
   const [notificationPayload, setNotificationPayload] = useState({ orders: [], bookings: [] });
+  const [readNotifications, setReadNotifications] = useState(() => new Set());
   const { darkMode, toggleTheme } = useThemeMode();
   const { user, logout, authReady } = useAuth();
   const isAuthenticated = Boolean(user);
+  const userRole = String(user?.role || "staff").toLowerCase();
   const authLabel = isAuthenticated ? "Sign out" : "Sign in";
   const authIcon = isAuthenticated ? faArrowRightFromBracket : faArrowRightToBracket;
   const displayName =
@@ -221,6 +230,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("") || "GU";
+  const readStorageKey = useMemo(
+    () => `reebs_notifications_read_${user?.id || "guest"}`,
+    [user?.id]
+  );
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
@@ -253,6 +266,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       setNotificationPayload({ orders: [], bookings: [] });
       setNotificationsError("");
       setNotificationsLoading(false);
+      setReadNotifications(new Set());
       return;
     }
 
@@ -295,6 +309,20 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     };
   }, [authReady, isAuthenticated]);
 
+  useEffect(() => {
+    if (!authReady || !isAuthenticated) return;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(readStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setReadNotifications(new Set(parsed));
+      }
+    } catch (err) {
+      console.warn("Failed to load notification state", err);
+    }
+  }, [authReady, isAuthenticated, readStorageKey]);
+
   const isActive = (app) => {
     if (app.external) return false;
     const matchPaths = app.matchPaths ?? [app.path];
@@ -308,9 +336,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     });
   };
 
+  const canSeeApp = (app) => {
+    if (!app.roles || app.roles.length === 0) return true;
+    return app.roles.some((role) => String(role).toLowerCase() === userRole);
+  };
+
   const renderLinks = (context = "sidebar") => (
     <ul className={`portal-sidebar__list portal-sidebar__list--${context}`}>
-      {apps.map((app) => {
+      {apps.filter(canSeeApp).map((app) => {
         const active = isActive(app);
         const linkClasses = [
           "portal-sidebar__link",
@@ -401,6 +434,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         toDate(order.lastModifiedAt) ||
         toDate(order.orderDate) ||
         toDate(order.deliveryDate);
+      const deliveryDate = toDate(order.deliveryDate);
+      const status = String(order.status || "").toLowerCase();
+      const isClosed = ["delivered", "completed", "cancelled", "canceled"].includes(status);
+      const isOverdue = deliveryDate && deliveryDate.getTime() < Date.now() && !isClosed;
       const assigned = Number(order.assignedUserId) === userId;
       const updatedBy = Number(order.updatedByUserId) === userId;
       const recent = isRecent(date);
@@ -411,7 +448,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         href: "/admin/orders",
       };
 
-      if (assigned) {
+      if (isOverdue) {
+        upsert(base.id, {
+          ...base,
+          priority: 4,
+          title: `Overdue order ${orderNumber}`,
+          meta: deliveryDate ? `Due ${formatNotificationTime(deliveryDate)}` : "Past due",
+        });
+      } else if (assigned) {
         upsert(base.id, {
           ...base,
           priority: 3,
@@ -442,6 +486,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         toDate(booking.lastModifiedAt) ||
         toDate(booking.createdAt) ||
         toDate(booking.eventDate);
+      const eventDate = toDate(booking.eventDate);
+      const status = String(booking.status || "").toLowerCase();
+      const isClosed = ["completed", "cancelled", "canceled"].includes(status);
+      const isOverdue = eventDate && eventDate.getTime() < Date.now() && !isClosed;
       const assigned = Number(booking.assignedUserId) === userId;
       const createdBy = Number(booking.createdByUserId) === userId;
       const recent = isRecent(date);
@@ -452,7 +500,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         href: "/admin/bookings",
       };
 
-      if (assigned) {
+      if (isOverdue) {
+        upsert(base.id, {
+          ...base,
+          priority: 4,
+          title: `Overdue booking #${bookingId}`,
+          meta: eventDate ? `Event ${formatNotificationTime(eventDate)}` : "Past event date",
+        });
+      } else if (assigned) {
         upsert(base.id, {
           ...base,
           priority: 3,
@@ -481,6 +536,36 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       .slice(0, 8);
   }, [isAuthenticated, notificationPayload, user?.id]);
 
+  const unreadCount = useMemo(
+    () => notifications.filter((note) => !readNotifications.has(note.id)).length,
+    [notifications, readNotifications]
+  );
+
+  const persistReadNotifications = (nextSet) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(readStorageKey, JSON.stringify([...nextSet]));
+    } catch (err) {
+      console.warn("Failed to persist notification state", err);
+    }
+  };
+
+  const markNotificationRead = (id) => {
+    setReadNotifications((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      persistReadNotifications(next);
+      return next;
+    });
+  };
+
+  const markAllNotificationsRead = () => {
+    const next = new Set(notifications.map((note) => note.id));
+    setReadNotifications(next);
+    persistReadNotifications(next);
+  };
+
   const renderNotifications = (context = "sidebar") => (
     <div className={`portal-sidebar__notifications portal-sidebar__notifications--${context}`}>
       <button
@@ -494,7 +579,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           <FontAwesomeIcon icon={faBell} />
           <span>Notifications</span>
         </span>
-        <span className="portal-sidebar__notifications-count">{notifications.length}</span>
+        <span className="portal-sidebar__notifications-count">{unreadCount}</span>
         <FontAwesomeIcon
           icon={faChevronDown}
           className={`portal-sidebar__notifications-caret ${notificationsOpen ? "is-open" : ""}`}
@@ -502,6 +587,17 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       </button>
       {notificationsOpen && (
         <div className="portal-sidebar__notifications-body">
+          {isAuthenticated && unreadCount > 0 && (
+            <div className="portal-sidebar__notifications-actions">
+              <button
+                type="button"
+                className="portal-sidebar__notifications-action"
+                onClick={markAllNotificationsRead}
+              >
+                Mark all read
+              </button>
+            </div>
+          )}
           {!isAuthenticated && <p className="portal-sidebar__notifications-muted">Sign in to see updates.</p>}
           {isAuthenticated && notificationsLoading && (
             <p className="portal-sidebar__notifications-muted">Loading activity...</p>
@@ -520,6 +616,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
                     to={note.href}
                     className="portal-sidebar__notification-link"
                     onClick={() => {
+                      markNotificationRead(note.id);
                       setNotificationsOpen(false);
                       if (isMobile && overlayOpen) setOverlayOpen(false);
                     }}

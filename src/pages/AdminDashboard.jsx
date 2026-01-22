@@ -73,6 +73,8 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+const APPROVAL_ORDER_MIN = 2000;
+const APPROVAL_BOOKING_MIN = 3000;
 
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -89,11 +91,27 @@ function AdminDashboard() {
   const [selectedUserStat, setSelectedUserStat] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [lowStockModalOpen, setLowStockModalOpen] = useState(false);
-  const [directoryStats, setDirectoryStats] = useState({ customers: 0, vendors: 0 });
+  const [directoryStats, setDirectoryStats] = useState({
+    customers: 0,
+    vendors: 0,
+    avgLeadTime: 0,
+    leadTimeCoverage: 0,
+  });
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState("");
+  const [approvalItems, setApprovalItems] = useState([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
+  const [approvalsError, setApprovalsError] = useState("");
+  const [approvingId, setApprovingId] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [taskDraft, setTaskDraft] = useState({ title: "", dueDate: "" });
+  const [appsOpen, setAppsOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches
+  );
+  const tasksStorageKey = useMemo(
+    () => `reebs_tasks_${user?.id || "guest"}`,
+    [user?.id]
   );
   const roleKey = (user?.role || "admin").toLowerCase();
   const effectiveRole = roleKey === "manager" ? "admin" : roleKey;
@@ -117,6 +135,28 @@ function AdminDashboard() {
     mediaQuery.addListener(handleChange);
     return () => mediaQuery.removeListener(handleChange);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(tasksStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setTasks(parsed);
+      }
+    } catch (err) {
+      console.warn("Failed to load tasks", err);
+    }
+  }, [tasksStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
+    } catch (err) {
+      console.warn("Failed to save tasks", err);
+    }
+  }, [tasks, tasksStorageKey]);
 
   const defaultUserStats = { orders: 0, orderRevenue: 0, bookings: 0, bookingRevenue: 0, stockMovements: 0 };
 
@@ -265,9 +305,19 @@ function AdminDashboard() {
         throw new Error(vendorsData?.error || "Failed to load vendors.");
       }
 
+      const vendorRows = Array.isArray(vendorsData) ? vendorsData : [];
+      const leadTimes = vendorRows
+        .map((vendor) => Number(vendor.leadTimeDays))
+        .filter((value) => Number.isFinite(value) && value >= 0);
+      const avgLeadTime = leadTimes.length
+        ? Math.round(leadTimes.reduce((sum, value) => sum + value, 0) / leadTimes.length)
+        : 0;
+
       setDirectoryStats({
         customers: Array.isArray(customersData) ? customersData.length : 0,
-        vendors: Array.isArray(vendorsData) ? vendorsData.length : 0,
+        vendors: vendorRows.length,
+        avgLeadTime,
+        leadTimeCoverage: leadTimes.length,
       });
     } catch (err) {
       console.error("Failed to load directory KPIs", err);
@@ -277,10 +327,88 @@ function AdminDashboard() {
     }
   }, []);
 
+  const fetchApprovals = useCallback(async () => {
+    if (!showGlobalKpis) {
+      setApprovalItems([]);
+      return;
+    }
+    setApprovalsLoading(true);
+    setApprovalsError("");
+    try {
+      const [ordersRes, bookingsRes] = await Promise.all([
+        fetch("/.netlify/functions/orders"),
+        fetch("/.netlify/functions/bookings"),
+      ]);
+      const [ordersData, bookingsData] = await Promise.all([
+        ordersRes.json().catch(() => null),
+        bookingsRes.json().catch(() => null),
+      ]);
+
+      if (!ordersRes.ok) {
+        throw new Error(ordersData?.error || "Failed to load orders.");
+      }
+      if (!bookingsRes.ok) {
+        throw new Error(bookingsData?.error || "Failed to load bookings.");
+      }
+
+      const nextItems = [];
+      const orders = Array.isArray(ordersData) ? ordersData : [];
+      orders.forEach((order) => {
+        const status = String(order.status || "").toLowerCase();
+        const amount = Number(order.total || 0);
+        if (!Number.isFinite(amount) || amount < APPROVAL_ORDER_MIN) return;
+        if (status !== "pending") return;
+        nextItems.push({
+          key: `order-${order.id}`,
+          type: "order",
+          id: order.id,
+          title: order.orderNumber || `Order #${order.id}`,
+          meta: order.customerName ? `Customer: ${order.customerName}` : "High-value order",
+          amount,
+          date: order.orderDate,
+          href: "/admin/orders",
+          raw: order,
+        });
+      });
+
+      const bookings = Array.isArray(bookingsData) ? bookingsData : [];
+      bookings.forEach((booking) => {
+        const status = String(booking.status || "").toLowerCase();
+        const amount = Number(booking.totalAmount || 0) / 100;
+        if (!Number.isFinite(amount) || amount < APPROVAL_BOOKING_MIN) return;
+        if (status !== "pending") return;
+        nextItems.push({
+          key: `booking-${booking.id}`,
+          type: "booking",
+          id: booking.id,
+          title: `Booking #${booking.id}`,
+          meta: booking.customerName ? `Client: ${booking.customerName}` : "High-value booking",
+          amount,
+          date: booking.eventDate,
+          href: "/admin/bookings",
+          raw: booking,
+        });
+      });
+
+      nextItems.sort((a, b) => {
+        if (b.amount !== a.amount) return b.amount - a.amount;
+        return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+      });
+
+      setApprovalItems(nextItems.slice(0, 6));
+    } catch (err) {
+      console.error("Failed to load approvals", err);
+      setApprovalsError(err.message || "Unable to load approvals.");
+    } finally {
+      setApprovalsLoading(false);
+    }
+  }, [showGlobalKpis]);
+
   useEffect(() => {
     fetchStats();
     fetchDirectoryStats();
-  }, [fetchStats, fetchDirectoryStats]);
+    fetchApprovals();
+  }, [fetchStats, fetchDirectoryStats, fetchApprovals]);
 
   useEffect(() => {
     setUserDetails({ orders: [], bookings: [], stockMovements: [] });
@@ -309,6 +437,9 @@ function AdminDashboard() {
   const revenueTotal = retailRevenue + rentalRevenue || 1;
   const customerCount = directoryStats.customers ?? 0;
   const vendorCount = directoryStats.vendors ?? 0;
+  const avgLeadTime = directoryStats.avgLeadTime ?? 0;
+  const leadTimeCoverage = directoryStats.leadTimeCoverage ?? 0;
+  const avgLeadTimeLabel = avgLeadTime ? `${avgLeadTime} days` : "—";
   const revenueSplit = {
     retailPct: Math.round((retailRevenue / revenueTotal) * 100),
     rentalPct: Math.round((rentalRevenue / revenueTotal) * 100),
@@ -328,13 +459,110 @@ function AdminDashboard() {
     (user?.email ? user.email.split("@")[0] : "") ||
     user?.role ||
     "User";
+  const actorName =
+    user?.fullName ||
+    user?.name ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    displayName ||
+    "Admin";
 
   const refreshDashboard = () => {
     fetchStats();
     fetchDirectoryStats();
+    fetchApprovals();
     if (showPersonalKpis) {
       const includeDetails = Boolean(selectedUserStat || userDetailsLoaded);
       fetchUserStats(includeDetails);
+    }
+  };
+
+  const handleAddTask = (event) => {
+    event.preventDefault();
+    const title = taskDraft.title.trim();
+    if (!title) return;
+    const nextTask = {
+      id: `task-${Date.now()}`,
+      title,
+      dueDate: taskDraft.dueDate || "",
+      done: false,
+      createdAt: new Date().toISOString(),
+    };
+    setTasks((prev) => [nextTask, ...prev]);
+    setTaskDraft({ title: "", dueDate: "" });
+  };
+
+  const toggleTask = (taskId) => {
+    setTasks((prev) =>
+      prev.map((task) => (task.id === taskId ? { ...task, done: !task.done } : task))
+    );
+  };
+
+  const removeTask = (taskId) => {
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+  };
+
+  const clearDoneTasks = () => {
+    setTasks((prev) => prev.filter((task) => !task.done));
+  };
+
+  const sortedTasks = useMemo(() => {
+    const list = [...tasks];
+    list.sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+    return list;
+  }, [tasks]);
+
+  const handleApprove = async (item) => {
+    if (!item || approvingId) return;
+    setApprovingId(item.key);
+    setApprovalsError("");
+    try {
+      if (item.type === "order") {
+        const response = await fetch("/.netlify/functions/orders", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id, status: "paid" }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || "Failed to approve order.");
+      } else if (item.type === "booking") {
+        const booking = item.raw;
+        const response = await fetch("/.netlify/functions/bookings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: booking.id,
+            customerId: booking.customerId,
+            eventDate: booking.eventDate,
+            startTime: booking.startTime || null,
+            endTime: booking.endTime || null,
+            venueAddress: booking.venueAddress || "",
+            status: "confirmed",
+            assignedUserId: booking.assignedUserId ?? null,
+            discount: 0,
+            items: Array.isArray(booking.items)
+              ? booking.items.map((row) => ({
+                  productId: row.productId,
+                  quantity: row.quantity,
+                  price: Number.isFinite(row.price) ? row.price / 100 : undefined,
+                }))
+              : [],
+            userId: user?.id,
+            userName: actorName,
+            userEmail: user?.email,
+          }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || "Failed to approve booking.");
+      }
+      setApprovalItems((prev) => prev.filter((entry) => entry.key !== item.key));
+    } catch (err) {
+      console.error("Approval failed", err);
+      setApprovalsError(err.message || "Approval failed.");
+    } finally {
+      setApprovingId("");
     }
   };
 
@@ -360,11 +588,11 @@ function AdminDashboard() {
     { label: "Vendors", path: "/admin/vendors", icon: faTruck, roles: ["admin", "manager"] },
     { label: "Maintenance", path: "/admin/maintenance", icon: faWrench, roles: ["admin", "staff", "manager"] },
     { label: "Delivery", path: "/admin/delivery", icon: faRoute, roles: ["admin", "staff", "manager", "driver"] },
-    { label: "Documents", path: "/admin/documents", icon: faFolderOpen, roles: ["admin", "staff", "manager"] },
+    { label: "Documents", path: "/admin/documents", icon: faFolderOpen, roles: ["admin", "manager"] },
     { label: "Users", path: "/admin/roles", icon: faUserAlt, roles: ["admin", "manager"] },
     { label: "Timesheets", path: "/admin/timesheets", icon: faClock, roles: ["admin", "staff", "manager", "warehouse", "driver", "sales"] },
     { label: "Marketing", path: "/admin/marketing", icon: faBullhorn, roles: ["admin", "manager"] },
-    { label: "Settings", path: "/admin/settings", icon: faGear, roles: ["admin", "staff", "manager"] },
+    { label: "Settings", path: "/admin/settings", icon: faGear, roles: ["admin", "manager"] },
     {
       label: "Template mode",
       path: "/admin/website-template",
@@ -551,6 +779,106 @@ function AdminDashboard() {
           </div>
         </header>
 
+        <section className={`admin-focus ${showGlobalKpis ? "" : "admin-focus--single"}`}>
+          {showGlobalKpis && (
+            <div className="admin-focus-card">
+              <div className="admin-focus-header">
+                <h3>Approvals queue</h3>
+                <span className="admin-focus-count">{approvalItems.length} waiting</span>
+              </div>
+              {approvalsLoading && <p className="admin-focus-muted">Loading approvals...</p>}
+              {!approvalsLoading && approvalsError && (
+                <p className="admin-focus-error">{approvalsError}</p>
+              )}
+              {!approvalsLoading && !approvalsError && approvalItems.length === 0 && (
+                <p className="admin-focus-muted">No approvals waiting.</p>
+              )}
+              {!approvalsLoading && !approvalsError && approvalItems.length > 0 && (
+                <ul className="admin-approvals-list">
+                  {approvalItems.map((item) => (
+                    <li key={item.key} className="admin-approval-item">
+                      <div>
+                        <Link to={item.href} className="admin-approval-title">
+                          {item.title}
+                        </Link>
+                        <p className="admin-approval-meta">{item.meta}</p>
+                        {item.date && (
+                          <p className="admin-approval-meta">Due {formatDate(item.date)}</p>
+                        )}
+                      </div>
+                      <div className="admin-approval-actions">
+                        <span className="admin-approval-amount">{formatCurrency(item.amount)}</span>
+                        <button
+                          type="button"
+                          className="admin-approval-btn"
+                          onClick={() => handleApprove(item)}
+                          disabled={approvingId === item.key}
+                        >
+                          {approvingId === item.key ? "Approving..." : "Approve"}
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="admin-focus-card">
+            <div className="admin-focus-header">
+              <h3>My tasks</h3>
+              <span className="admin-focus-count">
+                {tasks.filter((task) => !task.done).length} open
+              </span>
+            </div>
+            <form className="admin-task-form" onSubmit={handleAddTask}>
+              <input
+                type="text"
+                placeholder="Add a task for today"
+                value={taskDraft.title}
+                onChange={(event) => setTaskDraft((prev) => ({ ...prev, title: event.target.value }))}
+              />
+              <input
+                type="date"
+                value={taskDraft.dueDate}
+                onChange={(event) => setTaskDraft((prev) => ({ ...prev, dueDate: event.target.value }))}
+              />
+              <button type="submit">Add</button>
+            </form>
+            {sortedTasks.length === 0 && <p className="admin-focus-muted">No tasks yet.</p>}
+            {sortedTasks.length > 0 && (
+              <ul className="admin-task-list">
+                {sortedTasks.map((task) => (
+                  <li key={task.id} className={`admin-task-item ${task.done ? "is-done" : ""}`}>
+                    <button
+                      type="button"
+                      className="admin-task-check"
+                      onClick={() => toggleTask(task.id)}
+                      aria-pressed={task.done}
+                    >
+                      {task.done ? "✓" : "○"}
+                    </button>
+                    <div>
+                      <p className="admin-task-title">{task.title}</p>
+                      {task.dueDate && (
+                        <p className="admin-task-meta">Due {formatDate(task.dueDate)}</p>
+                      )}
+                    </div>
+                    <button type="button" className="admin-task-remove" onClick={() => removeTask(task.id)}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {sortedTasks.some((task) => task.done) && (
+              <button type="button" className="admin-task-clear" onClick={clearDoneTasks}>
+                Clear completed
+              </button>
+            )}
+          </div>
+        </section>
+
         {showGlobalKpis && (
           <section className="admin-kpi">
             <div className="admin-kpi-header">
@@ -632,6 +960,17 @@ function AdminDashboard() {
                           : "Total vendors"}
                     </span>
                   </Link>
+                  <Link to="/admin/vendors" className="admin-kpi-card admin-kpi-link-card">
+                    <p className="admin-kpi-label">Avg lead time</p>
+                    <h3 className="admin-kpi-value">{avgLeadTimeLabel}</h3>
+                    <span className="admin-kpi-sub">
+                      {directoryError
+                        ? "Lead-time data unavailable"
+                        : directoryLoading
+                          ? "Loading vendor KPIs..."
+                          : `${leadTimeCoverage} vendor${leadTimeCoverage === 1 ? "" : "s"} set`}
+                    </span>
+                  </Link>
                 </div>
                 <div className="admin-kpi-grid">
                   <Link to="/admin/inventory" className="admin-kpi-card admin-kpi-popular admin-kpi-link-card">
@@ -692,7 +1031,7 @@ function AdminDashboard() {
                         {lowStockCount} item{lowStockCount === 1 ? "" : "s"}
                       </p>
                       {!lowStockItems.length && (
-                        <p className="admin-kpi-sub">All products are above 2 in stock.</p>
+                        <p className="admin-kpi-sub">All products are above reorder level.</p>
                       )}
                     </div>
                   </button>
@@ -866,33 +1205,50 @@ function AdminDashboard() {
           </section>
         )}
 
-        <section className="admin-app-grid">
-          {visibleApps.map((app) => (
-            <div className="admin-app-slot" key={app.path}>
-              {app.external ? (
-                <a
-                  href={app.path}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="admin-app-link admin-app-link--external"
-                  aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
-                >
-                  <span className="admin-app-icon" aria-hidden="true">
-                    <FontAwesomeIcon icon={app.icon} />
-                  </span>
-                  <h2>{app.label}</h2>
-                </a>
-              ) : (
-                <Link to={app.path} className="admin-app-link">
-                  <span className="admin-app-icon" aria-hidden="true">
-                    <FontAwesomeIcon icon={app.icon} />
-                  </span>
-                  <h2>{app.label}</h2>
-                </Link>
-              )}
-            </div>
-          ))}
-        </section>
+        <div className="admin-app-toggle-row">
+          <div>
+            <p className="admin-kpi-label">Apps</p>
+            <p className="admin-kpi-sub">Quick access to {visibleApps.length} tools.</p>
+          </div>
+          <button
+            type="button"
+            className="admin-app-toggle"
+            onClick={() => setAppsOpen((prev) => !prev)}
+            aria-expanded={appsOpen}
+            aria-controls="admin-app-grid"
+          >
+            {appsOpen ? "Hide apps" : "Show apps"}
+          </button>
+        </div>
+        {appsOpen && (
+          <section className="admin-app-grid" id="admin-app-grid">
+            {visibleApps.map((app) => (
+              <div className="admin-app-slot" key={app.path}>
+                {app.external ? (
+                  <a
+                    href={app.path}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="admin-app-link admin-app-link--external"
+                    aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
+                  >
+                    <span className="admin-app-icon" aria-hidden="true">
+                      <FontAwesomeIcon icon={app.icon} />
+                    </span>
+                    <h2>{app.label}</h2>
+                  </a>
+                ) : (
+                  <Link to={app.path} className="admin-app-link">
+                    <span className="admin-app-icon" aria-hidden="true">
+                      <FontAwesomeIcon icon={app.icon} />
+                    </span>
+                    <h2>{app.label}</h2>
+                  </Link>
+                )}
+              </div>
+            ))}
+          </section>
+        )}
       </div>
 
       {lowStockModalOpen && (
@@ -926,13 +1282,15 @@ function AdminDashboard() {
                         >
                           {item.name || "Untitled"}
                         </Link>
-                        <span>Stock {item.stock ?? 0}</span>
+                        <span>
+                          Stock {item.stock ?? 0} · Reorder {item.reorderLevel ?? 2}
+                        </span>
                       </li>
                     );
                   })}
                 </ul>
               ) : (
-                <p className="admin-kpi-sub">All products are above 2 in stock.</p>
+                <p className="admin-kpi-sub">All products are above reorder level.</p>
               )}
             </div>
           </div>

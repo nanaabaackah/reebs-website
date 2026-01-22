@@ -147,6 +147,28 @@
   padding: 0.6rem;
 }
 
+.portal-sidebar__notifications-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.4rem;
+}
+
+.portal-sidebar__notifications-action {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.portal-sidebar__notifications-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .portal-sidebar__notifications-list {
   list-style: none;
   margin: 0;

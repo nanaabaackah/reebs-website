@@ -62,6 +62,22 @@ function RequireAuth({ children }) {
   return children;
 }
 
+const normalizeRole = (role) => String(role || "").trim().toLowerCase();
+
+function RequireRole({ allowedRoles = [], children }) {
+  const { user, authReady } = useAuth();
+  const location = useLocation();
+
+  if (!authReady) return null;
+  if (!allowedRoles.length) return children;
+  const role = normalizeRole(user?.role);
+  const canAccess = allowedRoles.some((allowed) => normalizeRole(allowed) === role);
+  if (!canAccess) {
+    return <Navigate to="/admin" replace state={{ from: location.pathname }} />;
+  }
+  return children;
+}
+
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
 const PORTAL_HOST = "portal.reebspartythemes.com";
 const DEFAULT_TITLE = "REEBS Party Themes";
@@ -91,6 +107,27 @@ const getAdminTitle = (pathname) => {
   if (pathname.startsWith("/admin/marketing")) return "Marketing";
   if (pathname.startsWith("/admin/website-template")) return "Website Template";
   return "Portal";
+};
+
+const getPublicTitle = (pathname) => {
+  const path = (pathname || "/").toLowerCase();
+  if (path === "/") return "Home";
+  if (path.startsWith("/login")) return "Login";
+  if (path.startsWith("/about")) return "About";
+  if (path.startsWith("/shop")) return "Shop";
+  if (path.startsWith("/rentals/")) return "Rental";
+  if (path.startsWith("/rentals")) return "Rentals";
+  if (path.startsWith("/gallery")) return "Gallery";
+  if (path.startsWith("/faq")) return "FAQ";
+  if (path.startsWith("/contact")) return "Contact";
+  if (path.startsWith("/cart")) return "Cart";
+  if (path.startsWith("/checkout")) return "Checkout";
+  if (path.startsWith("/book")) return "Book";
+  if (path.startsWith("/privacy-policy")) return "Privacy Policy";
+  if (path.startsWith("/refund-policy")) return "Refund Policy";
+  if (path.startsWith("/delivery-policy")) return "Delivery Policy";
+  if (path.startsWith("/terms-of-service")) return "Terms of Service";
+  return null;
 };
 
 const isPortalHost = () => {
@@ -150,10 +187,12 @@ function AppLayout() {
       document.title = `Portal | ${getAdminTitle(location.pathname)}`;
       return;
     }
-    document.title = DEFAULT_TITLE;
+    const pageTitle = getPublicTitle(location.pathname);
+    document.title = pageTitle ? `${pageTitle} | ${DEFAULT_TITLE}` : DEFAULT_TITLE;
   }, [location.pathname]);
 
   const showPortalSidebar = location.pathname.startsWith("/admin");
+  const hideNavbar = location.pathname === "/login";
 
   const routeTree = (
     <Routes>
@@ -184,15 +223,18 @@ function AppLayout() {
       <Route path="/admin/employees" element={<RequireAuth><AdminDirectory /></RequireAuth>} />
       <Route path="/admin/bookings" element={<RequireAuth><AdminBookings /></RequireAuth>} />
       <Route path="/admin/schedule" element={<RequireAuth><AdminScheduler /></RequireAuth>} />
-      <Route path="/admin/accounting" element={<RequireAuth><AdminAccounting /></RequireAuth>} />
+      <Route
+        path="/admin/accounting"
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><AdminAccounting /></RequireRole></RequireAuth>}
+      />
       <Route path="/admin/expenses" element={<RequireAuth><AdminExpenses /></RequireAuth>} />
       <Route
         path="/admin/hr"
-        element={<RequireAuth><MobileRestricted><AdminHR /></MobileRestricted></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><MobileRestricted><AdminHR /></MobileRestricted></RequireRole></RequireAuth>}
       />
       <Route
         path="/admin/documents"
-        element={<RequireAuth><MobileRestricted><AdminDocuments /></MobileRestricted></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><MobileRestricted><AdminDocuments /></MobileRestricted></RequireRole></RequireAuth>}
       />
       <Route path="/admin/timesheets" element={<RequireAuth><AdminTimesheets /></RequireAuth>} />
       <Route path="/admin/vendors" element={<RequireAuth><AdminVendors /></RequireAuth>} />
@@ -200,20 +242,20 @@ function AppLayout() {
       <Route path="/admin/delivery" element={<RequireAuth><AdminDelivery /></RequireAuth>} />
       <Route
         path="/admin/roles"
-        element={<RequireAuth><MobileRestricted><AdminRoles /></MobileRestricted></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><MobileRestricted><AdminRoles /></MobileRestricted></RequireRole></RequireAuth>}
       />
       <Route
         path="/admin/settings"
-        element={<RequireAuth><MobileRestricted><AdminSettings /></MobileRestricted></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><MobileRestricted><AdminSettings /></MobileRestricted></RequireRole></RequireAuth>}
       />
       <Route path="/admin/invoicing" element={<RequireAuth><AdminInvoicing /></RequireAuth>} />
       <Route
         path="/admin/marketing"
-        element={<RequireAuth><MobileRestricted><AdminMarketing /></MobileRestricted></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin", "manager"]}><MobileRestricted><AdminMarketing /></MobileRestricted></RequireRole></RequireAuth>}
       />
       <Route
         path="/admin/website-template"
-        element={<RequireAuth><WebsiteTemplateEditor /></RequireAuth>}
+        element={<RequireAuth><RequireRole allowedRoles={["admin"]}><WebsiteTemplateEditor /></RequireRole></RequireAuth>}
       />
     </Routes>
   );
@@ -230,7 +272,7 @@ function AppLayout() {
               </div>
             ) : (
               <>
-                <Navbar onCartToggle={() => setCartOpen(true)} />
+                {!hideNavbar && <Navbar onCartToggle={() => setCartOpen(true)} />}
                 {routeTree}
               </>
             )}

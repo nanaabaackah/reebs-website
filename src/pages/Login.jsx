@@ -36,6 +36,10 @@ function Login() {
 
   return (
     <div className="login-page">
+      <header className="login-brand">
+        <span className="login-brand-name">Reebs Party Themes</span>
+        <span className="login-brand-tag">Portal</span>
+      </header>
       <div className="login-card">
         <div className="login-header">
           <p className="login-eyebrow">ERP Access</p>

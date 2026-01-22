@@ -134,6 +134,12 @@ function AdminBookings() {
   });
   const [bouncyCastles, setBouncyCastles] = useState([]);
   const { user } = useAuth();
+  const viewStorageKey = useMemo(
+    () => `reebs_bookings_views_${user?.id || "guest"}`,
+    [user?.id]
+  );
+  const [savedViews, setSavedViews] = useState([]);
+  const [activeViewId, setActiveViewId] = useState("all");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -171,6 +177,28 @@ function AdminBookings() {
     document.addEventListener("mousedown", handleClickAway);
     return () => document.removeEventListener("mousedown", handleClickAway);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(viewStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed);
+      }
+    } catch (err) {
+      console.warn("Failed to load booking views", err);
+    }
+  }, [viewStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(viewStorageKey, JSON.stringify(savedViews));
+    } catch (err) {
+      console.warn("Failed to save booking views", err);
+    }
+  }, [savedViews, viewStorageKey]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -735,6 +763,50 @@ function AdminBookings() {
     }
   };
 
+  const applySavedView = (view) => {
+    setQuery(view?.query || "");
+    setStatusFilter(view?.statusFilter || "all");
+  };
+
+  const handleViewChange = (event) => {
+    const nextId = event.target.value;
+    setActiveViewId(nextId);
+    if (nextId === "all") {
+      applySavedView({ query: "", statusFilter: "all" });
+      return;
+    }
+    const view = savedViews.find((item) => item.id === nextId);
+    if (view) applySavedView(view);
+  };
+
+  const handleSaveView = () => {
+    if (typeof window === "undefined") return;
+    const name = window.prompt("Name this view");
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSavedViews((prev) => {
+      const existing = prev.find((item) => item.name.toLowerCase() === trimmed.toLowerCase());
+      if (existing) {
+        const next = prev.map((item) =>
+          item.id === existing.id ? { ...item, query, statusFilter } : item
+        );
+        setActiveViewId(existing.id);
+        return next;
+      }
+      const nextId = `view-${Date.now()}`;
+      setActiveViewId(nextId);
+      return [...prev, { id: nextId, name: trimmed, query, statusFilter }];
+    });
+  };
+
+  const handleDeleteView = () => {
+    if (activeViewId === "all") return;
+    setSavedViews((prev) => prev.filter((item) => item.id !== activeViewId));
+    setActiveViewId("all");
+    applySavedView({ query: "", statusFilter: "all" });
+  };
+
 
   return (
     <div className="bookings-page">
@@ -778,6 +850,17 @@ function AdminBookings() {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </label>
+              <label className="bookings-filter">
+                Saved view
+                <select value={activeViewId} onChange={handleViewChange}>
+                  <option value="all">All bookings</option>
+                  {savedViews.map((view) => (
+                    <option key={view.id} value={view.id}>
+                      {view.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="bookings-search">
                 Search
                 <input
@@ -787,6 +870,20 @@ function AdminBookings() {
                   placeholder="Id, customer, status"
                 />
               </label>
+              <div className="bookings-view-actions">
+                <button type="button" className="bookings-action" onClick={handleSaveView}>
+                  Save view
+                </button>
+                {activeViewId !== "all" && (
+                  <button
+                    type="button"
+                    className="bookings-action bookings-action-ghost"
+                    onClick={handleDeleteView}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

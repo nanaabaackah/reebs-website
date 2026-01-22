@@ -7,6 +7,8 @@ import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 const statusColumnStatements = [
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isArchived" BOOLEAN DEFAULT false`,
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorderLevel" INTEGER DEFAULT 2`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorderQuantity" INTEGER DEFAULT 0`,
 ];
 
 const ensureProductStatusColumns = async (client) => {
@@ -129,9 +131,11 @@ export async function handler() {
            id,
            name,
            sku,
-           COALESCE(stock, 0)::int AS stock
+           COALESCE(stock, 0)::int AS stock,
+           COALESCE("reorderLevel", 2)::int AS "reorderLevel",
+           COALESCE("reorderQuantity", 0)::int AS "reorderQuantity"
          FROM "product"
-         WHERE COALESCE(stock, 0) <= 2
+         WHERE COALESCE(stock, 0) <= COALESCE("reorderLevel", 2)
            AND COALESCE("isArchived", false) = false
            AND COALESCE("isDeleted", false) = false
          ORDER BY stock ASC, name ASC

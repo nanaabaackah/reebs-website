@@ -117,6 +117,40 @@ const ensureValidUserId = async (client, userId, organizationId = null) => {
   return res.rowCount > 0 ? parsedId : null;
 };
 
+const pickAutoAssignee = async (client, organizationId) => {
+  try {
+    const result = await client.query(
+      `SELECT
+         u.id,
+         COALESCE(o.open_orders, 0) + COALESCE(b.open_bookings, 0) AS load
+       FROM "user" u
+       LEFT JOIN (
+         SELECT "assignedUserId" AS user_id, COUNT(*) AS open_orders
+         FROM "order"
+         WHERE "organizationId" = $1
+           AND LOWER(status) NOT IN ('completed', 'delivered', 'cancelled', 'canceled')
+         GROUP BY "assignedUserId"
+       ) o ON o.user_id = u.id
+       LEFT JOIN (
+         SELECT "assignedUserId" AS user_id, COUNT(*) AS open_bookings
+         FROM "booking"
+         WHERE "organizationId" = $1
+           AND LOWER(status) NOT IN ('completed', 'cancelled', 'canceled')
+         GROUP BY "assignedUserId"
+       ) b ON b.user_id = u.id
+       WHERE u."organizationId" = $1
+         AND LOWER(u.role) IN ('admin', 'manager', 'staff', 'sales')
+       ORDER BY load ASC, u."updatedAt" DESC
+       LIMIT 1`,
+      [organizationId]
+    );
+    return result.rows?.[0]?.id || null;
+  } catch (err) {
+    console.warn("Auto-assign lookup failed:", err?.message || err);
+    return null;
+  }
+};
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -262,6 +296,9 @@ export async function handler(event) {
         ? null
         : await ensureValidUserId(client, assignedUserIdRaw, organizationId)
       : null;
+    const autoAssignedUserId = hasAssignedUser
+      ? assignedUserIdValue
+      : actorUserId || await pickAutoAssignee(client, organizationId);
 
     await client.query("BEGIN");
 
@@ -418,7 +455,7 @@ export async function handler(event) {
             totalAmount,
             status,
             actorUserId,
-            hasAssignedUser ? assignedUserIdValue : actorUserId,
+            autoAssignedUserId,
           ]
         );
         bookingId = bookingRes.rows[0].id;

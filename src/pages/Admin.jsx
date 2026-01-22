@@ -11,6 +11,18 @@ const getQuantity = (item) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const getReorderLevel = (item) => {
+  const raw = item?.reorderLevel ?? item?.reorder_level ?? item?.reorderlevel;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 2;
+};
+
+const getReorderQuantity = (item) => {
+  const raw = item?.reorderQuantity ?? item?.reorder_quantity ?? item?.reorderquantity;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const getCategory = (item) =>
   item?.specificCategory || item?.specificcategory || item?.sourceCategoryCode || "-";
 
@@ -68,6 +80,7 @@ function Admin() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [reorderOnly, setReorderOnly] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 10;
   const [stockActivity, setStockActivity] = useState([]);
@@ -397,7 +410,7 @@ function Admin() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, categoryFilter, inStockOnly, viewMode, items.length]);
+  }, [search, categoryFilter, inStockOnly, reorderOnly, viewMode, items.length]);
 
   const sortValue = (item, key) => {
     switch (key) {
@@ -411,6 +424,8 @@ function Admin() {
         return (getCategory(item) || "").toLowerCase();
       case "quantity":
         return getQuantity(item);
+      case "reorderLevel":
+        return getReorderLevel(item);
       case "lastUpdatedAt":
         return new Date(item.lastUpdatedAt || item.updatedAt || 0).getTime();
       case "lastUpdatedByName":
@@ -439,6 +454,7 @@ function Admin() {
         if (!cat.includes(filterCategory)) return false;
       }
       if (inStockOnly && quantity <= 0) return false;
+      if (reorderOnly && quantity > getReorderLevel(item)) return false;
       return true;
     });
 
@@ -462,7 +478,7 @@ function Admin() {
 
   const totalItems = inventory.length;
   const totalUnits = inventory.reduce((sum, item) => sum + getQuantity(item), 0);
-  const lowStock = inventory.filter((item) => getQuantity(item) <= 2).length;
+  const lowStock = inventory.filter((item) => getQuantity(item) <= getReorderLevel(item)).length;
   const detailIndex = useMemo(() => {
     if (!detailItem) return -1;
     return inventory.findIndex((item) => item.id === detailItem.id);
@@ -907,6 +923,8 @@ function Admin() {
       purchasePriceGhs: Number.isFinite(Number(item.purchasePriceGhs)) ? Number(item.purchasePriceGhs) : "",
       saleValue: Number.isFinite(Number(item.saleValue)) ? Number(item.saleValue) : "",
       attendantsNeeded: Number.isFinite(Number(item.attendantsNeeded)) ? Number(item.attendantsNeeded) : "",
+      reorderLevel: String(getReorderLevel(item)),
+      reorderQuantity: String(getReorderQuantity(item)),
       age: item.age || "",
       imageUrl: item.imageUrl || item.image || "",
       rate: item.rate || "",
@@ -934,6 +952,10 @@ function Admin() {
     const name = detailForm.name.trim();
     const stockValue = Number.parseInt(detailForm.stock, 10);
     const priceValue = Number(detailForm.price);
+    const reorderLevelValue =
+      detailForm.reorderLevel !== "" ? Number.parseInt(detailForm.reorderLevel, 10) : null;
+    const reorderQuantityValue =
+      detailForm.reorderQuantity !== "" ? Number.parseInt(detailForm.reorderQuantity, 10) : null;
 
     if (!name) {
       setDetailError("Name is required.");
@@ -945,6 +967,20 @@ function Admin() {
     }
     if (!Number.isFinite(priceValue) || priceValue < 0) {
       setDetailError("Price must be zero or higher.");
+      return;
+    }
+    if (
+      detailForm.reorderLevel !== "" &&
+      (!Number.isFinite(reorderLevelValue) || reorderLevelValue < 0)
+    ) {
+      setDetailError("Reorder level must be zero or higher.");
+      return;
+    }
+    if (
+      detailForm.reorderQuantity !== "" &&
+      (!Number.isFinite(reorderQuantityValue) || reorderQuantityValue < 0)
+    ) {
+      setDetailError("Reorder quantity must be zero or higher.");
       return;
     }
 
@@ -971,6 +1007,8 @@ function Admin() {
           saleValue: detailForm.saleValue !== "" ? Number(detailForm.saleValue) : undefined,
           attendantsNeeded:
             detailForm.attendantsNeeded !== "" ? Number(detailForm.attendantsNeeded) : undefined,
+          reorderLevel: Number.isFinite(reorderLevelValue) ? reorderLevelValue : undefined,
+          reorderQuantity: Number.isFinite(reorderQuantityValue) ? reorderQuantityValue : undefined,
           age: detailForm.age || undefined,
           imageUrl: detailForm.imageUrl || undefined,
           rate: detailForm.rate || undefined,
@@ -1201,7 +1239,7 @@ function Admin() {
           <div className="admin-card">
             <p className="admin-card-label">Low stock</p>
             <h2>{lowStock}</h2>
-            <span>At or below 2 units</span>
+            <span>At or below reorder point</span>
           </div>
         </section>
 
@@ -1240,6 +1278,14 @@ function Admin() {
                   onChange={(e) => setInStockOnly(e.target.checked)}
                 />
                 In stock only
+              </label>
+              <label className="admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={reorderOnly}
+                  onChange={(e) => setReorderOnly(e.target.checked)}
+                />
+                Needs reorder
               </label>
             </div>
             {!isMobileView && (
@@ -1323,6 +1369,11 @@ function Admin() {
                       </button>
                     </th>
                     <th>
+                      <button type="button" className="sort-header" onClick={() => requestSort("reorderLevel")}>
+                        Reorder <span className="sort-indicator">{sortIndicator("reorderLevel")}</span>
+                      </button>
+                    </th>
+                    <th>
                       <button type="button" className="sort-header" onClick={() => requestSort("lastUpdatedAt")}>
                         Last updated <span className="sort-indicator">{sortIndicator("lastUpdatedAt")}</span>
                       </button>
@@ -1338,14 +1389,14 @@ function Admin() {
                 <tbody>
                   {!loading && inventory.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="admin-empty">
+                      <td colSpan={9} className="admin-empty">
                         No items found in inventory.
                       </td>
                     </tr>
                   )}
                   {paginatedInventory.map((item) => {
                     const quantity = getQuantity(item);
-                    const isLow = quantity <= 2;
+                    const isLow = quantity <= getReorderLevel(item);
                     const isMenuOpen = openMenuId === item.id;
                     return (
                       <tr
@@ -1403,6 +1454,12 @@ function Admin() {
                             >
                               +
                             </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="admin-reorder">
+                            <span>Level {getReorderLevel(item)}</span>
+                            <span>Qty {getReorderQuantity(item)}</span>
                           </div>
                         </td>
                         <td>{formatDateTime(item.lastUpdatedAt || item.updatedAt)}</td>
@@ -1520,7 +1577,7 @@ function Admin() {
                 )}
                 {paginatedInventory.map((item) => {
                 const quantity = getQuantity(item);
-                const isLow = quantity <= 2;
+                const isLow = quantity <= getReorderLevel(item);
                 const isInteractive = !isMobileView;
                 const isMenuOpen = openMenuId === `card-${item.id}`;
                 return (
@@ -1633,6 +1690,9 @@ function Admin() {
                       <p className="inventory-card-sub">Barcode {item.barcode}</p>
                     )}
                     <p className="inventory-card-sub">{getCategory(item)}</p>
+                    <p className="inventory-card-sub">
+                      Reorder at {getReorderLevel(item)} · Qty {getReorderQuantity(item)}
+                    </p>
                     <p className="inventory-card-sub">
                       Updated {formatDateTime(item.lastUpdatedAt || item.updatedAt)}
                     </p>
@@ -2122,6 +2182,26 @@ function Admin() {
                     step="1"
                     value={detailForm.stock}
                     onChange={(event) => updateDetailForm("stock", event.target.value)}
+                  />
+                </label>
+                <label>
+                  Reorder level
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={detailForm.reorderLevel}
+                    onChange={(event) => updateDetailForm("reorderLevel", event.target.value)}
+                  />
+                </label>
+                <label>
+                  Reorder quantity
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={detailForm.reorderQuantity}
+                    onChange={(event) => updateDetailForm("reorderQuantity", event.target.value)}
                   />
                 </label>
                 <label>

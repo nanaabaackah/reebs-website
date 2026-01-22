@@ -138,6 +138,12 @@ function OrdersList() {
   const [page, setPage] = useState(0);
   const pageSize = 10;
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
+  const viewStorageKey = useMemo(
+    () => `reebs_orders_views_${user?.id || "guest"}`,
+    [user?.id]
+  );
+  const [savedViews, setSavedViews] = useState([]);
+  const [activeViewId, setActiveViewId] = useState("all");
   const [detailOrder, setDetailOrder] = useState(null);
   const [detailEditOpen, setDetailEditOpen] = useState(false);
   const [detailEditSaving, setDetailEditSaving] = useState(false);
@@ -190,6 +196,28 @@ function OrdersList() {
 
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(viewStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setSavedViews(parsed);
+      }
+    } catch (err) {
+      console.warn("Failed to load order views", err);
+    }
+  }, [viewStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(viewStorageKey, JSON.stringify(savedViews));
+    } catch (err) {
+      console.warn("Failed to save order views", err);
+    }
+  }, [savedViews, viewStorageKey]);
 
   useEffect(() => {
     if (!detailOrder) return;
@@ -457,6 +485,50 @@ function OrdersList() {
     }
   };
 
+  const applySavedView = (view) => {
+    setQuery(view?.query || "");
+    setStatusFilter(view?.statusFilter || "all");
+  };
+
+  const handleViewChange = (event) => {
+    const nextId = event.target.value;
+    setActiveViewId(nextId);
+    if (nextId === "all") {
+      applySavedView({ query: "", statusFilter: "all" });
+      return;
+    }
+    const view = savedViews.find((item) => item.id === nextId);
+    if (view) applySavedView(view);
+  };
+
+  const handleSaveView = () => {
+    if (typeof window === "undefined") return;
+    const name = window.prompt("Name this view");
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSavedViews((prev) => {
+      const existing = prev.find((item) => item.name.toLowerCase() === trimmed.toLowerCase());
+      if (existing) {
+        const next = prev.map((item) =>
+          item.id === existing.id ? { ...item, query, statusFilter } : item
+        );
+        setActiveViewId(existing.id);
+        return next;
+      }
+      const nextId = `view-${Date.now()}`;
+      setActiveViewId(nextId);
+      return [...prev, { id: nextId, name: trimmed, query, statusFilter }];
+    });
+  };
+
+  const handleDeleteView = () => {
+    if (activeViewId === "all") return;
+    setSavedViews((prev) => prev.filter((item) => item.id !== activeViewId));
+    setActiveViewId("all");
+    applySavedView({ query: "", statusFilter: "all" });
+  };
+
   const saveOrderDetails = async () => {
     if (!detailOrder?.id) return;
     setDetailEditSaving(true);
@@ -573,6 +645,29 @@ function OrdersList() {
                   <option value="completed">Completed</option>
                 </select>
               </label>
+            </div>
+            <div className="orders-view-controls">
+              <label className="orders-select">
+                Saved view
+                <select value={activeViewId} onChange={handleViewChange}>
+                  <option value="all">All orders</option>
+                  {savedViews.map((view) => (
+                    <option key={view.id} value={view.id}>
+                      {view.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="orders-view-actions">
+                <button type="button" className="orders-view-btn" onClick={handleSaveView}>
+                  Save view
+                </button>
+                {activeViewId !== "all" && (
+                  <button type="button" className="orders-view-btn orders-view-btn--ghost" onClick={handleDeleteView}>
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

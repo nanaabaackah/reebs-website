@@ -261,6 +261,17 @@ const displayRental = rental && selectedBouncyType
     selectedBouncyType?.attendantsNeeded ?? rental?.attendantsNeeded
   );
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (displayRental?.name) {
+      document.title = `REEBS Party Themes | ${displayRental.name}`;
+      return;
+    }
+    if (!loading && !rental) {
+      document.title = "REEBS Party Themes | Rental not found";
+    }
+  }, [displayRental?.name, loading, rental]);
+
   const handleBookingClick = (event) => {
     if (!showBouncyTable || selectedBouncyType) return;
     event.preventDefault();

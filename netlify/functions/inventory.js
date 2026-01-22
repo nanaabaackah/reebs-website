@@ -27,6 +27,8 @@ const statusColumnStatements = [
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN DEFAULT false`,
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMPTZ`,
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "deletedByUserId" INTEGER`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorderLevel" INTEGER DEFAULT 2`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "reorderQuantity" INTEGER DEFAULT 0`,
 ];
 const barcodeColumnStatements = [
   `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "barcode" TEXT`,
@@ -206,6 +208,8 @@ export async function handler(event = {}) {
           p."archivedAt" AS "archivedAt",
           p."isDeleted" AS "isDeleted",
           p."deletedAt" AS "deletedAt",
+          p."reorderLevel" AS "reorderLevel",
+          p."reorderQuantity" AS "reorderQuantity",
           p.currency,
           p."lastUpdatedAt",
           p."lastUpdatedByUserId",
@@ -389,11 +393,24 @@ export async function handler(event = {}) {
     const saleValueInput = payload.saleValue ?? payload.saleValueCents ?? payload.sale_value;
     const saleValue = toCents(saleValueInput);
     const stockValue = priceCents * stock;
+    const parsedId = Number(payload.id);
+    const reorderLevelRaw = Number(payload.reorderLevel ?? payload.reorder_level);
+    const reorderQuantityRaw = Number(payload.reorderQuantity ?? payload.reorder_quantity);
+    const isUpdate = Number.isFinite(parsedId) && parsedId > 0;
+    const reorderLevel = Number.isFinite(reorderLevelRaw)
+      ? Math.max(0, Math.round(reorderLevelRaw))
+      : isUpdate
+        ? null
+        : 2;
+    const reorderQuantity = Number.isFinite(reorderQuantityRaw)
+      ? Math.max(0, Math.round(reorderQuantityRaw))
+      : isUpdate
+        ? null
+        : 0;
 
     const actor = await resolveActor(client, normalizeActor(payload), organizationId);
 
     // If updating an existing product, retain its SKU; otherwise generate one
-    const parsedId = Number(payload.id);
     let sku = null;
     if (Number.isFinite(parsedId) && parsedId > 0) {
       const existing = await client.query(
@@ -433,12 +450,14 @@ export async function handler(event = {}) {
         "saleValue",
         "attendantsNeeded",
         "imageUrl",
+        "reorderLevel",
+        "reorderQuantity",
         "isActive",
         "lastUpdatedByUserId",
         "lastUpdatedAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,true,$20,NOW(),NOW(),NOW())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,true,$22,NOW(),NOW(),NOW())
       ON CONFLICT ("organizationId", "sku") DO UPDATE
       SET "barcode" = EXCLUDED."barcode",
           "name" = EXCLUDED."name",
@@ -457,6 +476,8 @@ export async function handler(event = {}) {
           "saleValue" = COALESCE(EXCLUDED."saleValue", "product"."saleValue"),
           "attendantsNeeded" = COALESCE(EXCLUDED."attendantsNeeded", "product"."attendantsNeeded"),
           "imageUrl" = COALESCE(EXCLUDED."imageUrl", "product"."imageUrl"),
+          "reorderLevel" = COALESCE(EXCLUDED."reorderLevel", "product"."reorderLevel"),
+          "reorderQuantity" = COALESCE(EXCLUDED."reorderQuantity", "product"."reorderQuantity"),
           "isActive" = true,
           "lastUpdatedByUserId" = EXCLUDED."lastUpdatedByUserId",
           "lastUpdatedAt" = NOW(),
@@ -481,6 +502,8 @@ export async function handler(event = {}) {
         "imageUrl" AS image,
         "imageUrl" AS "imageUrl",
         "attendantsNeeded" AS "attendantsNeeded",
+        "reorderLevel",
+        "reorderQuantity",
         "isActive" AS status,
         currency,
         "lastUpdatedAt",
@@ -507,6 +530,8 @@ export async function handler(event = {}) {
       saleValue,
       attendantsNeeded,
       imageUrl || null,
+      reorderLevel,
+      reorderQuantity,
       actor.userId,
     ]);
 
