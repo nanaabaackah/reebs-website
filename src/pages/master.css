@@ -11696,6 +11696,73 @@ button.admin-kpi-card {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.crm-address-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crm-address-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.crm-address-lines {
+  display: grid;
+  gap: 2px;
+  font-size: 0.95rem;
+}
+
+.crm-address-phone {
+  margin: 6px 0 0;
+  font-weight: 600;
+}
+
+.crm-address-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.crm-address-link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.crm-address-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.crm-address-action {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-main);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.crm-address-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.crm-address-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .crm-detail-card ul {
   list-style: none;
   padding: 0;

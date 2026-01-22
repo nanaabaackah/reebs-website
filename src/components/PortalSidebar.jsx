@@ -29,6 +29,7 @@ import {
   faCalendarCheck,
   faXmark,
   faArrowRightFromBracket,
+  faArrowRightToBracket,
 } from "@fortawesome/free-solid-svg-icons";
 
 import "./PortalSidebar.css";
@@ -169,7 +170,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   });
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { darkMode, toggleTheme } = useThemeMode();
-  const { logout } = useAuth();
+  const { user, logout, authReady } = useAuth();
+  const isAuthenticated = Boolean(user);
+  const authLabel = isAuthenticated ? "Sign out" : "Sign in";
+  const authIcon = isAuthenticated ? faArrowRightFromBracket : faArrowRightToBracket;
 
   const normalizedPath = useMemo(() => normalizePath(location.pathname), [location.pathname]);
 
@@ -258,6 +262,17 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     navigate("/login", { replace: true, state: { signedOut: true } });
   };
 
+  const handleAuthAction = () => {
+    if (!isAuthenticated) {
+      if (isMobile) {
+        setOverlayOpen(false);
+      }
+      navigate("/login", { replace: true, state: { from: normalizedPath } });
+      return;
+    }
+    handleSignOut();
+  };
+
   return (
     <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
       <div className="portal-sidebar__brand">
@@ -282,24 +297,26 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         </button>
       </div>
       {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
-      {!isMobile && (
-        <div className="portal-sidebar__actions">
-          <button
-            type="button"
-            className="portal-sidebar__signout-btn"
-            onClick={handleSignOut}
-          >
-            <FontAwesomeIcon icon={faArrowRightFromBracket} />
-            <span>Sign out</span>
-          </button>
-        </div>
-      )}
+      <div className="portal-sidebar__actions">
+        <button
+          type="button"
+          className="portal-sidebar__signout-btn"
+          onClick={handleAuthAction}
+          aria-label={authLabel}
+          title={authLabel}
+          disabled={!authReady}
+        >
+          <FontAwesomeIcon icon={authIcon} />
+          <span>{authLabel}</span>
+        </button>
+      </div>
       <div className="portal-sidebar__theme-toggle">
         <button
           type="button"
           className="portal-sidebar__theme-toggle-btn"
           onClick={toggleTheme}
           aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
+          title={darkMode ? "Light mode" : "Dark mode"}
         >
           <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
           <span>{darkMode ? "Light mode" : "Dark mode"}</span>
@@ -326,10 +343,13 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
               <button
                 type="button"
                 className="portal-sidebar__signout-btn"
-                onClick={handleSignOut}
+                onClick={handleAuthAction}
+                aria-label={authLabel}
+                title={authLabel}
+                disabled={!authReady}
               >
-                <FontAwesomeIcon icon={faArrowRightFromBracket} />
-                <span>Sign out</span>
+                <FontAwesomeIcon icon={authIcon} />
+                <span>{authLabel}</span>
               </button>
             </div>
             <div className="portal-sidebar__overlay-theme">
@@ -338,6 +358,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
                 className="portal-sidebar__theme-toggle-btn"
                 onClick={toggleTheme}
                 aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
+                title={darkMode ? "Light mode" : "Dark mode"}
               >
                 <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
                 <span>{darkMode ? "Light mode" : "Dark mode"}</span>

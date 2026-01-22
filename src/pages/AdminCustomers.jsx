@@ -38,6 +38,28 @@ const formatDate = (value) => {
 
 const sanitizePhone = (value) => String(value || "").replace(/[^\d+]/g, "");
 
+const parseDeliveryDetails = (value) => {
+  if (!value) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      return null;
+    }
+  }
+  if (typeof value === "object") return value;
+  return null;
+};
+
+const getAddressLines = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return [];
+  return text
+    .split(/\n|,/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+};
+
 const toNumber = (value, fallback = 0) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -208,6 +230,24 @@ function AdminCustomers() {
       { prospect: 0, nurture: 0, active: 0, loyal: 0, risk: 0 }
     );
   }, [enrichedCustomers]);
+
+  const deliverySnapshot = useMemo(() => {
+    const orders = detail?.orders;
+    if (!Array.isArray(orders)) return null;
+    for (const order of orders) {
+      const details = parseDeliveryDetails(order?.deliveryDetails);
+      if (!details) continue;
+      if (details.address || details.contact || details.notes) {
+        return { details, order };
+      }
+    }
+    return null;
+  }, [detail]);
+
+  const addressLines = useMemo(
+    () => getAddressLines(deliverySnapshot?.details?.address),
+    [deliverySnapshot]
+  );
 
   const boardColumns = [
     { id: "prospect", label: "Prospects", segments: ["prospect"] },
@@ -618,6 +658,40 @@ function AdminCustomers() {
                   <p>Bookings: {detail.totals.bookings}</p>
                   <p>Retail spent: {formatMoney(detail.totals.totalSpent)}</p>
                   <p>Rental spent: {formatMoney(detail.totals.totalRented)}</p>
+                </div>
+                <div className="crm-detail-card crm-address-card">
+                  <h4>Primary address</h4>
+                  <p className="crm-address-name">{activeCustomer?.name || "Customer"}</p>
+                  {addressLines.length ? (
+                    <div className="crm-address-lines">
+                      {addressLines.map((line, index) => (
+                        <span key={`${activeCustomer?.id || "customer"}-address-${index}`}>{line}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="crm-muted">No delivery address on file.</p>
+                  )}
+                  <p className="crm-address-phone">
+                    Phone number: {deliverySnapshot?.details?.contact || activeCustomer?.phone || detail?.customer?.phone || "Not provided"}
+                  </p>
+                  {deliverySnapshot?.details?.notes ? (
+                    <p className="crm-address-note">Delivery instructions: {deliverySnapshot.details.notes}</p>
+                  ) : (
+                    <button type="button" className="crm-address-link">
+                      Add delivery instructions
+                    </button>
+                  )}
+                  <div className="crm-address-actions">
+                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                      Edit
+                    </button>
+                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                      Remove
+                    </button>
+                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                      Set as Default
+                    </button>
+                  </div>
                 </div>
                 <div className="crm-detail-card">
                   <h4>Orders</h4>

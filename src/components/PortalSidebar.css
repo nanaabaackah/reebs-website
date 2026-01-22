@@ -273,6 +273,11 @@
   visibility: hidden;
 }
 
+.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn,
+.portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn {
+  justify-content: center;
+}
+
 .portal-sidebar__list {
   margin: 0;
   padding: 0;
@@ -331,7 +336,86 @@
 }
 
 @media (max-width: 720px) {
+  .portal-app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-app-content {
+    padding: 1.25rem;
+  }
+
   .portal-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    width: 100%;
+    min-height: auto;
+    padding: 0.75rem 1rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .portal-sidebar.is-expanded {
+    width: 100%;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .portal-sidebar__brand {
+    margin-bottom: 0;
+    flex: 1;
+  }
+
+  .portal-sidebar__brand-short {
+    display: none;
+  }
+
+  .portal-sidebar__brand-full {
+    display: inline;
+    font-size: 0.95rem;
+  }
+
+  .portal-sidebar:not(.is-expanded) .portal-sidebar__brand-full {
+    display: inline;
+  }
+
+  .portal-sidebar__toggle {
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  .portal-sidebar__toggle-btn {
+    width: auto;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .portal-sidebar__nav {
+    display: none;
+  }
+
+  .portal-sidebar__actions {
+    width: auto;
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  .portal-sidebar__theme-toggle {
+    width: auto;
+    margin-top: 0;
+  }
+
+  .portal-sidebar__signout-btn,
+  .portal-sidebar__theme-toggle-btn {
+    padding: 0.4rem 0.55rem;
+  }
+
+  .portal-sidebar__signout-btn span,
+  .portal-sidebar__theme-toggle-btn span,
+  .portal-sidebar__toggle span {
     display: none;
   }
 }
