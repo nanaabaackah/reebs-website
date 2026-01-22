@@ -34,6 +34,87 @@ const dayKey = (date) => {
 const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
 const endOfMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
+const GHANA_FIXED_HOLIDAYS = [
+  { month: 0, day: 1, name: "New Year's Day" },
+  { month: 0, day: 7, name: "Constitution Day" },
+  { month: 2, day: 6, name: "Independence Day" },
+  { month: 4, day: 1, name: "May Day" },
+  { month: 7, day: 4, name: "Founders' Day" },
+  { month: 7, day: 15, name: "Assumption Day" },
+  { month: 8, day: 21, name: "Kwame Nkrumah Memorial Day" },
+  { month: 11, day: 25, name: "Christmas Day" },
+  { month: 11, day: 26, name: "Boxing Day" },
+];
+
+const GHANA_EID_BY_YEAR = {
+  2024: { fitr: "2024-04-10", adha: "2024-06-17" },
+  2025: { fitr: "2025-03-31", adha: "2025-06-07" },
+  2026: { fitr: "2026-03-20", adha: "2026-05-27" },
+  2027: { fitr: "2027-03-10", adha: "2027-05-16" },
+  2028: { fitr: "2028-02-27", adha: "2028-05-05" },
+};
+
+const parseIsoDate = (value) => {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month - 1, day);
+};
+
+const addDays = (date, days) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const getEasterSunday = (year) => {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+};
+
+const getFarmersDay = (year) => {
+  const firstDecember = new Date(year, 11, 1);
+  const weekday = firstDecember.getDay();
+  const offset = (5 - weekday + 7) % 7;
+  firstDecember.setDate(firstDecember.getDate() + offset);
+  return firstDecember;
+};
+
+const buildGhanaHolidays = (year) => {
+  const holidays = GHANA_FIXED_HOLIDAYS.map((holiday) => ({
+    name: holiday.name,
+    date: new Date(year, holiday.month, holiday.day),
+  }));
+
+  const easterSunday = getEasterSunday(year);
+  holidays.push({ name: "Good Friday", date: addDays(easterSunday, -2) });
+  holidays.push({ name: "Easter Monday", date: addDays(easterSunday, 1) });
+  holidays.push({ name: "Farmers' Day", date: getFarmersDay(year) });
+
+  const eidDates = GHANA_EID_BY_YEAR[year];
+  if (eidDates?.fitr) {
+    holidays.push({ name: "Eid al-Fitr", date: parseIsoDate(eidDates.fitr) });
+  }
+  if (eidDates?.adha) {
+    holidays.push({ name: "Eid al-Adha", date: parseIsoDate(eidDates.adha) });
+  }
+
+  return holidays.filter((holiday) => holiday.date && !Number.isNaN(holiday.date.getTime()));
+};
+
 const buildCalendarDays = (monthDate) => {
   const first = startOfMonth(monthDate);
   const last = endOfMonth(monthDate);
@@ -455,6 +536,21 @@ function AdminScheduler() {
   const monthLabel = useMemo(() => {
     return monthCursor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   }, [monthCursor]);
+  const holidayMap = useMemo(() => {
+    const years = new Set(monthDays.map((date) => date.getFullYear()));
+    const map = new Map();
+    years.forEach((year) => {
+      const holidays = buildGhanaHolidays(year);
+      holidays.forEach((holiday) => {
+        const key = dayKey(holiday.date);
+        if (!key) return;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(holiday.name);
+      });
+    });
+    return map;
+  }, [monthDays]);
+  const activeHolidays = useMemo(() => holidayMap.get(dayKey(activeDay)) || [], [holidayMap, activeDay]);
 
   const mapCenter = useMemo(() => {
     if (locations.length) return { lat: locations[0].lat, lng: locations[0].lng };
@@ -732,6 +828,10 @@ function AdminScheduler() {
                   const isCurrentMonth = date.getMonth() === monthCursor.getMonth();
                   const isSelected = dayKey(activeDay) === key;
                   const count = bookingsByDay.get(key)?.length || 0;
+                  const holidayNames = holidayMap.get(key) || [];
+                  const holidayLabel =
+                    holidayNames.length > 1 ? `${holidayNames.length} holidays` : holidayNames[0];
+                  const holidayTitle = holidayNames.join(", ");
 
                   return (
                     <button
@@ -740,14 +840,19 @@ function AdminScheduler() {
                       className={
                         "calendar-day" +
                         (isCurrentMonth ? "" : " is-out") +
-                        (isSelected ? " is-selected" : "")
+                        (isSelected ? " is-selected" : "") +
+                        (holidayNames.length ? " is-holiday" : "")
                       }
+                      title={holidayTitle || undefined}
                       onClick={() => {
                         setActiveDay(date);
                         setUserSelectedDay(true);
                       }}
                     >
                       <span className="calendar-number">{date.getDate()}</span>
+                      {holidayNames.length > 0 && (
+                        <span className="calendar-holiday">{holidayLabel}</span>
+                      )}
                       {count > 0 && <span className="calendar-badge">{count}</span>}
                     </button>
                   );
@@ -766,6 +871,16 @@ function AdminScheduler() {
                   Book rental
                 </button>
               </div>
+              {activeHolidays.length > 0 && (
+                <div className="calendar-holidays">
+                  <h4>Ghana holidays</h4>
+                  <ul>
+                    {activeHolidays.map((holiday) => (
+                      <li key={`${dayKey(activeDay)}-${holiday}`}>{holiday}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {activeDayBookings.length === 0 ? (
                 <p className="scheduler-muted">No bookings scheduled.</p>
               ) : (

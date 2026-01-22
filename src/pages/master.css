@@ -2080,7 +2080,7 @@ h3{
 }
 
 /*********************************************************************************************************************/
-/
+
 
 /* ============================
    CART
@@ -12561,8 +12561,29 @@ button.admin-kpi-card {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
 }
 
+.calendar-day.is-holiday {
+  border-color: rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.12);
+}
+
 .calendar-number {
   font-weight: 700;
+}
+
+.calendar-holiday {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.2);
+  border-radius: 999px;
+  padding: 3px 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-badge {
@@ -12575,6 +12596,27 @@ button.admin-kpi-card {
   font-size: 0.8rem;
 }
 
+.calendar-holidays {
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: 12px;
+}
+
+.calendar-holidays h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.calendar-holidays ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
 .agenda-list {
   display: flex;
   flex-direction: column;
