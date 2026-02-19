@@ -1,9 +1,14 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faRotateRight, faWandMagicSparkles } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import {
+  EXPENSE_CATEGORY_LABELS,
+  getExpenseCategoryStyle,
+  normalizeExpenseCategory,
+} from "../data/expenseCategories";
+import "./admin.css";
 
 const formatCurrency = (amount) => {
   try {
@@ -70,6 +75,7 @@ function AdminAccounting() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [isFetching, setIsFetching] = useState(false);
   const [orders, setOrders] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -183,6 +189,7 @@ function AdminAccounting() {
     if (!data) setLoading(true);
     setIsFetching(true);
     setError("");
+    setNotice("");
     try {
       const result = await fetchJson(`/.netlify/functions/financials?window=${key}`);
       setData(result);
@@ -250,6 +257,31 @@ function AdminAccounting() {
   const financeSummary = useMemo(() => data?.summary || null, [data]);
   const expenseWindowLabel = data?.expenseWindowLabel || data?.windowLabel || "";
   const financeTransactions = useMemo(() => data?.transactions || [], [data]);
+  const expenseBreakdown = useMemo(() => {
+    const rows = Array.isArray(data?.expenseBreakdown) ? data.expenseBreakdown : [];
+    const totals = new Map();
+    rows.forEach((row) => {
+      const category = normalizeExpenseCategory(row?.category) || "Miscellaneous";
+      const amount = toNumber(row?.amount);
+      totals.set(category, (totals.get(category) || 0) + amount);
+    });
+    const ordered = [
+      ...EXPENSE_CATEGORY_LABELS,
+      ...Array.from(totals.keys())
+        .filter((category) => !EXPENSE_CATEGORY_LABELS.includes(category))
+        .sort((a, b) => a.localeCompare(b)),
+    ];
+    return ordered
+      .map((category) => ({
+        category,
+        amount: totals.get(category) || 0,
+      }))
+      .filter((entry) => entry.amount > 0);
+  }, [data]);
+  const expenseBreakdownTotal = useMemo(
+    () => expenseBreakdown.reduce((sum, entry) => sum + toNumber(entry.amount), 0),
+    [expenseBreakdown]
+  );
 
   const windowStart = data?.startDate ? new Date(data.startDate) : null;
   const windowEnd = data?.endDate ? new Date(data.endDate) : null;
@@ -389,7 +421,8 @@ function AdminAccounting() {
   const corporateRate = parsePercent(ghanaTaxConfig.corporateRate);
   const vatTotalRate = vatCoreRate + nhilRate + getFundRate + covidRate;
   const exemptSales = toNumber(taxInputs.exemptSales);
-  const taxableSales = Math.max(0, combinedTotal - exemptSales);
+  const salesBaseForTax = Math.max(combinedTotal, toNumber(data?.revenue || 0));
+  const taxableSales = Math.max(0, salesBaseForTax - exemptSales);
   const outputVat = taxableSales * vatTotalRate;
   const inputVatCredits = toNumber(taxInputs.inputVatCredits);
   const vatPayable = Math.max(0, outputVat - inputVatCredits);
@@ -412,10 +445,108 @@ function AdminAccounting() {
     0,
     vatPayable + corporateTaxDue + gslDue + fsrlDue - withholdingCredits
   );
+  const grossFormulaGap =
+    toNumber(financeSummary?.revenue || 0) +
+    toNumber(financeSummary?.rentalIncome || 0) -
+    toNumber(financeSummary?.cogs || 0) -
+    toNumber(financeSummary?.grossProfit || 0);
+  const netFormulaGap =
+    toNumber(financeSummary?.grossProfit || 0) -
+    toNumber(financeSummary?.operatingExpenses || 0) -
+    toNumber(financeSummary?.netProfit || 0);
+  const expenseTieOutGap =
+    expenseBreakdownTotal - toNumber(financeSummary?.operatingExpenses || 0);
+
+  const withinTolerance = (value) => Math.abs(toNumber(value)) <= 1;
+  const toMoneyString = (value) => toNumber(value).toFixed(2);
+
+  const autoFillBalanceInputs = () => {
+    const revenue = toNumber(data?.revenue || 0);
+    const cogs = toNumber(financeSummary?.cogs || 0);
+    const operatingExpenses = toNumber(financeSummary?.operatingExpenses || 0);
+    const projectedLiquid = Math.max(0, revenue - cogs - operatingExpenses);
+    const nextCurrentAssets = {
+      cashOnHand: projectedLiquid * 0.15,
+      bankBalance: projectedLiquid * 0.45,
+      accountsReceivable: Math.max(0, revenue * 0.2),
+      inventoryValue: Math.max(cogs * 0.3, 0),
+      prepaidExpenses: Math.max(operatingExpenses * 0.05, 0),
+      otherCurrentAssets: Math.max(operatingExpenses * 0.03, 0),
+      fixedAssets: toNumber(balanceInputs.fixedAssets),
+      otherAssets: toNumber(balanceInputs.otherAssets),
+    };
+    const nextLiabilities = {
+      accountsPayable: Math.max(cogs * 0.25, 0),
+      taxesPayable: Math.max(totalTaxDue, 0),
+      accruedExpenses: Math.max(operatingExpenses * 0.12, 0),
+      shortTermLoans: toNumber(balanceInputs.shortTermLoans),
+      longTermLoans: toNumber(balanceInputs.longTermLoans),
+    };
+
+    const nextTotalAssets =
+      nextCurrentAssets.cashOnHand +
+      nextCurrentAssets.bankBalance +
+      nextCurrentAssets.accountsReceivable +
+      nextCurrentAssets.inventoryValue +
+      nextCurrentAssets.prepaidExpenses +
+      nextCurrentAssets.otherCurrentAssets +
+      nextCurrentAssets.fixedAssets +
+      nextCurrentAssets.otherAssets;
+
+    const nextTotalLiabilities =
+      nextLiabilities.accountsPayable +
+      nextLiabilities.taxesPayable +
+      nextLiabilities.accruedExpenses +
+      nextLiabilities.shortTermLoans +
+      nextLiabilities.longTermLoans;
+
+    const equityBaseTarget = nextTotalAssets - nextTotalLiabilities - periodNetProfit;
+    const ownerEquityAuto = equityBaseTarget * 0.65;
+    const retainedEarningsAuto = equityBaseTarget - ownerEquityAuto;
+
+    setBalanceInputs({
+      cashOnHand: toMoneyString(nextCurrentAssets.cashOnHand),
+      bankBalance: toMoneyString(nextCurrentAssets.bankBalance),
+      accountsReceivable: toMoneyString(nextCurrentAssets.accountsReceivable),
+      inventoryValue: toMoneyString(nextCurrentAssets.inventoryValue),
+      prepaidExpenses: toMoneyString(nextCurrentAssets.prepaidExpenses),
+      otherCurrentAssets: toMoneyString(nextCurrentAssets.otherCurrentAssets),
+      fixedAssets: toMoneyString(nextCurrentAssets.fixedAssets),
+      otherAssets: toMoneyString(nextCurrentAssets.otherAssets),
+      accountsPayable: toMoneyString(nextLiabilities.accountsPayable),
+      taxesPayable: toMoneyString(nextLiabilities.taxesPayable),
+      accruedExpenses: toMoneyString(nextLiabilities.accruedExpenses),
+      shortTermLoans: toMoneyString(nextLiabilities.shortTermLoans),
+      longTermLoans: toMoneyString(nextLiabilities.longTermLoans),
+      ownerEquity: toMoneyString(ownerEquityAuto),
+      retainedEarnings: toMoneyString(retainedEarningsAuto),
+    });
+    setNotice("Balance inputs auto-filled from live sales, costs, expense, and tax estimates.");
+  };
+
+  const autoFillTaxInputs = () => {
+    const salesBase = Math.max(0, toNumber(data?.revenue || 0));
+    const operatingExpenses = toNumber(financeSummary?.operatingExpenses || 0);
+    const defaultExemptSales = salesBase * 0.05;
+    const estimatedInputVat = operatingExpenses * vatCoreRate;
+    setTaxInputs({
+      exemptSales: toMoneyString(defaultExemptSales),
+      inputVatCredits: toMoneyString(estimatedInputVat),
+      allowableDeductions: toMoneyString(operatingExpenses),
+      withholdingCredits: toMoneyString(0),
+      grossProduction: toMoneyString(salesBase),
+    });
+    setNotice("Tax inputs auto-filled from the selected window. Review before filing.");
+  };
+
+  const resetGhanaTaxRates = () => {
+    setGhanaTaxConfig(ghTaxDefaults);
+    setNotice("Ghana tax rates reset to default template values.");
+  };
 
   return (
-    <div className="accounting-page">
-      <div className="accounting-shell">
+    <div className="accounting-page accounting-page--redesign">
+      <div className="accounting-shell accounting-shell--redesign">
         <AdminBreadcrumb items={[{ label: "Accounting" }]} />
 
         <header className="accounting-header">
@@ -423,8 +554,13 @@ function AdminAccounting() {
             <p className="accounting-eyebrow">Financial Intelligence</p>
             <h1>Accounting</h1>
             <p className="accounting-subtitle">
-              Track liquidity, build year-end statements, and keep tax prep in one place.
+              Mostly automated for non-accountants: statements, reconciliations, and tax estimates refresh from live records.
             </p>
+            {data?.automation?.expenseSourceTable && (
+              <p className="accounting-muted">
+                Expense source: <strong>{data.automation.expenseSourceTable}</strong>
+              </p>
+            )}
           </div>
           <div className="accounting-filters">
             <div className="accounting-filters-left">
@@ -528,7 +664,7 @@ function AdminAccounting() {
               </div>
               <div className="accounting-actions">
                 <button type="button" className="accounting-secondary" onClick={() => fetchData(windowKey)}>
-                  <FontAwesomeIcon icon={faRotateRight} />
+                  <AppIcon icon={faRotateRight} />
                 </button>
               </div>
             </div>
@@ -547,6 +683,7 @@ function AdminAccounting() {
             </button>
           </div>
         )}
+        {!loading && !error && notice && <p className="accounting-status">{notice}</p>}
 
         {!loading && !error && data && viewMode === "overview" && (
           <>
@@ -624,6 +761,20 @@ function AdminAccounting() {
                       <span>Operating expenses</span>
                       <span>-{formatCurrency(financeSummary.operatingExpenses)}</span>
                     </div>
+                    {expenseBreakdown.length > 0 && (
+                      <>
+                        {expenseBreakdown.map((entry) => (
+                          <div key={entry.category} className="accounting-pnl-row accounting-pnl-row-sub accounting-negative">
+                            <span>
+                              <span className="expenses-tag" style={getExpenseCategoryStyle(entry.category)}>
+                                {entry.category}
+                              </span>
+                            </span>
+                            <span>-{formatCurrency(entry.amount)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
                     <div className="accounting-pnl-row total">
                       <strong>Net profit</strong>
                       <strong>{formatCurrency(financeSummary.netProfit)}</strong>
@@ -1044,11 +1195,42 @@ function AdminAccounting() {
               <div className="accounting-panel">
                 <div className="accounting-panel-head">
                   <div>
+                    <p className="accounting-panel-label">Automation</p>
+                    <h3>Statement integrity checks</h3>
+                    <p className="accounting-panel-sub">
+                      Automatic checks highlight when something does not tie out.
+                    </p>
+                  </div>
+                </div>
+                <ul className="accounting-checklist">
+                  <li className={withinTolerance(grossFormulaGap) ? "accounting-check-pass" : "accounting-check-fail"}>
+                    Gross profit formula {withinTolerance(grossFormulaGap) ? "passes." : `gap ${formatCurrency(Math.abs(grossFormulaGap))}.`}
+                  </li>
+                  <li className={withinTolerance(netFormulaGap) ? "accounting-check-pass" : "accounting-check-fail"}>
+                    Net profit formula {withinTolerance(netFormulaGap) ? "passes." : `gap ${formatCurrency(Math.abs(netFormulaGap))}.`}
+                  </li>
+                  <li className={withinTolerance(expenseTieOutGap) ? "accounting-check-pass" : "accounting-check-fail"}>
+                    Expense breakdown tie-out {withinTolerance(expenseTieOutGap) ? "passes." : `gap ${formatCurrency(Math.abs(expenseTieOutGap))}.`}
+                  </li>
+                  <li className={withinTolerance(balanceGap) ? "accounting-check-pass" : "accounting-check-fail"}>
+                    Balance sheet equation {withinTolerance(balanceGap) ? "passes." : `gap ${formatCurrency(Math.abs(balanceGap))}.`}
+                  </li>
+                </ul>
+              </div>
+
+              <div className="accounting-panel">
+                <div className="accounting-panel-head">
+                  <div>
                     <p className="accounting-panel-label">Inputs</p>
                     <h3>Balance sheet inputs</h3>
                     <p className="accounting-panel-sub">
                       Update opening balances at year start and closing balances at year end.
                     </p>
+                  </div>
+                  <div className="accounting-panel-actions">
+                    <button type="button" className="accounting-secondary" onClick={autoFillBalanceInputs}>
+                      <AppIcon icon={faWandMagicSparkles} /> Auto-fill
+                    </button>
                   </div>
                 </div>
                 <div className="accounting-form-grid">
@@ -1634,8 +1816,15 @@ function AdminAccounting() {
 
             <div className="accounting-panel">
               <div className="accounting-panel-head">
-                <h3>Tax inputs</h3>
-                <span className="accounting-panel-label">Adjustable credits & deductions</span>
+                <div>
+                  <h3>Tax inputs</h3>
+                  <span className="accounting-panel-label">Adjustable credits & deductions</span>
+                </div>
+                <div className="accounting-panel-actions">
+                  <button type="button" className="accounting-secondary" onClick={autoFillTaxInputs}>
+                    <AppIcon icon={faWandMagicSparkles} /> Auto-fill
+                  </button>
+                </div>
               </div>
               <div className="accounting-form-grid">
                 <label className="accounting-field">
@@ -1688,8 +1877,15 @@ function AdminAccounting() {
 
             <div className="accounting-panel">
               <div className="accounting-panel-head">
-                <h3>Ghana tax rates</h3>
-                <span className="accounting-panel-label">Adjust to current policy</span>
+                <div>
+                  <h3>Ghana tax rates</h3>
+                  <span className="accounting-panel-label">Adjust to current policy</span>
+                </div>
+                <div className="accounting-panel-actions">
+                  <button type="button" className="accounting-secondary" onClick={resetGhanaTaxRates}>
+                    <AppIcon icon={faWandMagicSparkles} /> Reset defaults
+                  </button>
+                </div>
               </div>
               <div className="accounting-form-grid">
                 <label className="accounting-field">
@@ -1771,15 +1967,6 @@ function AdminAccounting() {
                     inputMode="decimal"
                     value={ghanaTaxConfig.covidRate}
                     onChange={updateGhanaTax("covidRate")}
-                  />
-                </label>
-                <label className="accounting-field">
-                  Corporate tax rate
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={ghanaTaxConfig.corporateRate}
-                    onChange={updateGhanaTax("corporateRate")}
                   />
                 </label>
               </div>

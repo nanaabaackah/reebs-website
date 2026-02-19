@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import CookieConsent from 'react-cookie-consent';
-import '/src/pages/master.css';
 
 const CookieBanner = () => {
   const [isExpanded, setIsExpanded] = useState(false);

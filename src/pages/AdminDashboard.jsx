@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faBoxOpen,
   faReceipt,
@@ -26,8 +26,8 @@ import {
   faBullhorn,
   faGlobe,
   faPenToSquare,
-} from "@fortawesome/free-solid-svg-icons";
-import "./master.css";
+} from "/src/icons/iconSet";
+import "./admin.css";
 import { useAuth } from "../components/AuthContext";
 import { WEBSITE_URL } from "../utils/website";
 
@@ -774,7 +774,7 @@ function AdminDashboard() {
               onClick={refreshDashboard}
               disabled={loadingStats || loadingUserStats || loadingUserDetails}
             >
-              <FontAwesomeIcon icon={faRotateRight} />
+              <AppIcon icon={faRotateRight} />
             </button>
           </div>
         </header>
@@ -1233,14 +1233,14 @@ function AdminDashboard() {
                     aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
                   >
                     <span className="admin-app-icon" aria-hidden="true">
-                      <FontAwesomeIcon icon={app.icon} />
+                      <AppIcon icon={app.icon} />
                     </span>
                     <h2>{app.label}</h2>
                   </a>
                 ) : (
                   <Link to={app.path} className="admin-app-link">
                     <span className="admin-app-icon" aria-hidden="true">
-                      <FontAwesomeIcon icon={app.icon} />
+                      <AppIcon icon={app.icon} />
                     </span>
                     <h2>{app.label}</h2>
                   </Link>
@@ -1265,7 +1265,7 @@ function AdminDashboard() {
                 onClick={() => setLowStockModalOpen(false)}
                 aria-label="Close"
               >
-                <FontAwesomeIcon icon={faTimes} />
+                <AppIcon icon={faTimes} />
               </button>
             </header>
             <div className="admin-kpi-detail-body">

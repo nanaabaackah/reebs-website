@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTruck, faRotateRight, faLocationDot } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faTruck, faRotateRight, faLocationDot } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const STATUS_OPTIONS = [
   { value: "scheduled", label: "Scheduled" },
@@ -286,7 +286,7 @@ function AdminDelivery() {
           </div>
           <div className="delivery-actions">
             <button type="button" className="delivery-secondary" onClick={fetchDeliveries} disabled={loading}>
-              <FontAwesomeIcon icon={faRotateRight} /> Refresh
+              <AppIcon icon={faRotateRight} /> Refresh
             </button>
           </div>
         </header>
@@ -315,7 +315,7 @@ function AdminDelivery() {
 
         <div className="delivery-filters">
           <div className="delivery-search">
-            <FontAwesomeIcon icon={faLocationDot} />
+            <AppIcon icon={faLocationDot} />
             <input
               type="search"
               placeholder="Search customer, address, driver..."
@@ -341,7 +341,7 @@ function AdminDelivery() {
           <section className="delivery-panel">
             <div className="delivery-panel-head">
               <h3>
-                <FontAwesomeIcon icon={faTruck} /> Active routes
+                <AppIcon icon={faTruck} /> Active routes
               </h3>
               <span>{filteredDeliveries.length} stops</span>
             </div>

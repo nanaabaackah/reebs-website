@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faBars,
   faBullhorn,
@@ -21,6 +21,7 @@ import {
   faSun,
   faTools,
   faTruck,
+  faUser,
   faUserGroup,
   faUserTie,
   faUsers,
@@ -32,9 +33,9 @@ import {
   faXmark,
   faArrowRightFromBracket,
   faArrowRightToBracket,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 
-import "./PortalSidebar.css";
+import "/src/styles/components/PortalSidebar.css";
 import useThemeMode from "../hooks/useThemeMode";
 import { useAuth } from "./AuthContext";
 import { WEBSITE_URL } from "../utils/website";
@@ -155,11 +156,11 @@ const DEFAULT_APPS = [
     roles: ["admin", "manager"],
   },
   {
-    label: "Template mode",
-    path: "/admin/website-template",
+    label: "Advanced",
+    path: "/admin/advanced",
     icon: faPenToSquare,
-    matchPaths: ["/admin/website-template"],
-    roles: ["admin"],
+    matchPaths: ["/admin/advanced", "/admin/website-template"],
+    roles: ["admin", "manager"],
   },
 ];
 
@@ -361,13 +362,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
                 target="_blank"
                 rel="noreferrer"
                 className={linkClasses}
+                title={app.label}
                 aria-label={`${app.label}: ${app.description || "Opens in new tab"}`}
                 onClick={() => {
                   setUserMenuOpen(false);
                   if (isMobile) setOverlayOpen(false);
                 }}
               >
-                <FontAwesomeIcon icon={app.icon} />
+                <AppIcon icon={app.icon} />
                 <span>{app.label}</span>
               </a>
             </li>
@@ -378,12 +380,13 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             <Link
               to={app.path}
               className={linkClasses}
+              title={app.label}
               onClick={() => {
                 setUserMenuOpen(false);
                 if (isMobile && overlayOpen) setOverlayOpen(false);
               }}
             >
-              <FontAwesomeIcon icon={app.icon} />
+              <AppIcon icon={app.icon} />
               <span>{app.label}</span>
             </Link>
           </li>
@@ -536,10 +539,12 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       .slice(0, 8);
   }, [isAuthenticated, notificationPayload, user?.id]);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((note) => !readNotifications.has(note.id)).length,
+  const unreadNotifications = useMemo(
+    () => notifications.filter((note) => !readNotifications.has(note.id)),
     [notifications, readNotifications]
   );
+
+  const unreadCount = unreadNotifications.length;
 
   const persistReadNotifications = (nextSet) => {
     if (typeof window === "undefined") return;
@@ -549,6 +554,26 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       console.warn("Failed to persist notification state", err);
     }
   };
+
+  useEffect(() => {
+    if (!notifications.length) return;
+    setReadNotifications((prev) => {
+      if (!prev.size) return prev;
+      const currentIds = new Set(notifications.map((note) => note.id));
+      let changed = false;
+      const next = new Set();
+      prev.forEach((id) => {
+        if (currentIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      if (!changed) return prev;
+      persistReadNotifications(next);
+      return next;
+    });
+  }, [notifications, readStorageKey]);
 
   const markNotificationRead = (id) => {
     setReadNotifications((prev) => {
@@ -561,9 +586,13 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   };
 
   const markAllNotificationsRead = () => {
-    const next = new Set(notifications.map((note) => note.id));
-    setReadNotifications(next);
-    persistReadNotifications(next);
+    setReadNotifications((prev) => {
+      if (unreadNotifications.length === 0) return prev;
+      const next = new Set(prev);
+      unreadNotifications.forEach((note) => next.add(note.id));
+      persistReadNotifications(next);
+      return next;
+    });
   };
 
   const renderNotifications = (context = "sidebar") => (
@@ -576,11 +605,11 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
         aria-label="Toggle notifications"
       >
         <span className="portal-sidebar__notifications-title">
-          <FontAwesomeIcon icon={faBell} />
+          <AppIcon icon={faBell} />
           <span>Notifications</span>
         </span>
         <span className="portal-sidebar__notifications-count">{unreadCount}</span>
-        <FontAwesomeIcon
+        <AppIcon
           icon={faChevronDown}
           className={`portal-sidebar__notifications-caret ${notificationsOpen ? "is-open" : ""}`}
         />
@@ -608,9 +637,16 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           {isAuthenticated && !notificationsLoading && !notificationsError && notifications.length === 0 && (
             <p className="portal-sidebar__notifications-muted">No recent activity.</p>
           )}
-          {!notificationsLoading && !notificationsError && notifications.length > 0 && (
+          {isAuthenticated &&
+            !notificationsLoading &&
+            !notificationsError &&
+            notifications.length > 0 &&
+            unreadNotifications.length === 0 && (
+            <p className="portal-sidebar__notifications-muted">All caught up.</p>
+          )}
+          {!notificationsLoading && !notificationsError && unreadNotifications.length > 0 && (
             <ul className="portal-sidebar__notifications-list">
-              {notifications.map((note) => (
+              {unreadNotifications.map((note) => (
                 <li key={note.id} className="portal-sidebar__notification-item">
                   <Link
                     to={note.href}
@@ -652,7 +688,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           <span className="portal-sidebar__user-name">{displayName}</span>
           <span className="portal-sidebar__user-email">{displayEmail}</span>
         </span>
-        <FontAwesomeIcon
+        <AppIcon
           icon={faChevronDown}
           className={`portal-sidebar__user-caret ${userMenuOpen ? "is-open" : ""}`}
         />
@@ -663,12 +699,14 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             <Link
               to="/admin/settings?tab=profile"
               className="portal-sidebar__user-link"
+              title="Profile settings"
               onClick={() => {
                 setUserMenuOpen(false);
                 if (isMobile) setOverlayOpen(false);
               }}
             >
-              Profile settings
+              <AppIcon icon={faUser} />
+              <span>Profile settings</span>
             </Link>
           )}
           <button
@@ -678,7 +716,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
             title={darkMode ? "Light mode" : "Dark mode"}
           >
-            <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+            <AppIcon icon={darkMode ? faSun : faMoon} />
             <span>{darkMode ? "Light mode" : "Dark mode"}</span>
           </button>
           <button
@@ -689,7 +727,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
             title={authLabel}
             disabled={!authReady}
           >
-            <FontAwesomeIcon icon={authIcon} />
+            <AppIcon icon={authIcon} />
             <span>{authLabel}</span>
           </button>
         </div>
@@ -717,7 +755,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
           className="portal-sidebar__toggle-btn"
           aria-label={isMobile ? "Open menu" : "Toggle navigation"}
         >
-          <FontAwesomeIcon icon={expanded ? faChevronLeft : faBars} />
+          <AppIcon icon={expanded ? faChevronLeft : faBars} />
           {!isMobile && <span>{expanded ? "Collapse" : "Explore"}</span>}
         </button>
       </div>
@@ -737,7 +775,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
               onClick={() => setOverlayOpen(false)}
               aria-label="Close menu"
             >
-              <FontAwesomeIcon icon={faXmark} />
+              <AppIcon icon={faXmark} />
             </button>
             {renderUserSection("overlay")}
             {renderNotifications("overlay")}

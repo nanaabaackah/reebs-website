@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import "./public.css";
+import { AppIcon } from "/src/components/Icon";
 import {
   faCalendarCheck,
   faClipboardList,
@@ -10,7 +10,7 @@ import {
   faShieldHeart,
   faTruckFast,
   faWandMagicSparkles,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import { useCart } from "../components/CartContext";
 // Bouncy castles are loaded from the database
 
@@ -646,13 +646,13 @@ function Book() {
               </p>
               <div className="booking-pills" aria-label="Booking highlights">
                 <span>
-                  <FontAwesomeIcon icon={faWandMagicSparkles} /> Rentals only
+                  <AppIcon icon={faWandMagicSparkles} /> Rentals only
                 </span>
                 <span>
-                  <FontAwesomeIcon icon={faTruckFast} /> Delivery & pickup handled
+                  <AppIcon icon={faTruckFast} /> Delivery & pickup handled
                 </span>
                 <span>
-                  <FontAwesomeIcon icon={faShieldHeart} /> Sanitized + kid-safe
+                  <AppIcon icon={faShieldHeart} /> Sanitized + kid-safe
                 </span>
               </div>
               <div className="booking-cta-row" role="group" aria-label="Booking actions">
@@ -665,21 +665,21 @@ function Book() {
               </div>
               <div className="booking-meta">
                 <div>
-                  <FontAwesomeIcon icon={faCalendarCheck} />
+                  <AppIcon icon={faCalendarCheck} />
                   <div>
                     <strong>Same-day replies</strong>
                     <p>We hold your date while we confirm delivery & setup.</p>
                   </div>
                 </div>
                 <div>
-                  <FontAwesomeIcon icon={faClock} />
+                  <AppIcon icon={faClock} />
                   <div>
                     <strong>Flexible timing</strong>
                     <p>Morning drop-offs and evening pickups available.</p>
                   </div>
                 </div>
                 <div>
-                  <FontAwesomeIcon icon={faClipboardList} />
+                  <AppIcon icon={faClipboardList} />
                   <div>
                     <strong>Clear checklist</strong>
                     <p>We’ll share a prep list once your booking is locked.</p>
@@ -939,7 +939,7 @@ function Book() {
                 </p>
               </div>
               <div className="booking-rental-search">
-                <FontAwesomeIcon icon={faMagnifyingGlass} aria-hidden="true" />
+                <AppIcon icon={faMagnifyingGlass} aria-hidden="true" />
                 <label htmlFor="rentalSearch" className="sr-only">
                   Search rentals
                 </label>

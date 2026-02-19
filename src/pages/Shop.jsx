@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightLong, faTimes, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import "./public.css";
+import { AppIcon } from "/src/components/Icon";
+import { faArrowRightLong, faTimes, faMagnifyingGlass } from "/src/icons/iconSet";
 import AddToCartButton from "/src/components/AddToCartButton";
 import CartOverlay from "/src/components/CartOverlay";
 import CookieBanner from '/src/components/CookieBanner';
 import { useCart } from "/src/components/CartContext";
 import { useAuth } from "/src/components/AuthContext";
+import PartyConfetti from "/src/components/PartyConfetti";
 
 const SHOP_CACHE_KEY = "reebs_shop_inventory_v1";
 const SHOP_CACHE_TTL = 5 * 60 * 1000;
@@ -248,11 +249,11 @@ function Shop() {
       <CookieBanner />
       <main className="shop-page" role="main" id="main">
         <section id="r3-intro" className="shop-hero">
+          <PartyConfetti className="party-confetti-shop" />
           <div className="shop-hero-copy">
             <h1>Shop</h1>
             <p className="shop-sub">
-              Party supplies, stationary, house supplieess, toys, decor, and all the little delights that make
-              celebrations feel magical.
+              Party supplies, stationery, home supplies, toys, and decor that make celebrations feel complete.
             </p>
             <div className="shop-hero-actions">
               {isAuthenticated ? (
@@ -364,7 +365,7 @@ function Shop() {
                   <div className="shop-meta-row">
                     <nav className="breadcrumb">
                       <Link to="/">Home</Link>{" "}
-                      <FontAwesomeIcon icon={faArrowRightLong} />{"  "}
+                      <AppIcon icon={faArrowRightLong} />{"  "}
                       <span
                         onClick={() => setCategoryFilter("All")}
                         className="breadcrumb-link"
@@ -431,7 +432,7 @@ function Shop() {
                             <span className="shop-out-banner">Out of stock</span>
                           )}
                           <span className="shop-zoom" aria-hidden="true">
-                            <FontAwesomeIcon icon={faMagnifyingGlass} />
+                            <AppIcon icon={faMagnifyingGlass} />
                           </span>
                         </div>
                         <div className="shop-details">
@@ -588,7 +589,7 @@ function Shop() {
       {isAuthenticated && lightboxImage && (
         <div className="lightbox" onClick={() => setLightboxImage(null)}>
           <span className="lightbox-close">
-            <FontAwesomeIcon icon={faTimes} />
+            <AppIcon icon={faTimes} />
           </span>
           <img
             src={lightboxImage}

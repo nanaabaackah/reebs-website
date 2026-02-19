@@ -1,18 +1,18 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faCloudArrowUp,
   faDownload,
   faEye,
   faFolderOpen,
   faSearch,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const COMPANY = {
   name: "REEBS Party Themes",
@@ -554,7 +554,7 @@ function AdminDocuments() {
             </button>
           </div>
           <div className="documents-search">
-            <FontAwesomeIcon icon={faSearch} />
+            <AppIcon icon={faSearch} />
             <input
               type="text"
               placeholder="Search by customer, reference, or file..."
@@ -594,11 +594,11 @@ function AdminDocuments() {
                           to={`/admin/invoicing?type=${doc.referenceType}&id=${doc.referenceId}`}
                           className="documents-secondary"
                         >
-                          <FontAwesomeIcon icon={faEye} /> Preview
+                          <AppIcon icon={faEye} /> Preview
                         </Link>
                       ) : (
                         <button type="button" className="documents-secondary" onClick={() => previewUpload(doc)}>
-                          <FontAwesomeIcon icon={faEye} /> Preview
+                          <AppIcon icon={faEye} /> Preview
                         </button>
                       )}
                       <button
@@ -607,7 +607,7 @@ function AdminDocuments() {
                         onClick={() => (doc.source === "generated" && doc.referenceType !== "upload" ? downloadGenerated(doc) : downloadUpload(doc))}
                         disabled={downloading === doc.id}
                       >
-                        <FontAwesomeIcon icon={faDownload} />
+                        <AppIcon icon={faDownload} />
                         {downloading === doc.id ? "Preparing..." : "Download"}
                       </button>
                     </div>
@@ -620,7 +620,7 @@ function AdminDocuments() {
           <aside className="documents-upload">
             <div className="documents-upload-card">
               <div className="documents-upload-head">
-                <FontAwesomeIcon icon={faFolderOpen} />
+                <AppIcon icon={faFolderOpen} />
                 <div>
                   <h3>Upload documents</h3>
                   <p>Store contracts, vendor agreements, or signed receipts.</p>
@@ -661,7 +661,7 @@ function AdminDocuments() {
                 </label>
                 {uploadError && <p className="documents-error">{uploadError}</p>}
                 <button type="submit" className="documents-primary" disabled={uploading}>
-                  <FontAwesomeIcon icon={faCloudArrowUp} /> {uploading ? "Uploading..." : "Upload document"}
+                  <AppIcon icon={faCloudArrowUp} /> {uploading ? "Uploading..." : "Upload document"}
                 </button>
               </form>
             </div>

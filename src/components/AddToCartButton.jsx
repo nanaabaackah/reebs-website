@@ -1,6 +1,6 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus, faShoppingCart, faTrash, faPlus as faPlusIcon } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faMinus, faPlus, faShoppingCart, faTrash, faPlus as faPlusIcon } from "/src/icons/iconSet";
 import { useCart } from "/src/components/CartContext";
 
 function AddToCartButton({ item, onAdded }) {
@@ -37,7 +37,7 @@ function AddToCartButton({ item, onAdded }) {
         }}
         aria-label={inCart.cartQuantity > 1 ? "Remove one" : "Remove item"}
       >
-        <FontAwesomeIcon icon={inCart.cartQuantity > 1 ? faMinus : faTrash} />
+        <AppIcon icon={inCart.cartQuantity > 1 ? faMinus : faTrash} />
       </button>
 
       <span>{inCart.cartQuantity}</span>
@@ -47,7 +47,7 @@ function AddToCartButton({ item, onAdded }) {
         disabled={maxedOut || isUnavailable}
         aria-label="Add one"
       >
-        <FontAwesomeIcon icon={faPlus} />
+        <AppIcon icon={faPlus} />
       </button>
     </div>
   ) : (
@@ -58,7 +58,7 @@ function AddToCartButton({ item, onAdded }) {
       aria-live="polite"
       aria-label={canAdd ? "Add to cart" : "Out of stock"}
     >
-      <FontAwesomeIcon icon={faPlusIcon} />
+      <AppIcon icon={faPlusIcon} />
     </button>
   );
 }

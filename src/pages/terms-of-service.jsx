@@ -1,5 +1,5 @@
 import React from 'react';
-import './master.css';
+import './public.css';
 
 const termsSections = [
   {

@@ -4,7 +4,7 @@ import InstagramFeed from '/src/components/InstagramFeed';
 import { Link } from 'react-router-dom';
 import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 
-import './master.css';
+import './public.css';
 
 const formatCount = (value) => (Number.isFinite(value) ? `${value}+` : '…');
 
@@ -160,10 +160,9 @@ function About() {
                     <div className='r2-mto-back-heading'>
                         <h2>Meet the Owner</h2>
                         <p>
-                        Our founder, <strong>Sabina Ackah</strong>, brings a wealth of creativity and 
-                        organizational expertise to every project. With an eye for design and a deep 
-                        passion for event planning, she ensures that each client’s vision is met with 
-                        precision and flair.
+                        Our founder, <strong>Sabina Ackah</strong>, leads every project with creativity,
+                        structure, and care. She helps each client turn a party idea into a clear plan
+                        with beautiful results.
                         </p>
                     </div>
                 </section>

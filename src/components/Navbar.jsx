@@ -1,384 +1,188 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarDays, faCaretDown, faHome, faMoon, faShoppingCart, faSearch, faSun, faUser } from '@fortawesome/free-solid-svg-icons';
-import './Navbar.css'; 
-import { useCart } from "./CartContext";
+import '/src/styles/components/Navbar.css';
 import { useAuth } from "./AuthContext";
-import useThemeMode from "../hooks/useThemeMode";
 
-const Navbar = ({ onCartToggle }) => {
+const NAV_LINKS = [
+  { label: 'Home', path: '/' },
+  { label: 'Rentals', path: '/Rentals' },
+  { label: 'Shop', path: '/Shop' },
+  { label: 'Gallery', path: '/Gallery' },
+  { label: 'Contact', path: '/Contact' }
+];
+
+const isPathActive = (pathname, path) => {
+  if (path === '/') return pathname === '/';
+  return pathname === path || pathname.startsWith(`${path}/`);
+};
+
+const Navbar = ({ scrollContainerRef }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showResults, setShowResults] = useState(false);
-  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
-  const [showAuthMenu, setShowAuthMenu] = useState(false);
-  const { darkMode, toggleTheme } = useThemeMode();
-  const { cart } = useCart();
   const { user, logout, authReady } = useAuth();
-
-  const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
-  const showCommerceButtons = authReady && Boolean(user);
-  const searchIndex = [
-    { title: 'Home', path: '/', tags: 'hero rentals shop contact' },
-    { title: 'About', path: '/About', tags: 'team mission values' },
-    { title: 'Shop', path: '/Shop', tags: 'store products decor' },
-    { title: 'Rentals', path: '/Rentals', tags: 'equipment party setup' },
-    { title: 'Booking', path: '/Book', tags: 'rentals booking reserve delivery' },
-    { title: 'Gallery', path: '/Gallery', tags: 'photos themes' },
-    { title: 'FAQ', path: '/faq', tags: 'questions answers help' },
-    { title: 'Contact', path: '/Contact', tags: 'email phone whatsapp' },
-    { title: 'Cart', path: '/Cart', tags: 'bag checkout' },
-    { title: 'Privacy Policy', path: '/privacy-policy', tags: 'legal data' },
-  ];
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    let rafId = null;
+    const scrollHost = scrollContainerRef?.current || window;
+    const usingWindow = scrollHost === window;
+
+    const getScrollTop = () =>
+      usingWindow ? window.scrollY || window.pageYOffset || 0 : scrollHost.scrollTop;
+
     const handleScroll = () => {
-      setScrolled(window.scrollY > 40);
+      if (rafId != null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        const next = getScrollTop() > 42;
+        setScrolled((prev) => (prev === next ? prev : next));
+      });
     };
 
     handleScroll();
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    scrollHost.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (rafId != null) window.cancelAnimationFrame(rafId);
+      scrollHost.removeEventListener('scroll', handleScroll);
+    };
+  }, [location.pathname, scrollContainerRef]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
-    logout(); // Clear the user state/local storage
-    setShowAuthMenu(false); // Close the dropdown
+    logout();
+    setMobileOpen(false);
     navigate('/login', { replace: true, state: { signedOut: true } });
   };
 
-  const filteredResults = searchQuery.trim()
-    ? searchIndex.filter((item) => {
-        const q = searchQuery.trim().toLowerCase();
-        return (
-          item.title.toLowerCase().includes(q) ||
-          item.tags.toLowerCase().includes(q)
-        );
-      }).slice(0, 6)
-    : [];
+  const authPath = authReady && user ? '/admin' : '/login';
+  const authLabel = authReady && user ? 'Dashboard' : 'Sign in';
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (filteredResults.length > 0) {
-      navigate(filteredResults[0].path);
-      closeSearchOverlay();
-    }
+  const handleHeaderWheel = (event) => {
+    const scrollHost = scrollContainerRef?.current;
+    if (!scrollHost) return;
+    if (event.defaultPrevented) return;
+    if (event.deltaY === 0 && event.deltaX === 0) return;
+
+    scrollHost.scrollBy({
+      top: event.deltaY,
+      left: event.deltaX,
+      behavior: 'auto',
+    });
+    event.preventDefault();
   };
 
-  const openSearchOverlay = () => {
-    setShowSearchOverlay(true);
-    setShowResults(true);
-    setTimeout(() => {
-      const input = document.querySelector('.nav-search--overlay input');
-      if (input) input.focus();
-    }, 0);
-  };
-
-  const closeSearchOverlay = () => {
-    setShowSearchOverlay(false);
-    setShowResults(false);
-    setSearchQuery('');
-  };
-
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'Escape' && showSearchOverlay) {
-        closeSearchOverlay();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [showSearchOverlay]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.auth-menu')) {
-        setShowAuthMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (authReady && !user && location.pathname.startsWith("/admin")) {
-      navigate("/login", { replace: true, state: { from: location.pathname } });
-    }
-  }, [authReady, user, location.pathname, navigate]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const mediaQuery = window.matchMedia("(max-width: 720px)");
-    const isReadonlyRoute = (path) => {
-      if (!path.startsWith("/admin")) return false;
-      const normalized = path.replace(/\/+$/, "") || "/admin";
-      const isOrders = normalized === "/admin/orders";
-      const isBookings = normalized === "/admin/bookings";
-      return !(isOrders || isBookings);
-    };
-    const updateReadonly = () => {
-      const shouldReadonly = mediaQuery.matches && isReadonlyRoute(location.pathname);
-      document.body.classList.toggle("admin-readonly", shouldReadonly);
-    };
-    updateReadonly();
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", updateReadonly);
-      return () => {
-        mediaQuery.removeEventListener("change", updateReadonly);
-        document.body.classList.remove("admin-readonly");
-      };
-    }
-    mediaQuery.addListener(updateReadonly);
-    return () => {
-      mediaQuery.removeListener(updateReadonly);
-      document.body.classList.remove("admin-readonly");
-    };
-  }, [location.pathname]);
-
-  const renderSearch = (variant) => (
-    <div className={`nav-search nav-search--${variant}`}>
-      <form onSubmit={handleSearchSubmit}>
-        <FontAwesomeIcon icon={faSearch} aria-hidden="true" />
-        <input
-          type="search"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setShowResults(true);
-          }}
-          onFocus={() => searchQuery && setShowResults(true)}
-          onBlur={() => setTimeout(() => setShowResults(false), 120)}
-          placeholder="Start Typing"
-          aria-label="Search site"
-        />
-        <button type="submit" aria-label="Submit search">
-          Go
-        </button>
-      </form>
-      {showSearchOverlay && showResults && filteredResults.length > 0 && (
-        <ul className="nav-search-results" role="listbox">
-          {filteredResults.map((item) => (
-            <li key={item.path}>
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  navigate(item.path);
-                  closeSearchOverlay();
-                }}
-              >
-                <span className="nav-search-title">{item.title}</span>
-                <span className="nav-search-tags">{item.tags}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-
-  const isActive = (path) => location.pathname === path;
-  const desktopClassName = ['navbar', 'navbar-desktop', scrolled ? 'navbar-scrolled' : 'navbar-default'].join(' ').trim();
-  const mobileClassName = ['navbar', 'navbar-mobile', scrolled ? 'navbar-scrolled-mob' : 'navbar-default'].join(' ').trim();
-
-  const renderAuthMenu = () => {
-    if (!showAuthMenu || !authReady) return null;
-    return (
-      <div className="auth-menu-dropdown auth-dropdown-menu">
-        {user ? (
-          <>
-            <div className="auth-dropdown-header">
-              <strong>{user.name || user.firstName || "User"}</strong>
-              <small>{user.email}</small>
-            </div>
-            <Link 
-              to="/admin" 
-              className="auth-dropdown-item" 
-              onClick={() => setShowAuthMenu(false)}
-            >Dashboard
-            </Link>
-            
-            <button 
-              type="button" 
-              className="auth-dropdown-item logout-btn" 
-              onClick={handleLogout}
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <Link 
-            to="/login" 
-            className="auth-dropdown-item" 
-            onClick={() => setShowAuthMenu(false)}
+  const renderLinks = (onClick) => (
+    <ul className="navbar-links" role="list">
+      {NAV_LINKS.map((item) => (
+        <li key={item.path}>
+          <Link
+            to={item.path}
+            className={isPathActive(location.pathname, item.path) ? 'is-active' : ''}
+            aria-current={isPathActive(location.pathname, item.path) ? 'page' : undefined}
+            onClick={onClick}
           >
-            Sign In
+            {item.label}
           </Link>
-        )}
-      </div>
-    );
-  };
-
-  const renderLinks = (isMobile = false, includeLogo = true) => (
-    <ul className="menu">
-      {!isMobile && includeLogo && scrolled && (
-        <li className="main-logo">
-          <Link to="/"><img src="/imgs/reebs_logo.svg" alt="REEBS Logo" /></Link>
         </li>
-      )}
-      <li><Link to="/" className={isActive('/') ? 'active' : ''}><FontAwesomeIcon icon={faHome} /></Link></li>
-      <li><Link to="/About" className={isActive('/About') ? 'active' : ''}>About</Link></li>
-      <li><Link to="/Shop" className={isActive('/Shop') ? 'active' : ''}>Shop</Link></li>
-      <li className="drop">
-        <button type="button" className="dropbtn">
-          <Link to="/Rentals" className={isActive('/Rentals') ? 'active' : ''}>Rentals </Link>
-          <FontAwesomeIcon icon={faCaretDown} className="nav-caret" />
-        </button>
-        <div className="dropdown-content">
-          <Link to="/Rentals#Kid's%20Party%20Rentals">Kid's Party Equipment</Link>
-          <Link to="/Rentals#Party%20Setup%20Rentals">Party Setup Rentals</Link>
-          <Link to="/Rentals#Event%20Decor%20&%20Setup">Event Decor</Link>
-        </div>
-      </li>
-      <li><Link to="/Contact" className={isActive('/Contact') ? 'active' : ''}>Contact</Link></li>
-    
+      ))}
     </ul>
   );
 
   return (
-    <header>
-      <nav className={desktopClassName}>
-        <div className="nav-links">
+    <header className="site-header" onWheel={handleHeaderWheel}>
+      <div className="navbar-top-rail" aria-hidden="true" />
+      <nav className={`navbar navbar-desktop ${scrolled ? 'is-scrolled' : ''}`} aria-label="Main navigation">
+        <div className="navbar-corner navbar-corner-left" aria-hidden="true">
+          <svg viewBox="0 0 44 44" focusable="false" role="presentation">
+            <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+          </svg>
+        </div>
+        <div className="navbar-corner navbar-corner-right" aria-hidden="true">
+          <svg viewBox="0 0 44 44" focusable="false" role="presentation">
+            <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+          </svg>
+        </div>
+
+        <div className="navbar-col navbar-col-links">
           {renderLinks()}
         </div>
-        <div className='nav-buttons'>
-          <button
-            type="button"
-            className="glass-btn icon-btn search-toggle"
-            onClick={openSearchOverlay}
-            aria-label="Open search"
-          >
-            <FontAwesomeIcon icon={faSearch} />
-          </button>
-          {showCommerceButtons && (
-            <>
-              <button
-                type="button"
-                className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
-                onClick={() => navigate('/Book')}
-                aria-label="Book"
-              >
-                <FontAwesomeIcon icon={faCalendarDays} />
-              </button>
-              <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
-                <span className="cart-icon-wrapper">
-                  <FontAwesomeIcon icon={faShoppingCart} />
-                  {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-                </span>
-              </button>
-            </>
-          )}
-          <div className="auth-menu">
-            <button
-              type="button"
-              className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}
-              onClick={() => setShowAuthMenu((prev) => !prev)}
-              aria-haspopup="true"
-              aria-expanded={showAuthMenu}
-              aria-label="User menu"
-            >
-              <FontAwesomeIcon icon={faUser} />
+
+        <div className="navbar-col navbar-col-logo">
+          <Link to="/" className="navbar-logo-link" aria-label="REEBS home">
+            <img
+              src="/imgs/reebs_logo.svg"
+              alt="REEBS"
+              width="174"
+              height="58"
+              decoding="async"
+            />
+          </Link>
+        </div>
+
+        <div className="navbar-col navbar-col-actions">
+          <Link to={authPath} className="navbar-signin">
+            {authLabel}
+          </Link>
+          {authReady && user ? (
+            <button type="button" className="navbar-signout" onClick={handleLogout}>
+              Sign out
             </button>
-            {renderAuthMenu()}
-          </div>
-          <button
-            type="button"
-            className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}
-            onClick={toggleTheme}
-            aria-label="Toggle dark mode"
-          >
-            <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-          </button>
+          ) : null}
+          <Link to="/Contact" className="navbar-demo-btn">
+            <span>See a demo</span>
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </nav>
-      <nav className={mobileClassName}>
 
-        <div className="nav-links-mob">
+      <nav className={`navbar navbar-mobile ${mobileOpen ? 'is-open' : ''}`} aria-label="Mobile navigation">
+        <div className="navbar-mobile-top">
+          <Link to="/" className="navbar-logo-link" aria-label="REEBS home">
+            <img
+              src="/imgs/reebs_logo.svg"
+              alt="REEBS"
+              width="164"
+              height="54"
+              decoding="async"
+            />
+          </Link>
+          <button
+            type="button"
+            className="navbar-mobile-toggle"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((prev) => !prev)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
 
-          {scrolled && (
-            <Link className="logo" to="/"><img src="/imgs/reebs_logo.svg" alt="REEBS Logo" /></Link>
-          )}
-          <div className='nav-links'>
-            {renderLinks(true, false)}
+        <div className={`navbar-mobile-panel ${mobileOpen ? 'is-open' : ''}`}>
+          {renderLinks(() => setMobileOpen(false))}
+          <div className="navbar-mobile-actions">
+            <Link to={authPath} className="navbar-signin" onClick={() => setMobileOpen(false)}>
+              {authLabel}
+            </Link>
+            {authReady && user ? (
+              <button type="button" className="navbar-signout" onClick={handleLogout}>
+                Sign out
+              </button>
+            ) : null}
+            <Link to="/Contact" className="navbar-demo-btn" onClick={() => setMobileOpen(false)}>
+              <span>See a demo</span>
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
-          <div className='nav-buttons'>
-            <button
-              type="button"
-              className="glass-btn icon-btn search-toggle"
-              onClick={openSearchOverlay}
-              aria-label="Open search"
-            >
-              <FontAwesomeIcon icon={faSearch} />
-            </button>
-            {showCommerceButtons && (
-              <>
-                <button
-                  type="button"
-                  className={`${isActive('/Book') ? 'active' : ''} glass-btn icon-btn cart-button`}
-                  onClick={() => navigate('/Book')}
-                  aria-label="Book"
-                >
-                  <FontAwesomeIcon icon={faCalendarDays} />
-                </button>
-                <button className="cart-button glass-btn icon-btn" onClick={onCartToggle}>
-                  <span className="cart-icon-wrapper">
-                    <FontAwesomeIcon icon={faShoppingCart} />
-                    {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-                  </span>
-                </button>
-              </>
-            )}
-          <div className="auth-menu">
-            <button
-              type="button"
-              className={`cart-button glass-btn icon-btn ${showAuthMenu ? 'is-active' : ''}`}
-              onClick={() => setShowAuthMenu((prev) => !prev)}
-              aria-haspopup="true"
-              aria-expanded={showAuthMenu}
-              aria-label="User menu"
-            >
-              <FontAwesomeIcon icon={faUser} />
-            </button>
-            {renderAuthMenu()}
-          </div>
-            <button
-              type="button"
-              className={`cart-button glass-btn icon-btn theme-toggle ${darkMode ? 'is-dark' : ''}`}
-              onClick={toggleTheme}
-              aria-label="Toggle dark mode"
-            >
-              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-            </button>
-          </div>
-          
         </div>
       </nav>
-      {showSearchOverlay && (
-        <div className="nav-search-overlay" role="dialog" aria-modal="true" onClick={closeSearchOverlay}>
-          <div className="nav-search-box" onClick={(e) => e.stopPropagation()}>
-            <button className="nav-search-close" type="button" aria-label="Close search" onClick={closeSearchOverlay}>
-              ×
-            </button>
-            <p className="nav-search-label">Search the site</p>
-            {renderSearch('overlay')}
-          </div>
-        </div>
-      )}
     </header>
   );
-}
+};
 
 export default Navbar;

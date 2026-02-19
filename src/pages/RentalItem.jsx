@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import "./public.css";
+import { AppIcon } from "/src/components/Icon";
 import {
   faArrowLeftLong,
   faArrowRightLong,
@@ -9,8 +9,9 @@ import {
   faClock,
   faShieldHeart,
   faTruckFast,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import { useCart } from "/src/components/CartContext";
+import { applySeo } from "/src/utils/seo";
 // Bouncy castle variants are fetched from the database
 
 const slugify = (value = "") =>
@@ -107,10 +108,10 @@ const BouncyVariantCard = ({ type, selected, onSelect }) => {
           {hasMultiple && (
             <>
               <button type="button" className="bouncy-nav bouncy-nav-left" onClick={handlePrev} aria-label={`Previous ${type.name} photo`}>
-                <FontAwesomeIcon icon={faArrowLeftLong} />
+                <AppIcon icon={faArrowLeftLong} />
               </button>
               <button type="button" className="bouncy-nav bouncy-nav-right" onClick={handleNext} aria-label={`Next ${type.name} photo`}>
-                <FontAwesomeIcon icon={faArrowRightLong} />
+                <AppIcon icon={faArrowRightLong} />
               </button>
               <span className="bouncy-counter">{activeIndex + 1} / {images.length}</span>
             </>
@@ -262,15 +263,24 @@ const displayRental = rental && selectedBouncyType
   );
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    const normalizedPath = `/rentals/${slug || ""}`;
     if (displayRental?.name) {
-      document.title = `REEBS Party Themes | ${displayRental.name}`;
+      applySeo({
+        pathname: normalizedPath,
+        title: `${displayRental.name} Rental | REEBS Party Themes`,
+        description: `View details, pricing, and booking options for ${displayRental.name} at REEBS Party Themes.`,
+        type: "product",
+      });
       return;
     }
     if (!loading && !rental) {
-      document.title = "REEBS Party Themes | Rental not found";
+      applySeo({
+        pathname: normalizedPath,
+        title: "Rental Not Found | REEBS Party Themes",
+        description: "This rental item may have moved or become unavailable. Explore current REEBS rental options.",
+      });
     }
-  }, [displayRental?.name, loading, rental]);
+  }, [displayRental?.name, loading, rental, slug]);
 
   const handleBookingClick = (event) => {
     if (!showBouncyTable || selectedBouncyType) return;
@@ -337,10 +347,10 @@ const displayRental = rental && selectedBouncyType
               className="breadcrumb-back"
               onClick={() => navigate(-1)}
             >
-              <FontAwesomeIcon icon={faArrowLeftLong} /> Back
+              <AppIcon icon={faArrowLeftLong} /> Back
             </button>
             <Link to="/Rentals">Rentals</Link>
-            <FontAwesomeIcon icon={faArrowRightLong} aria-hidden="true" />
+            <AppIcon icon={faArrowRightLong} aria-hidden="true" />
             <span>{displayRental.name}</span>
           </nav>
 
@@ -451,27 +461,27 @@ const displayRental = rental && selectedBouncyType
               <ul className="rental-includes">
                 {detailHighlights.map((item) => (
                   <li key={item}>
-                    <FontAwesomeIcon icon={faShieldHeart} /> {item}
+                    <AppIcon icon={faShieldHeart} /> {item}
                   </li>
                 ))}
               </ul>
               <div className="rental-feature-row">
                 <div>
-                  <FontAwesomeIcon icon={faTruckFast} />
+                  <AppIcon icon={faTruckFast} />
                   <div>
                     <strong>Delivery & Pickup</strong>
                     <p>Handled by our team within Accra. We confirm timing after you book.</p>
                   </div>
                 </div>
                 <div>
-                  <FontAwesomeIcon icon={faClock} />
+                  <AppIcon icon={faClock} />
                   <div>
                     <strong>Timeline</strong>
                     <p>Most setups take under an hour. We’ll align with your venue schedule.</p>
                   </div>
                 </div>
                 <div>
-                  <FontAwesomeIcon icon={faClipboardList} />
+                  <AppIcon icon={faClipboardList} />
                   <div>
                     <strong>Custom notes</strong>
                     <p>Share your theme and guest count so we tailor the setup.</p>

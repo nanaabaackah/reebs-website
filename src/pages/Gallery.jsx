@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom';
 import galleryImages from '/src/data/galleryImages.json';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
-import './master.css';
+import './public.css';
 import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
+import PartyConfetti from '/src/components/PartyConfetti';
 
 function Gallery() {
     const [activeIndex, setActiveIndex] = useState(-1);
@@ -85,9 +86,11 @@ function Gallery() {
 
     return (
         <div className="gallery-page">
-            <main className="gallery-shell">
+            <a href="#main" className="skip-link">Skip to main content</a>
+            <main className="gallery-shell" id="main" role="main">
                 <section id="r5-intro" className="gallery-hero">
                     <div className="gallery-hero-beams" aria-hidden="true" />
+                    <PartyConfetti className="party-confetti-gallery" />
                     <div className="gallery-hero-grid">
                         <div className="gallery-hero-copy">
                             <p className="gallery-kicker">Recent installs · Party boxes · Rentals</p>

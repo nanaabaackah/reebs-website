@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./master.css";
+import "./admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEllipsisVertical } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faEllipsisVertical } from "/src/icons/iconSet";
 import roleColors from "../utils/roleColors";
 
 const ROLE_OPTIONS = [
@@ -370,7 +370,7 @@ function AdminRoles() {
                               aria-expanded={menuOpen}
                               onClick={() => setOpenMenuId((prev) => (prev === user.id ? null : user.id))}
                             >
-                              <FontAwesomeIcon icon={faEllipsisVertical} />
+                              <AppIcon icon={faEllipsisVertical} />
                               <span className="sr-only">Actions</span>
                             </button>
                             {menuOpen && (

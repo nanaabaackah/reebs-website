@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faPlus,
   faPen,
@@ -8,9 +8,9 @@ import {
   faXmark,
   faPhone,
   faEnvelope,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const emptyForm = {
   name: "",
@@ -240,10 +240,10 @@ function AdminVendors() {
           {!isMobileView && (
             <div className="vendors-actions">
               <button type="button" className="vendors-secondary" onClick={fetchVendors}>
-                <FontAwesomeIcon icon={faRotateRight} /> Refresh
+                <AppIcon icon={faRotateRight} /> Refresh
               </button>
               <button type="button" className="vendors-primary" onClick={openCreateForm}>
-                <FontAwesomeIcon icon={faPlus} /> Add Vendor
+                <AppIcon icon={faPlus} /> Add Vendor
               </button>
             </div>
           )}
@@ -292,7 +292,7 @@ function AdminVendors() {
                 </div>
                 {!isMobileView && (
                   <button type="button" className="vendors-secondary" onClick={openCreateForm}>
-                    <FontAwesomeIcon icon={faPlus} /> New
+                    <AppIcon icon={faPlus} /> New
                   </button>
                 )}
               </div>
@@ -335,7 +335,7 @@ function AdminVendors() {
                         className="vendors-secondary"
                         onClick={() => openEditForm(selectedVendor)}
                       >
-                        <FontAwesomeIcon icon={faPen} /> Edit
+                        <AppIcon icon={faPen} /> Edit
                       </button>
                     )}
                   </div>
@@ -343,12 +343,12 @@ function AdminVendors() {
                   <div className="vendors-profile-actions">
                     {selectedVendor.email && (
                       <a className="vendors-action" href={`mailto:${selectedVendor.email}`}>
-                        <FontAwesomeIcon icon={faEnvelope} /> Email
+                        <AppIcon icon={faEnvelope} /> Email
                       </a>
                     )}
                     {selectedVendor.phone && (
                       <a className="vendors-action" href={`tel:${selectedVendor.phone}`}>
-                        <FontAwesomeIcon icon={faPhone} /> Call
+                        <AppIcon icon={faPhone} /> Call
                       </a>
                     )}
                   </div>
@@ -437,7 +437,7 @@ function AdminVendors() {
                 {activeVendor?.id && <span className="admin-modal-meta">ID {activeVendor.id}</span>}
               </div>
               <button className="admin-close" onClick={closeForm} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
 

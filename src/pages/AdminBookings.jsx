@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import "./admin.css";
+import { AppIcon } from "/src/components/Icon";
 import {
   faPlus,
   faRotateRight,
@@ -9,7 +9,7 @@ import {
   faFileInvoice,
   faChevronLeft,
   faChevronRight,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
@@ -822,11 +822,11 @@ function AdminBookings() {
           {!isMobileView && (
             <div className="bookings-actions">
               <button type="button" className="bookings-secondary" onClick={fetchAll}>
-                <FontAwesomeIcon icon={faRotateRight} />
+                <AppIcon icon={faRotateRight} />
                 Refresh
               </button>
               <button type="button" className="bookings-primary" onClick={openCreate}>
-                <FontAwesomeIcon icon={faPlus} />
+                <AppIcon icon={faPlus} />
                 Add booking
               </button>
             </div>
@@ -892,7 +892,7 @@ function AdminBookings() {
             <div className="bookings-inline">
               <p className="bookings-error">{error}</p>
               <button type="button" className="bookings-secondary" onClick={fetchAll}>
-                <FontAwesomeIcon icon={faRotateRight} /> Retry
+                <AppIcon icon={faRotateRight} /> Retry
               </button>
             </div>
           )}
@@ -1099,7 +1099,7 @@ function AdminBookings() {
                                   viewInvoice(booking);
                                 }}
                               >
-                                <FontAwesomeIcon icon={faFileInvoice} />
+                                <AppIcon icon={faFileInvoice} />
                                 Generate invoice
                               </button>
                               <button
@@ -1109,7 +1109,7 @@ function AdminBookings() {
                                   openEdit(booking);
                                 }}
                               >
-                                <FontAwesomeIcon icon={faPen} />
+                                <AppIcon icon={faPen} />
                                 Edit details
                               </button>
                             </div>
@@ -1192,7 +1192,7 @@ function AdminBookings() {
                 <h2>{editing ? "Update" : "Add"} booking</h2>
               </div>
               <button type="button" className="customers-modal-close" onClick={closeModal} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
 
@@ -1406,7 +1406,7 @@ function AdminBookings() {
                     disabled={!canGoPrevDetail}
                     aria-label="Previous booking"
                   >
-                    <FontAwesomeIcon icon={faChevronLeft} />
+                    <AppIcon icon={faChevronLeft} />
                   </button>
                   <button
                     type="button"
@@ -1415,7 +1415,7 @@ function AdminBookings() {
                     disabled={!canGoNextDetail}
                     aria-label="Next booking"
                   >
-                    <FontAwesomeIcon icon={faChevronRight} />
+                    <AppIcon icon={faChevronRight} />
                   </button>
                 </div>
                 {!isMobileView && (
@@ -1453,7 +1453,7 @@ function AdminBookings() {
                       setDetailBooking(null);
                     }}
                   >
-                    <FontAwesomeIcon icon={faPen} />
+                    <AppIcon icon={faPen} />
                     Edit
                   </button>
                 )}
@@ -1463,7 +1463,7 @@ function AdminBookings() {
                   onClick={() => setDetailBooking(null)}
                   aria-label="Close"
                 >
-                  <FontAwesomeIcon icon={faXmark} />
+                  <AppIcon icon={faXmark} />
                 </button>
               </div>
             </header>

@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faClock,
   faHistory,
   faSignInAlt,
   faSignOutAlt,
   faLocationDot,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
-import "./master.css";
+import "./admin.css";
 
 const formatTime = (value) => {
   if (!value) return "-";
@@ -146,7 +146,7 @@ function AdminTimesheets() {
         <section className="timesheet-hero">
           <div className="timesheet-now">
             <div className="timesheet-now-clock">
-              <FontAwesomeIcon icon={faClock} />
+              <AppIcon icon={faClock} />
               <div>
                 <p>Current time</p>
                 <h2>{now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</h2>
@@ -170,11 +170,11 @@ function AdminTimesheets() {
               onClick={toggleShift}
               disabled={clocking}
             >
-              <FontAwesomeIcon icon={activeShift ? faSignOutAlt : faSignInAlt} />
+              <AppIcon icon={activeShift ? faSignOutAlt : faSignInAlt} />
               {clocking ? "Updating..." : activeShift ? "Clock out" : "Clock in"}
             </button>
             <div className="timesheet-geo">
-              <FontAwesomeIcon icon={faLocationDot} />
+              <AppIcon icon={faLocationDot} />
               <span>{geoStatus || (activeShift ? "Location stored for shift." : "Geo-tag optional.")}</span>
             </div>
           </div>
@@ -201,7 +201,7 @@ function AdminTimesheets() {
         <section className="timesheet-history">
           <div className="timesheet-history-head">
             <h3>
-              <FontAwesomeIcon icon={faHistory} /> Recent shifts
+              <AppIcon icon={faHistory} /> Recent shifts
             </h3>
             <button type="button" className="timesheet-refresh" onClick={fetchTimesheets} disabled={loading}>
               Refresh
@@ -226,7 +226,7 @@ function AdminTimesheets() {
                   <div className="timesheet-item-meta">
                     <span>{shift.durationMinutes ? formatDuration(shift.durationMinutes) : "Open"}</span>
                     <span className="timesheet-dot">
-                      <FontAwesomeIcon icon={faLocationDot} />
+                      <AppIcon icon={faLocationDot} />
                       {shift.clockInLat ? "Geo-tagged" : "No geo"}
                     </span>
                   </div>

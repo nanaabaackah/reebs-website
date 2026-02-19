@@ -1,25 +1,35 @@
 import React, { useEffect, useState } from 'react';
 
-function BackToTop() {
+function BackToTop({ scrollContainerRef }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const scrollHost = scrollContainerRef?.current || window;
+    const usingWindow = scrollHost === window;
+
+    const getScrollTop = () =>
+      usingWindow ? window.scrollY || window.pageYOffset || 0 : scrollHost.scrollTop;
+
     const handleScroll = () => {
-      if (typeof window === 'undefined') return;
-      setVisible(window.scrollY > 240);
+      setVisible(getScrollTop() > 240);
     };
 
     handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    scrollHost.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollHost.removeEventListener('scroll', handleScroll);
+  }, [scrollContainerRef]);
+
+  const handleBackToTop = () => {
+    const scrollHost = scrollContainerRef?.current || window;
+    scrollHost.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (!visible) return null;
 
   return (
     <button
       className="back-to-top"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      onClick={handleBackToTop}
       aria-label="Back to top"
       type="button"
     >

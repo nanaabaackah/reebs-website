@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import "./admin.css";
+import { AppIcon } from "/src/components/Icon";
 import {
   faUserPlus,
   faEnvelope,
@@ -11,8 +11,8 @@ import {
   faTableCells,
   faClock,
   faRotateRight,
-} from "@fortawesome/free-solid-svg-icons";
-import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
+} from "/src/icons/iconSet";
+import { faWhatsapp } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
 const formatMoney = (value, currency = "GHS") => {
@@ -306,10 +306,10 @@ function AdminCustomers() {
           </div>
           <div className="crm-header-actions">
             <button type="button" className="crm-secondary" onClick={fetchCustomers} disabled={loading}>
-              <FontAwesomeIcon icon={faRotateRight} /> Refresh
+              <AppIcon icon={faRotateRight} /> Refresh
             </button>
             <button type="button" className="crm-primary" onClick={() => setCreateOpen(true)}>
-              <FontAwesomeIcon icon={faUserPlus} /> Add Customer
+              <AppIcon icon={faUserPlus} /> Add Customer
             </button>
           </div>
         </header>
@@ -377,7 +377,7 @@ function AdminCustomers() {
               className={viewMode === "board" ? "is-active" : ""}
               onClick={() => setViewMode("board")}
             >
-              <FontAwesomeIcon icon={faColumns} /> Board
+              <AppIcon icon={faColumns} /> Board
             </button>
             <button
               type="button"
@@ -386,7 +386,7 @@ function AdminCustomers() {
               className={viewMode === "list" ? "is-active" : ""}
               onClick={() => setViewMode("list")}
             >
-              <FontAwesomeIcon icon={faTableCells} /> List
+              <AppIcon icon={faTableCells} /> List
             </button>
             <button
               type="button"
@@ -395,7 +395,7 @@ function AdminCustomers() {
               className={viewMode === "timeline" ? "is-active" : ""}
               onClick={() => setViewMode("timeline")}
             >
-              <FontAwesomeIcon icon={faClock} /> Timeline
+              <AppIcon icon={faClock} /> Timeline
             </button>
           </div>
           <p className="crm-count">
@@ -441,10 +441,10 @@ function AdminCustomers() {
                         </div>
                         <div className="crm-card-body">
                           <p>
-                            <FontAwesomeIcon icon={faEnvelope} /> {customer.email || "No email"}
+                            <AppIcon icon={faEnvelope} /> {customer.email || "No email"}
                           </p>
                           <p>
-                            <FontAwesomeIcon icon={faPhone} /> {customer.phone || "No phone"}
+                            <AppIcon icon={faPhone} /> {customer.phone || "No phone"}
                           </p>
                         </div>
                         <div className="crm-metrics">
@@ -465,7 +465,7 @@ function AdminCustomers() {
                           {customer.phone && (
                             <>
                               <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
-                                <FontAwesomeIcon icon={faPhone} /> Call
+                                <AppIcon icon={faPhone} /> Call
                               </a>
                               <a
                                 href={`https://wa.me/${sanitizePhone(customer.phone)}`}
@@ -473,12 +473,12 @@ function AdminCustomers() {
                                 target="_blank"
                                 rel="noreferrer"
                               >
-                                <FontAwesomeIcon icon={faWhatsapp} /> WhatsApp
+                                <AppIcon icon={faWhatsapp} /> WhatsApp
                               </a>
                             </>
                           )}
                           <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
-                            <FontAwesomeIcon icon={faHistory} /> View profile
+                            <AppIcon icon={faHistory} /> View profile
                           </button>
                         </div>
                       </article>
@@ -595,7 +595,7 @@ function AdminCustomers() {
                 <h2>Add customer</h2>
               </div>
               <button className="customers-modal-close" onClick={() => setCreateOpen(false)} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
             <form className="customers-form" onSubmit={createCustomer}>
@@ -646,7 +646,7 @@ function AdminCustomers() {
                 <p className="crm-muted">{activeCustomer.email || "No email"} · {activeCustomer.phone || "No phone"}</p>
               </div>
               <button className="customers-modal-close" onClick={() => setActiveCustomer(null)} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
             {detailLoading && <p className="crm-muted">Loading history...</p>}

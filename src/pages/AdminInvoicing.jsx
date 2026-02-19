@@ -1,12 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faPrint, faPaperPlane, faSearch, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faFilePdf, faPrint, faPaperPlane, faSearch, faFolderOpen } from "/src/icons/iconSet";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const formatCurrency = (amount) => {
   try {
@@ -1002,7 +1002,7 @@ function AdminInvoicing() {
                 onClick={buildPdf}
                 disabled={!displayInvoice || pdfLoading}
               >
-                <FontAwesomeIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
+                <AppIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
               </button>
               <button
                 type="button"
@@ -1010,7 +1010,7 @@ function AdminInvoicing() {
                 onClick={saveToDocuments}
                 disabled={!displayInvoice || savingDoc}
               >
-                <FontAwesomeIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
+                <AppIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
               </button>
               <button
                 type="button"
@@ -1018,10 +1018,10 @@ function AdminInvoicing() {
                 onClick={() => window.print()}
                 disabled={!displayInvoice}
               >
-                <FontAwesomeIcon icon={faPrint} /> Print
+                <AppIcon icon={faPrint} /> Print
               </button>
               <button type="button" className="invoicing-secondary" disabled>
-                <FontAwesomeIcon icon={faPaperPlane} /> Email
+                <AppIcon icon={faPaperPlane} /> Email
               </button>
             </div>
             {saveError && <p className="invoicing-error">{saveError}</p>}
@@ -1032,7 +1032,7 @@ function AdminInvoicing() {
         <div className="invoicing-layout">
           <aside className="invoicing-sidebar no-print">
             <div className="invoicing-search">
-              <FontAwesomeIcon icon={faSearch} />
+              <AppIcon icon={faSearch} />
               <input
                 type="text"
                 placeholder={viewType === "bookings" ? "Search booking or customer" : "Search order or customer"}
@@ -1163,7 +1163,7 @@ function AdminInvoicing() {
                   onClick={buildPdf}
                   disabled={!displayInvoice || pdfLoading}
                 >
-                  <FontAwesomeIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
+                  <AppIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
                 </button>
                 <button
                   type="button"
@@ -1171,7 +1171,7 @@ function AdminInvoicing() {
                   onClick={saveToDocuments}
                   disabled={!displayInvoice || savingDoc}
                 >
-                  <FontAwesomeIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
+                  <AppIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
                 </button>
               </div>
 

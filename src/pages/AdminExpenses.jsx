@@ -1,12 +1,18 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faWallet, faPlus, faReceipt } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faPlus, faReceipt } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
-import "./master.css";
+import {
+  EXPENSE_CATEGORY_LABELS,
+  getExpenseCategoryStyle,
+  inferExpenseCategory,
+  normalizeExpenseCategory,
+} from "../data/expenseCategories";
+import "./admin.css";
 
-const CATEGORIES = ["Logistics", "Operational", "Payroll", "Marketing", "Maintenance"];
+const AUTO_CATEGORY_VALUE = "auto";
 
 const formatCurrency = (amount) => {
   try {
@@ -32,10 +38,22 @@ const formatDate = (value) => {
   });
 };
 
+const formatMonthLabel = (monthKey) => {
+  if (!monthKey) return "All time";
+  const date = new Date(`${monthKey}-01T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return "Selected period";
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+};
+
 const toNumber = (value, fallback = 0) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 };
+
+const normalizeExpense = (expense) => ({
+  ...expense,
+  category: normalizeExpenseCategory(expense?.category) || "Miscellaneous",
+});
 
 const formatExpenseLink = (expense) => {
   const parts = [];
@@ -54,8 +72,10 @@ function AdminExpenses() {
   const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [allTimeView, setAllTimeView] = useState(false);
+  const [monthFilter, setMonthFilter] = useState(() => new Date().toISOString().slice(0, 7));
   const [form, setForm] = useState({
-    category: "Logistics",
+    category: AUTO_CATEGORY_VALUE,
     amount: "",
     description: "",
     date: new Date().toISOString().slice(0, 10),
@@ -87,17 +107,23 @@ function AdminExpenses() {
     }
   };
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async ({ month = monthFilter, allTime = allTimeView } = {}) => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/.netlify/functions/expenses");
+      const params = new URLSearchParams();
+      if (!allTime && month) {
+        params.set("month", `${month}-01`);
+      }
+      const query = params.toString();
+      const res = await fetch(`/.netlify/functions/expenses${query ? `?${query}` : ""}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load expenses.");
-      setExpenses(Array.isArray(data) ? data : []);
+      setExpenses(Array.isArray(data) ? data.map(normalizeExpense) : []);
     } catch (err) {
       console.error("Expenses fetch failed", err);
       setError(err.message || "Unable to load expenses.");
+      setExpenses([]);
     } finally {
       setLoading(false);
     }
@@ -117,7 +143,7 @@ function AdminExpenses() {
       if (!res.ok) throw new Error(data?.error || "Failed to seed expenses.");
       if (data?.seeded) {
         setStatus("Sample expenses loaded.");
-        await fetchExpenses();
+        await fetchExpenses({ month: monthFilter, allTime: allTimeView });
       } else {
         setStatus("Expenses already exist in the database.");
       }
@@ -130,9 +156,26 @@ function AdminExpenses() {
   };
 
   useEffect(() => {
-    fetchExpenses();
     fetchLinks();
   }, []);
+
+  useEffect(() => {
+    fetchExpenses({ month: monthFilter, allTime: allTimeView });
+  }, [monthFilter, allTimeView]);
+
+  const categoryList = useMemo(() => {
+    const extras = Array.from(
+      new Set(
+        expenses
+          .map((expense) => normalizeExpenseCategory(expense.category))
+          .filter(Boolean)
+      )
+    )
+      .filter((category) => !EXPENSE_CATEGORY_LABELS.includes(category))
+      .sort((a, b) => a.localeCompare(b));
+
+    return [...EXPENSE_CATEGORY_LABELS, ...extras];
+  }, [expenses]);
 
   const totalExpenses = useMemo(
     () => expenses.reduce((sum, expense) => sum + toNumber(expense.amount) / 100, 0),
@@ -140,19 +183,24 @@ function AdminExpenses() {
   );
 
   const totalsByCategory = useMemo(() => {
-    return CATEGORIES.reduce((acc, category) => {
+    return categoryList.reduce((acc, category) => {
       const total = expenses
-        .filter((item) => item.category === category)
+        .filter((item) => normalizeExpenseCategory(item.category) === category)
         .reduce((sum, item) => sum + toNumber(item.amount) / 100, 0);
       acc[category] = total;
       return acc;
     }, {});
-  }, [expenses]);
+  }, [categoryList, expenses]);
 
-  const monthLabel = useMemo(() => {
-    const now = new Date();
-    return now.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  }, []);
+  const periodLabel = useMemo(
+    () => (allTimeView ? "All time" : formatMonthLabel(monthFilter)),
+    [allTimeView, monthFilter]
+  );
+
+  const suggestedCategory = useMemo(
+    () => inferExpenseCategory({ category: form.category, description: form.description }),
+    [form.category, form.description]
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -176,9 +224,21 @@ function AdminExpenses() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to log expense.");
-      setExpenses((prev) => [data, ...prev]);
-      setStatus("Expense logged.");
-      setForm((prev) => ({ ...prev, amount: "", description: "", orderId: "", bookingId: "" }));
+      const normalizedRow = normalizeExpense(data);
+      setExpenses((prev) => [normalizedRow, ...prev]);
+      if (data?.categoryAutoDetected) {
+        setStatus(`Expense logged. Category auto-detected as ${normalizedRow.category}.`);
+      } else {
+        setStatus("Expense logged.");
+      }
+      setForm((prev) => ({
+        ...prev,
+        category: AUTO_CATEGORY_VALUE,
+        amount: "",
+        description: "",
+        orderId: "",
+        bookingId: "",
+      }));
     } catch (err) {
       console.error("Expense save failed", err);
       setError(err.message || "Unable to save expense.");
@@ -188,8 +248,8 @@ function AdminExpenses() {
   };
 
   return (
-    <div className="expenses-page">
-      <div className="expenses-shell">
+    <div className="expenses-page expenses-page--redesign">
+      <div className="expenses-shell expenses-shell--redesign">
         <AdminBreadcrumb items={[{ label: "Expenses" }]} />
 
         <header className="expenses-header">
@@ -197,23 +257,46 @@ function AdminExpenses() {
             <p className="expenses-eyebrow">Operating Expenses</p>
             <h1>Expense Tracker</h1>
             <p className="expenses-subtitle">
-              Capture logistics, operational, payroll, and marketing spend to calculate true net profit.
+              Mostly automatic bookkeeping: category is inferred from notes, totals roll up by period,
+              and accounting statements update automatically.
             </p>
           </div>
           <div className="expenses-total-card">
-            <p className="expenses-card-label">Monthly total</p>
+            <p className="expenses-card-label">Total in view</p>
             <h3>{formatCurrency(totalExpenses)}</h3>
-            <p>{monthLabel}</p>
+            <p>{periodLabel}</p>
           </div>
         </header>
+
+        <div className="expenses-filters">
+          <label>
+            Posting period
+            <input
+              type="month"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+              disabled={allTimeView}
+            />
+          </label>
+          <label className="expenses-check">
+            <input
+              type="checkbox"
+              checked={allTimeView}
+              onChange={(event) => setAllTimeView(event.target.checked)}
+            />
+            Show all time
+          </label>
+        </div>
 
         {error && <p className="expenses-error">{error}</p>}
         {status && <p className="expenses-success">{status}</p>}
 
         <section className="expenses-kpis">
-          {CATEGORIES.map((category) => (
+          {categoryList.map((category) => (
             <div key={category} className="expenses-kpi">
-              <span className={`expenses-tag ${category.toLowerCase()}`}>{category}</span>
+              <span className="expenses-tag" style={getExpenseCategoryStyle(category)}>
+                {category}
+              </span>
               <strong>{formatCurrency(totalsByCategory[category] || 0)}</strong>
             </div>
           ))}
@@ -223,9 +306,9 @@ function AdminExpenses() {
           <section className="expenses-card">
             <div className="expenses-card-head">
               <h2>
-                <FontAwesomeIcon icon={faPlus} /> Log expense
+                <AppIcon icon={faPlus} /> Log expense
               </h2>
-              <p className="expenses-muted">Capture operational costs in seconds.</p>
+              <p className="expenses-muted">Default mode auto-categorizes so non-accountants can post quickly.</p>
             </div>
             <form className="expenses-form" onSubmit={handleSubmit}>
               <label>
@@ -234,13 +317,17 @@ function AdminExpenses() {
                   value={form.category}
                   onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
                 >
-                  {CATEGORIES.map((category) => (
+                  <option value={AUTO_CATEGORY_VALUE}>Auto-detect from description</option>
+                  {EXPENSE_CATEGORY_LABELS.map((category) => (
                     <option key={category} value={category}>
                       {category}
                     </option>
                   ))}
                 </select>
               </label>
+              <p className="expenses-hint">
+                Suggested category: <strong>{suggestedCategory}</strong>
+              </p>
               <label>
                 Amount (GHS)
                 <input
@@ -313,12 +400,16 @@ function AdminExpenses() {
             <div className="admin-table-header">
               <div>
                 <h3>
-                  <FontAwesomeIcon icon={faReceipt} /> Expense ledger
+                  <AppIcon icon={faReceipt} /> Expense ledger
                 </h3>
                 <span>{expenses.length} records</span>
               </div>
               <div className="expenses-actions">
-                <button type="button" className="expenses-secondary" onClick={fetchExpenses}>
+                <button
+                  type="button"
+                  className="expenses-secondary"
+                  onClick={() => fetchExpenses({ month: monthFilter, allTime: allTimeView })}
+                >
                   Refresh
                 </button>
                 {expenses.length === 0 && !loading && (
@@ -362,13 +453,11 @@ function AdminExpenses() {
                       <tr key={expense.id}>
                         <td>{formatDate(expense.date)}</td>
                         <td>
-                          <span className={`expenses-tag ${String(expense.category || "").toLowerCase()}`}>
+                          <span className="expenses-tag" style={getExpenseCategoryStyle(expense.category)}>
                             {expense.category}
                           </span>
                         </td>
-                        <td>
-                          {formatExpenseLink(expense)}
-                        </td>
+                        <td>{formatExpenseLink(expense)}</td>
                         <td>{formatCurrency(toNumber(expense.amount) / 100)}</td>
                         <td>{expense.description || "-"}</td>
                       </tr>

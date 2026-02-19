@@ -2,6 +2,27 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { requireUser } from "./_shared/userAuth.js";
+import {
+  EXPENSE_CATEGORIES,
+  buildExpenseFilter,
+  normalizeExpenseCategory,
+  resolveExpenseColumns,
+  resolveExpenseTable,
+} from "./_shared/expenseAccounting.js";
+
+const RESPONSE_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
+  "Access-Control-Allow-Methods": "GET,OPTIONS",
+};
+
+const json = (statusCode, body) => ({
+  statusCode,
+  headers: RESPONSE_HEADERS,
+  body: JSON.stringify(body),
+});
 
 const getWindowRange = (windowKey = "thisMonth") => {
   const now = new Date();
@@ -74,7 +95,118 @@ const ensureOrderColumns = async (client) => {
   }
 };
 
-export async function handler(event) {
+const hasColumn = async (client, tableName, columnName, schema = "public") => {
+  const result = await client.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
+     LIMIT 1`,
+    [schema, tableName, columnName]
+  );
+  return result.rowCount > 0;
+};
+
+const normalizeSku = (sku) => (typeof sku === "string" ? sku.trim().toUpperCase() : "");
+
+const buildExpenseBreakdown = async ({ client, start, end, organizationId }) => {
+  const table = await resolveExpenseTable(client);
+  if (!table) {
+    return {
+      totalCents: 0,
+      breakdown: [],
+      tableLabel: null,
+      hasOrganizationId: false,
+    };
+  }
+
+  const columns = await resolveExpenseColumns(client, table);
+  const hasOrganizationId = columns.includes("organizationId");
+  const expenseTotals = new Map();
+
+  const { whereClause, params } = buildExpenseFilter({
+    hasOrganizationId,
+    organizationId,
+    startDate: start,
+    endDate: end,
+    dateExpression: "\"date\"",
+  });
+
+  const expenseRows = await client.query(
+    `SELECT category, COALESCE(SUM(amount), 0) AS expense_cents
+     FROM ${table.queryRef}
+     ${whereClause}
+     GROUP BY category`,
+    params
+  );
+
+  for (const row of expenseRows.rows || []) {
+    const category = normalizeExpenseCategory(row.category) || "Miscellaneous";
+    const cents = Number(row.expense_cents || 0);
+    if (!Number.isFinite(cents) || cents === 0) continue;
+    expenseTotals.set(category, (expenseTotals.get(category) || 0) + cents);
+  }
+
+  try {
+    const maintenanceHasOrg = await hasColumn(client, "maintenanceLog", "organizationId");
+    const maintenanceParams = [start.toISOString(), end.toISOString()];
+    const maintenanceConditions = [
+      `LOWER(COALESCE(m.status, '')) IN ('open', 'resolved', 'accepted')`,
+      `COALESCE(m."resolvedAt", m."createdAt") >= $1`,
+      `COALESCE(m."resolvedAt", m."createdAt") < $2`,
+    ];
+    if (maintenanceHasOrg) {
+      maintenanceParams.push(organizationId);
+      maintenanceConditions.push(`m."organizationId" = $${maintenanceParams.length}`);
+    }
+
+    const maintenanceRes = await client.query(
+      `SELECT COALESCE(SUM(m.cost), 0) AS maintenance_cents
+       FROM "maintenanceLog" m
+       WHERE ${maintenanceConditions.join(" AND ")}`,
+      maintenanceParams
+    );
+
+    const maintenanceCents = Number(maintenanceRes.rows[0]?.maintenance_cents || 0);
+    if (Number.isFinite(maintenanceCents) && maintenanceCents > 0) {
+      const maintenanceCategory = "Repairs & Maintenance";
+      expenseTotals.set(
+        maintenanceCategory,
+        (expenseTotals.get(maintenanceCategory) || 0) + maintenanceCents
+      );
+    }
+  } catch (err) {
+    console.warn("Maintenance expense rollup failed:", err?.message || err);
+  }
+
+  const orderedCategories = [
+    ...EXPENSE_CATEGORIES,
+    ...Array.from(expenseTotals.keys())
+      .filter((category) => !EXPENSE_CATEGORIES.includes(category))
+      .sort((a, b) => a.localeCompare(b)),
+  ];
+
+  const breakdown = orderedCategories
+    .map((category) => ({
+      category,
+      amount: (expenseTotals.get(category) || 0) / 100,
+    }))
+    .filter((entry) => entry.amount > 0);
+
+  const totalCents = breakdown.reduce((sum, entry) => sum + Math.round(entry.amount * 100), 0);
+
+  return {
+    totalCents,
+    breakdown,
+    tableLabel: table.label,
+    hasOrganizationId,
+  };
+};
+
+export async function handler(event = {}) {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: RESPONSE_HEADERS, body: "" };
+  }
+
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -85,22 +217,38 @@ export async function handler(event) {
 
   try {
     await client.connect();
+
+    const authUser = await requireUser(client, event);
+    if (!authUser) {
+      return json(401, { error: "Unauthorized" });
+    }
+
+    const organizationId = Number(authUser.organizationId);
     await ensureOrderColumns(client);
 
-    const params = [start.toISOString(), end.toISOString()];
+    const [orderHasOrg, bookingHasOrg] = await Promise.all([
+      hasColumn(client, "order", "organizationId"),
+      hasColumn(client, "booking", "organizationId"),
+    ]);
+
+    const startIso = start.toISOString();
+    const endIso = end.toISOString();
+    const orderParams = orderHasOrg ? [startIso, endIso, organizationId] : [startIso, endIso];
+    const bookingParams = bookingHasOrg ? [startIso, endIso, organizationId] : [startIso, endIso];
+    const orderOrgFilter = orderHasOrg ? `AND o."organizationId" = $3` : "";
+    const bookingOrgFilter = bookingHasOrg ? `AND b."organizationId" = $3` : "";
 
     const [
       summary,
-      categoryRows,
       topRows,
       cashflowRows,
       deliveryFeeRows,
       skuRows,
       transactionRows,
-      expenseRows,
       bookingSummary,
       bookingDaily,
       topRentalRows,
+      expenseSummary,
     ] = await Promise.all([
       client.query(
         `SELECT
@@ -109,12 +257,14 @@ export async function handler(event) {
              FROM "order" o
              WHERE o."orderDate" >= $1
                AND o."orderDate" < $2
+               ${orderOrgFilter}
            ), 0)::int AS orders,
            COALESCE((
              SELECT SUM(o.total_amount)
              FROM "order" o
              WHERE o."orderDate" >= $1
                AND o."orderDate" < $2
+               ${orderOrgFilter}
            ), 0) AS revenue_cents,
            COALESCE((
              SELECT SUM(oi.quantity)
@@ -122,6 +272,7 @@ export async function handler(event) {
              JOIN "orderItem" oi ON oi."orderId" = o.id
              WHERE o."orderDate" >= $1
                AND o."orderDate" < $2
+               ${orderOrgFilter}
            ), 0)::int AS units,
            COALESCE((
              SELECT SUM(oi.quantity * COALESCE(p."purchasePriceGhs", 0))
@@ -130,21 +281,9 @@ export async function handler(event) {
              JOIN "product" p ON p.id = oi."productId"
              WHERE o."orderDate" >= $1
                AND o."orderDate" < $2
+               ${orderOrgFilter}
            ), 0) AS cost_cents`,
-        params
-      ),
-      client.query(
-        `SELECT
-           LOWER(p."sourceCategoryCode") AS category,
-           COALESCE(SUM(oi.total_amount), 0) AS revenue_cents,
-           COALESCE(SUM(oi.quantity), 0)::int AS units
-         FROM "order" o
-         JOIN "orderItem" oi ON oi."orderId" = o.id
-         JOIN "product" p ON p.id = oi."productId"
-         WHERE o."orderDate" >= $1
-           AND o."orderDate" < $2
-         GROUP BY LOWER(p."sourceCategoryCode")`,
-        params
+        orderParams
       ),
       client.query(
         `SELECT
@@ -158,10 +297,11 @@ export async function handler(event) {
          JOIN "product" p ON p.id = oi."productId"
          WHERE o."orderDate" >= $1
            AND o."orderDate" < $2
+           ${orderOrgFilter}
          GROUP BY p.id, p.name, p.sku
          ORDER BY revenue_cents DESC
          LIMIT 5`,
-        params
+        orderParams
       ),
       client.query(
         `SELECT
@@ -170,9 +310,10 @@ export async function handler(event) {
          FROM "order" o
          WHERE o."orderDate" >= $1
            AND o."orderDate" < $2
+           ${orderOrgFilter}
          GROUP BY o."orderDate"::date
          ORDER BY o."orderDate"::date ASC`,
-        params
+        orderParams
       ),
       client.query(
         `SELECT
@@ -181,8 +322,9 @@ export async function handler(event) {
            o."orderDate"::date AS bucket
          FROM "order" o
          WHERE o."orderDate" >= $1
-           AND o."orderDate" < $2`,
-        params
+           AND o."orderDate" < $2
+           ${orderOrgFilter}`,
+        orderParams
       ),
       client.query(
         `SELECT
@@ -195,8 +337,9 @@ export async function handler(event) {
          JOIN "product" p ON p.id = oi."productId"
          WHERE o."orderDate" >= $1
            AND o."orderDate" < $2
+           ${orderOrgFilter}
          GROUP BY p.sku, p."sourceCategoryCode"`,
-        params
+        orderParams
       ),
       client.query(
         `SELECT
@@ -211,39 +354,35 @@ export async function handler(event) {
          JOIN "product" p ON p.id = oi."productId"
          WHERE o."orderDate" >= $1
            AND o."orderDate" < $2
+           ${orderOrgFilter}
          GROUP BY p.id, p.name, p.sku, p."purchasePriceGhs"
          ORDER BY revenue_cents DESC
          LIMIT 50`,
-        params
-      ),
-      client.query(
-        `SELECT COALESCE(SUM(amount), 0) AS expense_cents
-         FROM "expense"
-         WHERE date >= $1
-           AND date < $2`,
-        params
+        orderParams
       ),
       client.query(
         `SELECT
            COUNT(*)::int AS bookings,
-           COALESCE(SUM("totalAmount"), 0) AS revenue_cents
-         FROM "booking"
-         WHERE LOWER(COALESCE(status, '')) IN ('confirmed', 'completed')
-           AND "eventDate" >= $1
-           AND "eventDate" < $2`,
-        params
+           COALESCE(SUM(b."totalAmount"), 0) AS revenue_cents
+         FROM "booking" b
+         WHERE LOWER(COALESCE(b.status, '')) IN ('confirmed', 'completed')
+           AND b."eventDate" >= $1
+           AND b."eventDate" < $2
+           ${bookingOrgFilter}`,
+        bookingParams
       ),
       client.query(
         `SELECT
-           "eventDate"::date AS bucket,
-           COALESCE(SUM("totalAmount"), 0) AS revenue_cents
-         FROM "booking"
-         WHERE LOWER(COALESCE(status, '')) IN ('confirmed', 'completed')
-           AND "eventDate" >= $1
-           AND "eventDate" < $2
-         GROUP BY "eventDate"::date
-         ORDER BY "eventDate"::date ASC`,
-        params
+           b."eventDate"::date AS bucket,
+           COALESCE(SUM(b."totalAmount"), 0) AS revenue_cents
+         FROM "booking" b
+         WHERE LOWER(COALESCE(b.status, '')) IN ('confirmed', 'completed')
+           AND b."eventDate" >= $1
+           AND b."eventDate" < $2
+           ${bookingOrgFilter}
+         GROUP BY b."eventDate"::date
+         ORDER BY b."eventDate"::date ASC`,
+        bookingParams
       ),
       client.query(
         `SELECT
@@ -258,17 +397,21 @@ export async function handler(event) {
          WHERE LOWER(COALESCE(b.status, '')) IN ('confirmed', 'completed')
            AND b."eventDate" >= $1
            AND b."eventDate" < $2
+           ${bookingOrgFilter}
          GROUP BY p.id, p.name, p.sku
          ORDER BY revenue_cents DESC
          LIMIT 5`,
-        params
+        bookingParams
       ),
+      buildExpenseBreakdown({
+        client,
+        start,
+        end,
+        organizationId,
+      }),
     ]);
 
     const categoryMap = { retail: 0, rental: 0, other: 0 };
-
-    const normalizeSku = (sku) => (typeof sku === "string" ? sku.trim().toUpperCase() : "");
-
     const addToCategory = (cat, cents) => {
       if (cat === "rental") {
         categoryMap.rental += cents;
@@ -277,7 +420,6 @@ export async function handler(event) {
       }
     };
 
-    // SKU-driven split: INV* -> retail, RENT* -> rental (though rentals will be driven by bookings below), otherwise fall back to category code
     for (const row of skuRows.rows || []) {
       const sku = normalizeSku(row.sku || "");
       const cents = Number(row.revenue_cents || 0);
@@ -292,6 +434,7 @@ export async function handler(event) {
     const bookingRevenueCents = Number(bookingSummary.rows[0]?.revenue_cents || 0);
     const bookingCount = bookingSummary.rows[0]?.bookings || 0;
     categoryMap.rental += bookingRevenueCents;
+
     const deliveryFeeTotals = new Map();
     let deliveryFeeCentsTotal = 0;
     for (const row of deliveryFeeRows.rows || []) {
@@ -301,14 +444,15 @@ export async function handler(event) {
       const key = row.bucket;
       deliveryFeeTotals.set(key, (deliveryFeeTotals.get(key) || 0) + feeCents);
     }
+
     categoryMap.retail += deliveryFeeCentsTotal;
+
     const orderRevenueCents = Number(summary.rows[0]?.revenue_cents || 0) + deliveryFeeCentsTotal;
     const costCents = Number(summary.rows[0]?.cost_cents || 0);
-    const expenseWindowCents = Number(expenseRows.rows[0]?.expense_cents || 0);
+    const expenseWindowCents = Number(expenseSummary.totalCents || 0);
     const grossProfitCents = orderRevenueCents - costCents + bookingRevenueCents;
     const netProfitCents = grossProfitCents - expenseWindowCents;
 
-    // Merge cashflow from orders and bookings by date
     const cashflowMap = new Map();
     for (const row of cashflowRows.rows || []) {
       const key = row.bucket;
@@ -348,61 +492,59 @@ export async function handler(event) {
       };
     });
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+    return json(200, {
+      window: windowKey,
+      windowLabel: label,
+      startDate: startIso,
+      endDate: endIso,
+      orders: summary.rows[0]?.orders || 0,
+      bookings: bookingCount,
+      bookingRevenue: bookingRevenueCents / 100,
+      revenue: (orderRevenueCents + bookingRevenueCents) / 100,
+      units: summary.rows[0]?.units || 0,
+      expenseWindowLabel: label,
+      summary: {
+        revenue: orderRevenueCents / 100,
+        cogs: costCents / 100,
+        rentalIncome: bookingRevenueCents / 100,
+        grossProfit: grossProfitCents / 100,
+        operatingExpenses: expenseWindowCents / 100,
+        netProfit: netProfitCents / 100,
       },
-      body: JSON.stringify({
-        window: windowKey,
-        windowLabel: label,
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
-        orders: summary.rows[0]?.orders || 0,
-        bookings: bookingCount,
-        bookingRevenue: bookingRevenueCents / 100,
-        revenue: (orderRevenueCents + bookingRevenueCents) / 100,
-        units: summary.rows[0]?.units || 0,
-        expenseWindowLabel: label,
-        summary: {
-          revenue: orderRevenueCents / 100,
-          cogs: costCents / 100,
-          rentalIncome: bookingRevenueCents / 100,
-          grossProfit: grossProfitCents / 100,
-          operatingExpenses: expenseWindowCents / 100,
-          netProfit: netProfitCents / 100,
+      expenseBreakdown: expenseSummary.breakdown,
+      transactions,
+      revenueByCategory: {
+        retail: categoryMap.retail / 100,
+        rental: categoryMap.rental / 100,
+        other: categoryMap.other / 100,
+      },
+      topProducts: (topRows.rows || []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        sku: row.sku,
+        revenue: Number(row.revenue_cents || 0) / 100,
+        units: row.units || 0,
+      })),
+      topRentals: (topRentalRows.rows || []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        sku: row.sku,
+        revenue: Number(row.revenue_cents || 0) / 100,
+        units: row.units || 0,
+      })),
+      cashflow,
+      automation: {
+        organizationScoped: {
+          orders: orderHasOrg,
+          bookings: bookingHasOrg,
+          expenses: expenseSummary.hasOrganizationId,
         },
-        transactions,
-        revenueByCategory: {
-          retail: categoryMap.retail / 100,
-          rental: categoryMap.rental / 100,
-          other: categoryMap.other / 100,
-        },
-        topProducts: (topRows.rows || []).map((row) => ({
-          id: row.id,
-          name: row.name,
-          sku: row.sku,
-          revenue: Number(row.revenue_cents || 0) / 100,
-          units: row.units || 0,
-        })),
-        topRentals: (topRentalRows.rows || []).map((row) => ({
-          id: row.id,
-          name: row.name,
-          sku: row.sku,
-          revenue: Number(row.revenue_cents || 0) / 100,
-          units: row.units || 0,
-        })),
-        cashflow,
-      }),
-    };
+        expenseSourceTable: expenseSummary.tableLabel,
+      },
+    });
   } catch (err) {
     console.error("❌ Financial stats error:", err);
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Failed to load financial stats" }),
-    };
+    return json(500, { error: "Failed to load financial stats" });
   } finally {
     await client.end().catch(() => {});
   }

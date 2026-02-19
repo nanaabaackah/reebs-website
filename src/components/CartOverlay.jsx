@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faMinus, faPlus, faTimes, faTrash } from "/src/icons/iconSet";
 import { useCart } from "./CartContext";
 
 const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
@@ -56,7 +56,7 @@ function CartOverlay({ open, onClose }) {
               ))}
             </select>
             <button className="close-cart" onClick={onClose} aria-label="Close cart">
-              <FontAwesomeIcon icon={faTimes} />
+              <AppIcon icon={faTimes} />
             </button>
           </div>
         </div>
@@ -93,7 +93,7 @@ function CartOverlay({ open, onClose }) {
                           onClick={() => removeFromCart(item.id)}
                           aria-label="Remove item"
                         >
-                          <FontAwesomeIcon icon={faTrash} />
+                          <AppIcon icon={faTrash} />
                         </button>
                       </div>
 
@@ -107,7 +107,7 @@ function CartOverlay({ open, onClose }) {
                             }
                             aria-label="Decrease quantity"
                           >
-                            <FontAwesomeIcon icon={faMinus} />
+                            <AppIcon icon={faMinus} />
                           </button>
                           <span>{item.cartQuantity}</span>
                           <button
@@ -115,7 +115,7 @@ function CartOverlay({ open, onClose }) {
                             disabled={item.cartQuantity >= getItemQuantity(item)}
                             aria-label="Increase quantity"
                           >
-                            <FontAwesomeIcon icon={faPlus} />
+                            <AppIcon icon={faPlus} />
                           </button>
                           <p className="cart-stock">
                             {available > 0 ? `${available} left` : "Max stock"}

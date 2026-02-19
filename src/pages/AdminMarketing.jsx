@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faTags,
   faBullhorn,
   faPaperPlane,
   faRotateRight,
   faPlus,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const TYPE_OPTIONS = [
   { value: "PERCENTAGE", label: "% Off" },
@@ -286,10 +286,10 @@ function AdminMarketing() {
           </div>
           <div className="marketing-actions">
             <button type="button" className="admin-secondary" onClick={seedCampaigns}>
-              <FontAwesomeIcon icon={faPlus} /> Seed campaigns
+              <AppIcon icon={faPlus} /> Seed campaigns
             </button>
             <button type="button" className="admin-secondary" onClick={fetchDiscounts}>
-              <FontAwesomeIcon icon={faRotateRight} /> Refresh
+              <AppIcon icon={faRotateRight} /> Refresh
             </button>
           </div>
         </header>
@@ -505,7 +505,7 @@ function AdminMarketing() {
                   <div className="marketing-segment-meta">
                     <strong>{segment.count}</strong>
                     <button type="button" onClick={() => sendBlast(segment.label)}>
-                      <FontAwesomeIcon icon={faPaperPlane} /> Message
+                      <AppIcon icon={faPaperPlane} /> Message
                     </button>
                   </div>
                 </div>

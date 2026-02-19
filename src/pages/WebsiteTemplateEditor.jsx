@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faCircleCheck,
   faExternalLinkAlt,
   faFloppyDisk,
   faPenToSquare,
-} from "@fortawesome/free-solid-svg-icons";
-import "./master.css";
+} from "/src/icons/iconSet";
+import "./admin.css";
 
 import { useTemplateConfig } from "../context/TemplateConfigContext";
 import { WEBSITE_URL } from "../utils/website";
@@ -134,23 +134,23 @@ function WebsiteTemplateEditor() {
                 setEditMode(true);
               }}
             >
-              <FontAwesomeIcon icon={faPenToSquare} />
+              <AppIcon icon={faPenToSquare} />
               Enter edit mode
             </button>
           ) : (
             <>
               <button type="button" className="hero-btn hero-btn-ghost" onClick={handlePreview}>
-                <FontAwesomeIcon icon={faExternalLinkAlt} />
+                <AppIcon icon={faExternalLinkAlt} />
                 Preview edits
               </button>
               <button type="button" className="hero-btn hero-btn-ghost" onClick={handleExitEditMode}>
-                <FontAwesomeIcon icon={faPenToSquare} />
+                <AppIcon icon={faPenToSquare} />
                 Exit edit mode
               </button>
             </>
           )}
           <a href={WEBSITE_URL} target="_blank" rel="noreferrer" className="hero-btn hero-btn-link">
-            <FontAwesomeIcon icon={faExternalLinkAlt} />
+            <AppIcon icon={faExternalLinkAlt} />
             View public site
           </a>
         </div>
@@ -181,11 +181,11 @@ function WebsiteTemplateEditor() {
           ))}
           <div className="template-editor-actions">
             <button type="submit" className="hero-btn hero-btn-primary" disabled={!editMode || saving}>
-              <FontAwesomeIcon icon={faFloppyDisk} />
+              <AppIcon icon={faFloppyDisk} />
               Save &amp; apply
             </button>
             <button type="button" className="hero-btn hero-btn-ghost" onClick={handleReset} disabled={!editMode}>
-              <FontAwesomeIcon icon={faCircleCheck} />
+              <AppIcon icon={faCircleCheck} />
               Restore defaults
             </button>
           </div>

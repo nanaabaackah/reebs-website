@@ -1,11 +1,11 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import "./master.css";
+import "./admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
 import { GoogleMap, InfoWindowF, MarkerF, useJsApiLoader } from "@react-google-maps/api";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faArrowLeft, faArrowRight } from "/src/icons/iconSet";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -788,7 +788,7 @@ function AdminScheduler() {
                       setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
                     }
                   >
-                    <FontAwesomeIcon icon={faArrowLeft} />
+                    <AppIcon icon={faArrowLeft} />
                   </button>
                   <button
                     type="button"
@@ -826,7 +826,7 @@ function AdminScheduler() {
                       setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
                     }
                   >
-                    <FontAwesomeIcon icon={faArrowRight} />
+                    <AppIcon icon={faArrowRight} />
                   </button>
                 </div>
                 <button

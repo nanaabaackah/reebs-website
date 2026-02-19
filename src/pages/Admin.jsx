@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import "./master.css";
+import "./admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import { useCart } from "../components/CartContext";
@@ -80,6 +80,7 @@ function Admin() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [inStockOnly, setInStockOnly] = useState(false);
+  const [outOfStockOnly, setOutOfStockOnly] = useState(false);
   const [reorderOnly, setReorderOnly] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 10;
@@ -410,7 +411,7 @@ function Admin() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, categoryFilter, inStockOnly, reorderOnly, viewMode, items.length]);
+  }, [search, categoryFilter, inStockOnly, outOfStockOnly, reorderOnly, viewMode, items.length]);
 
   const sortValue = (item, key) => {
     switch (key) {
@@ -454,6 +455,7 @@ function Admin() {
         if (!cat.includes(filterCategory)) return false;
       }
       if (inStockOnly && quantity <= 0) return false;
+      if (outOfStockOnly && quantity > 0) return false;
       if (reorderOnly && quantity > getReorderLevel(item)) return false;
       return true;
     });
@@ -467,7 +469,7 @@ function Admin() {
       return 0;
     });
     return filtered;
-  }, [items, sortConfig, search, categoryFilter, inStockOnly]);
+  }, [items, sortConfig, search, categoryFilter, inStockOnly, outOfStockOnly, reorderOnly]);
 
   const pageCount = Math.max(1, Math.ceil(inventory.length / pageSize));
   const clampedPage = Math.min(page, pageCount - 1);
@@ -479,6 +481,62 @@ function Admin() {
   const totalItems = inventory.length;
   const totalUnits = inventory.reduce((sum, item) => sum + getQuantity(item), 0);
   const lowStock = inventory.filter((item) => getQuantity(item) <= getReorderLevel(item)).length;
+  const outOfStock = inventory.filter((item) => getQuantity(item) <= 0).length;
+  const healthyItems = Math.max(0, totalItems - lowStock);
+  const healthyRate = totalItems ? Math.round((healthyItems / totalItems) * 100) : 0;
+  const lowStockRate = totalItems ? Math.round((lowStock / totalItems) * 100) : 0;
+  const outOfStockRate = totalItems ? Math.round((outOfStock / totalItems) * 100) : 0;
+  const avgUnitsPerSku = totalItems ? (totalUnits / totalItems).toFixed(1) : "0.0";
+  const stockHealthSegments = useMemo(() => {
+    let healthy = 0;
+    let low = 0;
+    let out = 0;
+    inventory.forEach((item) => {
+      const quantity = getQuantity(item);
+      const reorderLevel = getReorderLevel(item);
+      if (quantity <= 0) {
+        out += 1;
+      } else if (quantity <= reorderLevel) {
+        low += 1;
+      } else {
+        healthy += 1;
+      }
+    });
+    return [
+      { key: "healthy", label: "Healthy", value: healthy, color: "#22c55e" },
+      { key: "low", label: "Low stock", value: low, color: "#f59e0b" },
+      { key: "out", label: "Out of stock", value: out, color: "#ef4444" },
+    ];
+  }, [inventory]);
+  const stockHealthTotal = stockHealthSegments.reduce((sum, segment) => sum + segment.value, 0);
+  const donutRadius = 46;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  const stockHealthDonut = useMemo(() => {
+    let consumed = 0;
+    return stockHealthSegments.map((segment) => {
+      const fraction = stockHealthTotal ? segment.value / stockHealthTotal : 0;
+      const dash = fraction * donutCircumference;
+      const offset = donutCircumference - consumed;
+      consumed += dash;
+      return { ...segment, dash, offset };
+    });
+  }, [stockHealthSegments, stockHealthTotal, donutCircumference]);
+  const categoryUnits = useMemo(() => {
+    const totals = new Map();
+    inventory.forEach((item) => {
+      const key = String(getCategory(item) || "Uncategorized");
+      const quantity = Math.max(0, getQuantity(item));
+      totals.set(key, (totals.get(key) || 0) + quantity);
+    });
+    return [...totals.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [inventory]);
+  const categoryUnitsMax = useMemo(
+    () => Math.max(1, ...categoryUnits.map((entry) => entry.value)),
+    [categoryUnits]
+  );
   const detailIndex = useMemo(() => {
     if (!detailItem) return -1;
     return inventory.findIndex((item) => item.id === detailItem.id);
@@ -1225,21 +1283,125 @@ function Admin() {
           )}
         </header>
 
-        <section className="admin-cards">
-          <div className="admin-card">
-            <p className="admin-card-label">Total items</p>
-            <h2>{totalItems}</h2>
-            <span>SKUs listed</span>
+        <section className="inventory-kpi-panel" aria-label="Inventory KPIs">
+          <div className="inventory-kpi-grid">
+            <article className="inventory-kpi-card">
+              <p className="inventory-kpi-label">Total items</p>
+              <h2 className="inventory-kpi-value">{totalItems}</h2>
+              <p className="inventory-kpi-meta">{healthyItems} healthy SKUs</p>
+              <div className="inventory-kpi-meter" aria-hidden="true">
+                <span style={{ width: `${healthyRate}%` }} />
+              </div>
+              <p className="inventory-kpi-foot">{healthyRate}% above reorder level</p>
+            </article>
+            <article className="inventory-kpi-card">
+              <p className="inventory-kpi-label">Units on hand</p>
+              <h2 className="inventory-kpi-value">{totalUnits}</h2>
+              <p className="inventory-kpi-meta">Average {avgUnitsPerSku} units per SKU</p>
+              <div className="inventory-kpi-meter inventory-kpi-meter--accent" aria-hidden="true">
+                <span style={{ width: `${Math.min(100, Math.round(Number(avgUnitsPerSku) * 10))}%` }} />
+              </div>
+              <p className="inventory-kpi-foot">Live stock in current filtered view</p>
+            </article>
+            <article className="inventory-kpi-card">
+              <p className="inventory-kpi-label">Low stock risk</p>
+              <h2 className="inventory-kpi-value">{lowStock}</h2>
+              <p className="inventory-kpi-meta">{outOfStock} fully out of stock</p>
+              <div className="inventory-kpi-meter inventory-kpi-meter--danger" aria-hidden="true">
+                <span style={{ width: `${lowStockRate}%` }} />
+              </div>
+              <p className="inventory-kpi-foot">{outOfStockRate}% are out of stock</p>
+            </article>
           </div>
-          <div className="admin-card">
-            <p className="admin-card-label">Units on hand</p>
-            <h2>{totalUnits}</h2>
-            <span>All warehouses</span>
-          </div>
-          <div className="admin-card">
-            <p className="admin-card-label">Low stock</p>
-            <h2>{lowStock}</h2>
-            <span>At or below reorder point</span>
+
+          <div className="inventory-kpi-visuals">
+            <article className="inventory-kpi-chart-card">
+              <div className="inventory-kpi-chart-head">
+                <h3>Stock health</h3>
+                <span>{stockHealthTotal} SKUs</span>
+              </div>
+              <div className="inventory-kpi-donut-wrap">
+                <div className="inventory-kpi-donut-shell" role="img" aria-label="Stock health breakdown chart">
+                  <svg viewBox="0 0 112 112" aria-hidden="true">
+                    <circle
+                      className="inventory-kpi-donut-track"
+                      cx="56"
+                      cy="56"
+                      r={donutRadius}
+                      fill="none"
+                      strokeWidth="10"
+                    />
+                    {stockHealthDonut
+                      .filter((segment) => segment.value > 0)
+                      .map((segment) => (
+                        <circle
+                          key={segment.key}
+                          cx="56"
+                          cy="56"
+                          r={donutRadius}
+                          fill="none"
+                          stroke={segment.color}
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={`${segment.dash} ${Math.max(
+                            0,
+                            donutCircumference - segment.dash
+                          )}`}
+                          strokeDashoffset={segment.offset}
+                          transform="rotate(-90 56 56)"
+                        />
+                      ))}
+                  </svg>
+                  <div className="inventory-kpi-donut-center">
+                    <strong>{stockHealthTotal}</strong>
+                    <span>SKUs</span>
+                  </div>
+                </div>
+                <ul className="inventory-kpi-legend">
+                  {stockHealthSegments.map((segment) => (
+                    <li key={segment.key}>
+                      <span
+                        className="inventory-kpi-dot"
+                        style={{ "--dot-color": segment.color }}
+                        aria-hidden="true"
+                      />
+                      <span>{segment.label}</span>
+                      <strong>{segment.value}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+
+            <article className="inventory-kpi-chart-card">
+              <div className="inventory-kpi-chart-head">
+                <h3>Units by category</h3>
+                <span>Top 5</span>
+              </div>
+              {categoryUnits.length === 0 ? (
+                <p className="inventory-kpi-empty">No category data available.</p>
+              ) : (
+                <div className="inventory-kpi-bars">
+                  {categoryUnits.map((entry) => {
+                    const width =
+                      entry.value > 0
+                        ? Math.max(8, Math.round((entry.value / categoryUnitsMax) * 100))
+                        : 0;
+                    return (
+                      <div key={entry.label} className="inventory-kpi-bar-row">
+                        <span className="inventory-kpi-bar-label" title={entry.label}>
+                          {entry.label}
+                        </span>
+                        <div className="inventory-kpi-bar-track" aria-hidden="true">
+                          <span style={{ width: `${width}%` }} />
+                        </div>
+                        <span className="inventory-kpi-bar-value">{entry.value}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </article>
           </div>
         </section>
 
@@ -1275,9 +1437,25 @@ function Admin() {
                 <input
                   type="checkbox"
                   checked={inStockOnly}
-                  onChange={(e) => setInStockOnly(e.target.checked)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setInStockOnly(checked);
+                    if (checked) setOutOfStockOnly(false);
+                  }}
                 />
                 In stock only
+              </label>
+              <label className="admin-checkbox">
+                <input
+                  type="checkbox"
+                  checked={outOfStockOnly}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setOutOfStockOnly(checked);
+                    if (checked) setInStockOnly(false);
+                  }}
+                />
+                Out of stock only
               </label>
               <label className="admin-checkbox">
                 <input

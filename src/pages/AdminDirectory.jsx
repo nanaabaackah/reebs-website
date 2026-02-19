@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./master.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faRotateRight, faXmark, faPen, faEye } from "@fortawesome/free-solid-svg-icons";
+import "./admin.css";
+import { AppIcon } from "/src/components/Icon";
+import { faPlus, faRotateRight, faXmark, faPen, faEye } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import roleColors from "../utils/roleColors";
 
@@ -370,11 +370,11 @@ function AdminDirectory() {
           </div>
           <div className="customers-actions">
             <button type="button" className="customers-secondary" onClick={fetchAll}>
-              <FontAwesomeIcon icon={faRotateRight} />
+              <AppIcon icon={faRotateRight} />
               Refresh
             </button>
             <button type="button" className="customers-primary" onClick={openCreateModal} disabled={!canMutate}>
-              <FontAwesomeIcon icon={faPlus} />
+              <AppIcon icon={faPlus} />
               Add
             </button>
           </div>
@@ -414,7 +414,7 @@ function AdminDirectory() {
                     onClick={() => setQuery("")}
                     aria-label="Clear search"
                   >
-                    <FontAwesomeIcon icon={faXmark} />
+                    <AppIcon icon={faXmark} />
                   </button>
                 )}
               </div>
@@ -511,7 +511,7 @@ function AdminDirectory() {
                                 className="directory-edit"
                                 onClick={() => openDetail(row)}
                               >
-                                <FontAwesomeIcon icon={faEye} />
+                                <AppIcon icon={faEye} />
                                 View
                               </button>
                               <button
@@ -519,7 +519,7 @@ function AdminDirectory() {
                                 className="directory-edit"
                                 onClick={() => openEditModal(row)}
                               >
-                                <FontAwesomeIcon icon={faPen} />
+                                <AppIcon icon={faPen} />
                                 Edit
                               </button>
                             </>
@@ -530,7 +530,7 @@ function AdminDirectory() {
                               className="directory-edit"
                               onClick={() => openDetail(row)}
                             >
-                              <FontAwesomeIcon icon={faEye} />
+                              <AppIcon icon={faEye} />
                               View
                             </button>
                           )}
@@ -540,7 +540,7 @@ function AdminDirectory() {
                               className="directory-edit"
                               onClick={() => openEditModal(row)}
                             >
-                              <FontAwesomeIcon icon={faPen} />
+                              <AppIcon icon={faPen} />
                               Edit
                             </button>
                           )}
@@ -589,7 +589,7 @@ function AdminDirectory() {
                 <h2>{editing ? "Update" : "Add"} {activeTab === "customers" ? "customer" : "user"}</h2>
               </div>
               <button type="button" className="customers-modal-close" onClick={closeModal} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
 
@@ -738,7 +738,7 @@ function AdminDirectory() {
                 )}
               </div>
               <button type="button" className="customers-modal-close" onClick={closeDetail} aria-label="Close">
-                <FontAwesomeIcon icon={faXmark} />
+                <AppIcon icon={faXmark} />
               </button>
             </header>
 

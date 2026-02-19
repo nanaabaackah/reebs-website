@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./master.css";
+import "./public.css";
 import { useAuth } from "../components/AuthContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faEye, faEyeSlash } from "/src/icons/iconSet";
 
 function Login() {
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ function Login() {
                 onClick={() => setShowPassword((prev) => !prev)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                <AppIcon icon={showPassword ? faEyeSlash : faEye} />
               </button>
             </div>
           </label>

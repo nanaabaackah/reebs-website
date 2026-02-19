@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPhone, faClock, faTruck, faCalendarCheck } from '@fortawesome/free-solid-svg-icons';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import { AppIcon } from '/src/components/Icon';
+import { faPhone, faClock, faTruck, faCalendarCheck } from '/src/icons/iconSet';
+import { faWhatsapp } from '/src/icons/iconSet';
+import PartyConfetti from '/src/components/PartyConfetti';
 
-import './master.css';
+import './public.css';
 
 const faqSections = [
     {
@@ -88,8 +89,10 @@ const faqSections = [
 function FAQ() {
     return (
         <div className="faq-page">
-            <main className="faq-shell" id="main">
+            <a href="#main" className="skip-link">Skip to main content</a>
+            <main className="faq-shell" id="main" role="main">
                 <section className="faq-hero" aria-labelledby="faq-heading">
+                    <PartyConfetti className="party-confetti-faq" />
                     <div className="faq-hero-grid">
                         <div className="faq-hero-copy">
                             <p className="kicker">Answers in a snap</p>
@@ -107,11 +110,11 @@ function FAQ() {
                                 <Link className="hero-btn hero-btn-primary" to="/contact">Chat with a planner</Link>
                                 <Link className="hero-btn hero-btn-ghost" to="/rentals">View rentals</Link>
                                 <a className="hero-btn hero-btn-link" href="tel:+233244238419">
-                                    <FontAwesomeIcon icon={faPhone} /> Call us
+                                    <AppIcon icon={faPhone} /> Call us
                                 </a>
                             </div>
                             <p className="faq-response-time">
-                                <FontAwesomeIcon icon={faClock} /> Fast replies between 8:30am - 7pm (Mon-Sat)
+                                <AppIcon icon={faClock} /> Fast replies between 8:30am - 7pm (Mon-Sat)
                             </p>
                         </div>
                         <div className="faq-hero-card glass-card" aria-label="Popular quick answers">
@@ -121,15 +124,15 @@ function FAQ() {
                             </div>
                             <ul className="faq-hero-list">
                                 <li>
-                                    <FontAwesomeIcon icon={faCalendarCheck} aria-hidden="true" />
+                                    <AppIcon icon={faCalendarCheck} aria-hidden="true" />
                                     <span>Lock your date early - weekends go first.</span>
                                 </li>
                                 <li>
-                                    <FontAwesomeIcon icon={faTruck} aria-hidden="true" />
+                                    <AppIcon icon={faTruck} aria-hidden="true" />
                                     <span>Delivery + pickup anywhere in Ghana; fees vary by distance.</span>
                                 </li>
                                 <li>
-                                    <FontAwesomeIcon icon={faWhatsapp} aria-hidden="true" />
+                                    <AppIcon icon={faWhatsapp} aria-hidden="true" />
                                     <span>WhatsApp for fastest confirmations: +233 24 423 8419.</span>
                                 </li>
                             </ul>
@@ -182,10 +185,10 @@ function FAQ() {
                         <div className="faq-cta-actions" role="group" aria-label="Contact options">
                             <Link className="hero-btn hero-btn-primary" to="/contact">Start a brief</Link>
                             <a className="hero-btn hero-btn-ghost" href="tel:+233244238419">
-                                <FontAwesomeIcon icon={faPhone} /> Call now
+                                <AppIcon icon={faPhone} /> Call now
                             </a>
                             <a className="hero-btn hero-btn-link" href="https://wa.me/233244238419" target="_blank" rel="noreferrer">
-                                <FontAwesomeIcon icon={faWhatsapp} /> WhatsApp
+                                <AppIcon icon={faWhatsapp} /> WhatsApp
                             </a>
                         </div>
                     </div>

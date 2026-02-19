@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faWrench, faPlus, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faWrench, faPlus, faRotateRight } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./master.css";
+import "./admin.css";
 
 const defaultForm = {
   productId: "",
@@ -204,7 +204,7 @@ function AdminMaintenance() {
           </div>
           <div className="maintenance-actions">
             <button type="button" className="maintenance-secondary" onClick={fetchLogs}>
-              <FontAwesomeIcon icon={faRotateRight} /> Refresh
+              <AppIcon icon={faRotateRight} /> Refresh
             </button>
           </div>
         </header>
@@ -234,7 +234,7 @@ function AdminMaintenance() {
           <section className="maintenance-card">
             <div className="maintenance-card-head">
               <h2>
-                <FontAwesomeIcon icon={faWrench} /> Log maintenance
+                <AppIcon icon={faWrench} /> Log maintenance
               </h2>
               <p className="maintenance-muted">Mark assets as under repair to pause bookings.</p>
             </div>
@@ -299,7 +299,7 @@ function AdminMaintenance() {
                 />
               </label>
               <button type="submit" className="maintenance-primary" disabled={saving}>
-                <FontAwesomeIcon icon={faPlus} /> {saving ? "Saving..." : "Log issue"}
+                <AppIcon icon={faPlus} /> {saving ? "Saving..." : "Log issue"}
               </button>
             </form>
           </section>

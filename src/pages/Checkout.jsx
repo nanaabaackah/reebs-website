@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AppIcon } from "/src/components/Icon";
 import {
   faBagShopping,
   faReceipt,
   faShieldHeart,
   faTruckFast,
-} from "@fortawesome/free-solid-svg-icons";
+} from "/src/icons/iconSet";
 import { useCart } from "../components/CartContext";
-import "./master.css";
+import "./public.css";
 
 const TIME_WINDOW_OPTIONS = [
   { value: "9am-11am", label: "9:00am – 11:00am", endMinutes: 11 * 60 },
@@ -446,7 +446,7 @@ const Checkout = () => {
             <div className="checkout-steps">
               <div className="checkout-step">
                 <span className="checkout-step-icon">
-                  <FontAwesomeIcon icon={faBagShopping} />
+                  <AppIcon icon={faBagShopping} />
                 </span>
                 <div>
                   <h3>Review your cart</h3>
@@ -455,7 +455,7 @@ const Checkout = () => {
               </div>
               <div className="checkout-step">
                 <span className="checkout-step-icon">
-                  <FontAwesomeIcon icon={faTruckFast} />
+                  <AppIcon icon={faTruckFast} />
                 </span>
                 <div>
                   <h3>{fulfillmentCopy.stepTwoTitle}</h3>
@@ -464,7 +464,7 @@ const Checkout = () => {
               </div>
               <div className="checkout-step">
                 <span className="checkout-step-icon">
-                  <FontAwesomeIcon icon={faReceipt} />
+                  <AppIcon icon={faReceipt} />
                 </span>
                 <div>
                   <h3>Receive your invoice</h3>
@@ -473,7 +473,7 @@ const Checkout = () => {
               </div>
               <div className="checkout-step">
                 <span className="checkout-step-icon">
-                  <FontAwesomeIcon icon={faShieldHeart} />
+                  <AppIcon icon={faShieldHeart} />
                 </span>
                 <div>
                   <h3>{fulfillmentCopy.stepFourTitle}</h3>

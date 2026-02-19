@@ -3,11 +3,12 @@ import CookieBanner from '/src/components/CookieBanner';
 import Map from '/src/components/Map';
 import { Link } from 'react-router-dom';
 import ContactForm from '/src/components/ContactForm';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEnvelope, faPhone, faLocationDot, faClock } from '@fortawesome/free-solid-svg-icons';
-import { faWhatsapp, faFacebook, faInstagram, faTiktok } from '@fortawesome/free-brands-svg-icons';
-import './master.css';
+import { AppIcon } from '/src/components/Icon';
+import { faEnvelope, faPhone, faLocationDot, faClock } from '/src/icons/iconSet';
+import { faWhatsapp, faFacebook, faInstagram, faTiktok } from '/src/icons/iconSet';
+import './public.css';
 import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
+import PartyConfetti from '/src/components/PartyConfetti';
 
 function Contact() {
     useEffect(() => {
@@ -22,9 +23,11 @@ function Contact() {
 
     return (
         <div className="contact-page">
+            <a href="#main" className="skip-link">Skip to main content</a>
             <CookieBanner />
-            <main className="contact-shell" id="main">
+            <main className="contact-shell" id="main" role="main">
                 <section className="contact-hero" aria-labelledby="contact-hero-heading">
+                    <PartyConfetti className="party-confetti-contact" />
                     <div className="contact-hero-grid">
                         <div className="contact-hero-copy">
                             <p className="kicker">Let's plan your party</p>
@@ -40,7 +43,7 @@ function Contact() {
                             </div>
                             <div className="contact-actions" role="group" aria-label="Ways to reach us">
                                 <a className="hero-btn hero-btn-primary" href="tel:+233244238419">
-                                    <FontAwesomeIcon icon={faPhone} /> Call us
+                                    <AppIcon icon={faPhone} /> Call us
                                 </a>
                                 <a
                                     className="hero-btn hero-btn-ghost"
@@ -48,20 +51,20 @@ function Contact() {
                                     target="_blank"
                                     rel="noreferrer"
                                 >
-                                    <FontAwesomeIcon icon={faWhatsapp} /> WhatsApp
+                                    <AppIcon icon={faWhatsapp} /> WhatsApp
                                 </a>
                                 <Link className="hero-btn hero-btn-link" to="/rentals">
                                     Plan my setup
                                 </Link>
                             </div>
                             <div className="contact-meta">
-                                <span><FontAwesomeIcon icon={faClock} /> 8:30am – 7pm (Mon–Sat)</span>
-                                <span><FontAwesomeIcon icon={faLocationDot} /> Sakumono Broadway, Tema</span>
+                                <span><AppIcon icon={faClock} /> 8:30am – 7pm (Mon–Sat)</span>
+                                <span><AppIcon icon={faLocationDot} /> Sakumono Broadway, Tema</span>
                             </div>
                         </div>
                         <div className="contact-hero-card" aria-label="Studio details">
                             <div className="contact-card-header">
-                                <FontAwesomeIcon icon={faLocationDot} />
+                                <AppIcon icon={faLocationDot} />
                                 <div>
                                     <p className="kicker">Visit or pickup</p>
                                     <h2>Swing by our store</h2>
@@ -98,7 +101,7 @@ function Contact() {
                 <section className="contact-info-grid" aria-label="Stay connected">
                     <article className="contact-card">
                         <div className="contact-card-header">
-                            <FontAwesomeIcon icon={faPhone} />
+                            <AppIcon icon={faPhone} />
                             <h3>Talk to a human</h3>
                         </div>
                         <p>Need quick answers on availability or pricing? Call or text and we’ll confirm details right away.</p>
@@ -109,7 +112,7 @@ function Contact() {
                     </article>
                     <article className="contact-card">
                         <div className="contact-card-header">
-                            <FontAwesomeIcon icon={faEnvelope} />
+                            <AppIcon icon={faEnvelope} />
                             <h3>Send a brief</h3>
                         </div>
                         <p>Share your theme, date, guest count, and budget. We’ll reply within one business day with options.</p>
@@ -120,19 +123,19 @@ function Contact() {
                     </article>
                     <article className="contact-card">
                         <div className="contact-card-header">
-                            <FontAwesomeIcon icon={faFacebook} />
+                            <AppIcon icon={faFacebook} />
                             <h3>Follow along</h3>
                         </div>
                         <p>See new setups, balloons, and party inspo from events across Ghana.</p>
                         <div className="contact-socials">
                             <a href="https://www.facebook.com/reebspartythemes" target="_blank" rel="noreferrer" aria-label="Facebook">
-                                <FontAwesomeIcon icon={faFacebook} />
+                                <AppIcon icon={faFacebook} />
                             </a>
                             <a href="https://www.instagram.com/reebspartythemes_/" target="_blank" rel="noreferrer" aria-label="Instagram">
-                                <FontAwesomeIcon icon={faInstagram} />
+                                <AppIcon icon={faInstagram} />
                             </a>
                             <a href="https://www.tiktok.com/@reebspartythemes_" target="_blank" rel="noreferrer" aria-label="TikTok">
-                                <FontAwesomeIcon icon={faTiktok} />
+                                <AppIcon icon={faTiktok} />
                             </a>
                         </div>
                     </article>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./master.css";
+import "./admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import roleColors from "../utils/roleColors";
 

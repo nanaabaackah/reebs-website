@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 //import rentalItems from "/src/data/rentalItems.json"
 import { Link, useNavigate } from 'react-router-dom';
-import './master.css';
+import './public.css';
 import SideNav from '/src/components/SideNav';
 import { useCart } from "/src/components/CartContext";
 import { useAuth } from "/src/components/AuthContext";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMagnifyingGlass, faShieldHeart, faTruckFast, faWandMagicSparkles } from '@fortawesome/free-solid-svg-icons';
+import { AppIcon } from '/src/components/Icon';
+import { faMagnifyingGlass, faShieldHeart, faTruckFast, faWandMagicSparkles } from '/src/icons/iconSet';
+import PartyConfetti from '/src/components/PartyConfetti';
 
 const slugify = (value = "") =>
     value
@@ -336,6 +337,10 @@ function Rentals() {
 
     useEffect(() => {
         const sections = Array.from(document.querySelectorAll(".rent-category-section"));
+        const scrollHost = document.querySelector(".main");
+        const scrollTarget = scrollHost || window;
+        const getScrollTop = () =>
+            scrollHost ? scrollHost.scrollTop : window.scrollY || window.pageYOffset || 0;
         let ticking = false;
         const handleScroll = () => {
             if (ticking) return;
@@ -344,7 +349,7 @@ function Rentals() {
                 let current = "";
                 sections.forEach((section) => {
                     const sectionTop = section.offsetTop - 150;
-                    if (window.scrollY >= sectionTop) {
+                    if (getScrollTop() >= sectionTop) {
                         current = section.getAttribute("id") || "";
                     }
                 });
@@ -353,7 +358,7 @@ function Rentals() {
                 const grid = document.getElementById("rentals-grid");
                 if (grid) {
                     const showThreshold = grid.offsetTop - 140;
-                    const shouldShow = window.scrollY >= showThreshold;
+                    const shouldShow = getScrollTop() >= showThreshold;
                     setShowSideNav((prev) => (prev === shouldShow ? prev : shouldShow));
                 }
                 ticking = false;
@@ -361,8 +366,8 @@ function Rentals() {
         };
 
         handleScroll();
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
+        scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
+        return () => scrollTarget.removeEventListener("scroll", handleScroll);
     }, [groupedRentals]);
 
     if (loading) return (
@@ -381,6 +386,7 @@ function Rentals() {
             <div className="rentals-page" id="main" role="main">
                 <main className="rentals-shell">
                     <section id='rentals-intro' className="rentals-hero" aria-labelledby="rentals-hero-heading">
+                        <PartyConfetti className="party-confetti-rentals" />
                         <div className="rentals-hero-copy">
                             <h1 id="rentals-hero-heading">Party rentals styled the REEBS way</h1>
                             <p className="hero-sub rentals-sub">
@@ -388,15 +394,15 @@ function Rentals() {
                             </p>
                             <div className="rentals-pill-row" aria-label="Rental highlights">
                                 <span className="rentals-pill">
-                                    <FontAwesomeIcon icon={faWandMagicSparkles} aria-hidden="true" />
+                                    <AppIcon icon={faWandMagicSparkles} aria-hidden="true" />
                                     Styled setups
                                 </span>
                                 <span className="rentals-pill">
-                                    <FontAwesomeIcon icon={faShieldHeart} aria-hidden="true" />
+                                    <AppIcon icon={faShieldHeart} aria-hidden="true" />
                                     Cleaned + kid-safe
                                 </span>
                                 <span className="rentals-pill">
-                                    <FontAwesomeIcon icon={faTruckFast} aria-hidden="true" />
+                                    <AppIcon icon={faTruckFast} aria-hidden="true" />
                                     Delivery & pickup
                                 </span>
                             </div>
@@ -467,7 +473,7 @@ function Rentals() {
 
                                 <div className="rentals-controls">
                                     <div className="search-wrapper rentals-search">
-                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
+                                        <AppIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
                                         <input
                                             type="text"
                                             placeholder="Search bounce houses, decor, concessions..."

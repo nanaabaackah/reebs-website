@@ -2,6 +2,15 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { requireUser } from "./_shared/userAuth.js";
+import {
+  EXPENSE_CATEGORIES,
+  buildExpenseFilter,
+  inferExpenseCategory,
+  isSupportedExpenseCategory,
+  normalizeExpenseCategory,
+  resolveExpenseColumns,
+  resolveExpenseTable,
+} from "./_shared/expenseAccounting.js";
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -11,8 +20,6 @@ const json = (statusCode, body) => ({
   },
   body: JSON.stringify(body),
 });
-
-const CATEGORIES = ["Logistics", "Operational", "Payroll", "Marketing", "Maintenance"];
 
 const getMonthRange = (value) => {
   const now = value ? new Date(value) : new Date();
@@ -24,56 +31,10 @@ const getMonthRange = (value) => {
   return { start, end };
 };
 
-const resolveExpenseTable = async (client) => {
-  const candidatesRes = await client.query(
-    `SELECT table_schema, table_name
-     FROM information_schema.columns
-     WHERE column_name IN ('category', 'amount', 'description', 'date')
-       AND table_schema NOT IN ('pg_catalog', 'information_schema')
-     GROUP BY table_schema, table_name
-     HAVING COUNT(DISTINCT column_name) >= 4`
-  );
-
-  const candidates = candidatesRes.rows.map((row) => ({
-    label: `${row.table_schema}.${row.table_name}`,
-    schema: row.table_schema,
-    tableName: row.table_name,
-    queryRef: `"${row.table_schema}"."${row.table_name}"`,
-  }));
-
-  if (!candidates.length) {
-    candidates.push(
-      { label: "public.expense", schema: "public", tableName: "expense", queryRef: "\"expense\"" },
-      { label: "public.Expense", schema: "public", tableName: "Expense", queryRef: "\"Expense\"" },
-      { label: "public.expenses", schema: "public", tableName: "expenses", queryRef: "\"expenses\"" }
-    );
-  }
-
-  const available = [];
-  for (const table of candidates) {
-    try {
-      const countRes = await client.query(`SELECT COUNT(*)::int AS count FROM ${table.queryRef}`);
-      available.push({ ...table, count: countRes.rows[0]?.count || 0 });
-    } catch {
-      // ignore missing tables
-    }
-  }
-
-  if (!available.length) return null;
-  available.sort((a, b) => b.count - a.count);
-  return available[0];
-};
-
-const resolveExpenseColumns = async (client, table) => {
-  if (!table?.schema || !table?.tableName) return [];
-  const result = await client.query(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_schema = $1 AND table_name = $2`,
-    [table.schema, table.tableName]
-  );
-  return result.rows.map((row) => row.column_name);
-};
+const normalizeExpenseRow = (row) => ({
+  ...row,
+  category: normalizeExpenseCategory(row?.category) || "Miscellaneous",
+});
 
 export async function handler(event = {}) {
   if (event.httpMethod === "OPTIONS") {
@@ -127,23 +88,20 @@ export async function handler(event = {}) {
       const debug = event.queryStringParameters?.debug === "1";
       const monthParam = event.queryStringParameters?.month;
       const range = monthParam ? getMonthRange(monthParam) : null;
-      const params = [];
-      const whereClauses = [];
-      if (hasOrganizationId) {
-        params.push(organizationId);
-        whereClauses.push(`"organizationId" = $${params.length}`);
-      }
-      if (range) {
-        params.push(range.start.toISOString(), range.end.toISOString());
-        whereClauses.push(`date >= $${params.length - 1} AND date < $${params.length}`);
-      }
-      const whereClause = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
+      const { params, whereClause } = buildExpenseFilter({
+        hasOrganizationId,
+        organizationId,
+        startDate: range?.start,
+        endDate: range?.end,
+        dateExpression: "\"date\"",
+      });
 
       if (debug) {
         return json(200, {
           table: table.label,
           count: table.count,
           columns,
+          categories: EXPENSE_CATEGORIES,
         });
       }
 
@@ -188,7 +146,7 @@ export async function handler(event = {}) {
 
       const maintenanceRows = (maintenanceRes.rows || []).map((row) => ({
         id: `maintenance-${row.id}`,
-        category: "Maintenance",
+        category: "Repairs & Maintenance",
         amount: row.cost,
         description: `${row.productName || "Asset"}: ${row.issue || row.type || "Maintenance"}`,
         date: row.date,
@@ -206,7 +164,7 @@ export async function handler(event = {}) {
         return String(b.id).localeCompare(String(a.id));
       });
 
-      return json(200, combined);
+      return json(200, combined.map(normalizeExpenseRow));
     }
 
     if (event.httpMethod !== "POST") {
@@ -229,16 +187,47 @@ export async function handler(event = {}) {
       const now = new Date();
       const daysAgo = (days) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       const samples = [
-        { category: "Logistics", amount: 12050, description: "Fuel for delivery to East Legon", date: daysAgo(2) },
-        { category: "Operational", amount: 85000, description: "Monthly rent for storage", date: daysAgo(6) },
-        { category: "Payroll", amount: 300000, description: "Staff salaries", date: daysAgo(10) },
-        { category: "Marketing", amount: 45000, description: "Instagram promo campaign", date: daysAgo(12) },
-        { category: "Operational", amount: 23000, description: "Electricity bill", date: daysAgo(15) },
-        { category: "Logistics", amount: 9575, description: "Vehicle maintenance", date: daysAgo(18) },
+        {
+          category: "Transport & Fuel",
+          amount: 12050,
+          description: "Fuel for delivery to East Legon",
+          date: daysAgo(2),
+        },
+        {
+          category: "Rent & Utilities",
+          amount: 85000,
+          description: "Monthly warehouse rent",
+          date: daysAgo(6),
+        },
+        {
+          category: "Payroll & Staff Costs",
+          amount: 300000,
+          description: "Staff salaries and overtime",
+          date: daysAgo(10),
+        },
+        {
+          category: "Marketing & Advertising",
+          amount: 45000,
+          description: "Instagram promo campaign",
+          date: daysAgo(12),
+        },
+        {
+          category: "Communication & Internet",
+          amount: 23000,
+          description: "Internet and call credits",
+          date: daysAgo(15),
+        },
+        {
+          category: "Repairs & Maintenance",
+          amount: 9575,
+          description: "Vehicle servicing and minor repairs",
+          date: daysAgo(18),
+        },
       ];
 
       const insertColumns = ["category", "amount", "description", "date"];
       if (hasUserId) insertColumns.push("\"userId\"");
+      if (hasOrganizationId) insertColumns.push("\"organizationId\"");
       if (hasCreatedAt) insertColumns.push("\"createdAt\"");
       if (hasUpdatedAt) insertColumns.push("\"updatedAt\"");
 
@@ -252,6 +241,7 @@ export async function handler(event = {}) {
           row.date.toISOString()
         );
         if (hasUserId) values.push(null);
+        if (hasOrganizationId) values.push(organizationId);
         if (hasCreatedAt) values.push(new Date().toISOString());
         if (hasUpdatedAt) values.push(new Date().toISOString());
         const range = Array.from({ length: insertColumns.length }, (_, i) => `$${base + i + 1}`);
@@ -275,8 +265,11 @@ export async function handler(event = {}) {
     const bookingId = payload.bookingId ? Number(payload.bookingId) : null;
     const dateValue = payload.date ? new Date(payload.date) : new Date();
 
-    if (!category || !CATEGORIES.includes(category)) {
-      return json(400, { error: "Invalid category." });
+    if (category && category.toLowerCase() !== "auto" && !isSupportedExpenseCategory(category)) {
+      return json(400, {
+        error: "Invalid category.",
+        allowedCategories: EXPENSE_CATEGORIES,
+      });
     }
     if (!description) {
       return json(400, { error: "Description is required." });
@@ -312,10 +305,11 @@ export async function handler(event = {}) {
       }
     }
 
+    const resolvedCategory = inferExpenseCategory({ category, description });
     const amountCents = Math.round(amountValue * 100);
 
     const insertColumns = ["category", "amount", "description", "date"];
-    const insertValues = [category, amountCents, description, dateValue.toISOString()];
+    const insertValues = [resolvedCategory, amountCents, description, dateValue.toISOString()];
     if (hasUserId) {
       insertColumns.push("\"userId\"");
       insertValues.push(userId);
@@ -350,7 +344,10 @@ export async function handler(event = {}) {
       insertValues
     );
 
-    return json(200, insert.rows[0]);
+    return json(200, {
+      ...normalizeExpenseRow(insert.rows[0]),
+      categoryAutoDetected: !category || category.toLowerCase() === "auto",
+    });
   } catch (err) {
     console.error("❌ Expenses error:", err);
     return json(500, { error: err.message || "Failed to process expenses" });

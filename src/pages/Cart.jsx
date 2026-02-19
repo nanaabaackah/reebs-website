@@ -1,9 +1,9 @@
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faGift, faLock, faTruck } from "@fortawesome/free-solid-svg-icons";
+import { AppIcon } from "/src/components/Icon";
+import { faArrowLeft, faGift, faLock, faTruck } from "/src/icons/iconSet";
 import { Link } from "react-router-dom";
 import { useCart } from "../components/CartContext";
-import "./master.css";
+import "./public.css";
 
 const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
 
@@ -73,9 +73,9 @@ const Cart = () => {
             </div>
           </div>
           <div className="hero-card-perks">
-            <span><FontAwesomeIcon icon={faTruck} /> In-store pickup only</span>
-            <span><FontAwesomeIcon icon={faLock} /> Secure checkout</span>
-            <span><FontAwesomeIcon icon={faGift} /> We pack with care</span>
+            <span><AppIcon icon={faTruck} /> In-store pickup only</span>
+            <span><AppIcon icon={faLock} /> Secure checkout</span>
+            <span><AppIcon icon={faGift} /> We pack with care</span>
           </div>
         </div>
       </section>
@@ -102,7 +102,7 @@ const Cart = () => {
                 <div className="toolbar-actions">
                   <button className="ghost-btn clear-all" onClick={clearCart}>Clear cart</button>
                   <Link className="pill-link" to="/Shop">
-                    <FontAwesomeIcon icon={faArrowLeft} /> Continue shopping
+                    <AppIcon icon={faArrowLeft} /> Continue shopping
                   </Link>
                 </div>
               </div>
@@ -213,9 +213,9 @@ const Cart = () => {
                 </div>
               </div>
               <div className="summary-perks">
-                <span><FontAwesomeIcon icon={faLock} /> Safe checkout</span>
-                <span><FontAwesomeIcon icon={faTruck} /> In-store pickup only</span>
-                <span><FontAwesomeIcon icon={faGift} /> Styled for fun</span>
+                <span><AppIcon icon={faLock} /> Safe checkout</span>
+                <span><AppIcon icon={faTruck} /> In-store pickup only</span>
+                <span><AppIcon icon={faGift} /> Styled for fun</span>
               </div>
               <Link className="checkout-btn" to="/Checkout">Proceed to Checkout</Link>
               <Link className="ghost-btn summary-continue" to="/Shop">
