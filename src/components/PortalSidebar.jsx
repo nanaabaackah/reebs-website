@@ -93,6 +93,7 @@ const DEFAULT_APPS = [
     label: "Invoicing",
     path: "/admin/invoicing",
     icon: faFileInvoiceDollar,
+    roles: ["admin", "manager"],
   },
   {
     label: "Directory",

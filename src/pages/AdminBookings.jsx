@@ -134,6 +134,8 @@ function AdminBookings() {
   });
   const [bouncyCastles, setBouncyCastles] = useState([]);
   const { user } = useAuth();
+  const roleKey = String(user?.role || "").trim().toLowerCase();
+  const canAccessInvoicing = roleKey === "admin" || roleKey === "manager";
   const viewStorageKey = useMemo(
     () => `reebs_bookings_views_${user?.id || "guest"}`,
     [user?.id]
@@ -511,7 +513,7 @@ function AdminBookings() {
   }, [form.items, form.discount, form.discountType, productMap]);
 
   const viewInvoice = (booking) => {
-    if (!booking?.id) return;
+    if (!booking?.id || !canAccessInvoicing) return;
     navigate(`/admin/invoicing?type=bookings&id=${booking.id}`);
   };
 
@@ -986,15 +988,17 @@ function AdminBookings() {
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="bookings-menu-actions">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        closeMenu();
-                                        viewInvoice(booking);
-                                      }}
-                                    >
-                                      Generate invoice
-                                    </button>
+                                    {canAccessInvoicing && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          closeMenu();
+                                          viewInvoice(booking);
+                                        }}
+                                      >
+                                        Generate invoice
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -1092,16 +1096,18 @@ function AdminBookings() {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="bookings-menu-actions">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  closeMenu();
-                                  viewInvoice(booking);
-                                }}
-                              >
-                                <AppIcon icon={faFileInvoice} />
-                                Generate invoice
-                              </button>
+                              {canAccessInvoicing && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    closeMenu();
+                                    viewInvoice(booking);
+                                  }}
+                                >
+                                  <AppIcon icon={faFileInvoice} />
+                                  Generate invoice
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {

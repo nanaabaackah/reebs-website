@@ -128,6 +128,8 @@ const getIsMobileView = () =>
 
 function OrdersList() {
   const { user } = useAuth();
+  const roleKey = String(user?.role || "").trim().toLowerCase();
+  const canAccessInvoicing = roleKey === "admin" || roleKey === "manager";
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -406,7 +408,7 @@ function OrdersList() {
   };
 
   const viewReceipt = (order) => {
-    if (!order?.id) return;
+    if (!order?.id || !canAccessInvoicing) return;
     navigate(`/admin/invoicing?type=orders&id=${order.id}`);
     setOpenMenuId(null);
   };
@@ -768,12 +770,14 @@ function OrdersList() {
                             className={`bookings-menu-list ${openMenuId === `table-${order.id}` ? "open" : ""}`}
                             style={openMenuId === `table-${order.id}` ? menuPosition : undefined}
                           >
-                            <button
-                              type="button"
-                              onClick={() => viewReceipt(order)}
-                            >
-                              Generate invoice
+                            {canAccessInvoicing && (
+                              <button
+                                type="button"
+                                onClick={() => viewReceipt(order)}
+                              >
+                                Generate invoice
                               </button>
+                            )}
                               <button type="button">Edit</button>
                               <button type="button">Mark fulfilled</button>
                             </div>
@@ -862,12 +866,14 @@ function OrdersList() {
                             className={`bookings-menu-list ${openMenuId === `card-${order.id}` ? "open" : ""}`}
                             style={openMenuId === `card-${order.id}` ? menuPosition : undefined}
                           >
-                            <button
-                              type="button"
-                              onClick={() => viewReceipt(order)}
-                            >
-                              Generate invoice
-                            </button>
+                            {canAccessInvoicing && (
+                              <button
+                                type="button"
+                                onClick={() => viewReceipt(order)}
+                              >
+                                Generate invoice
+                              </button>
+                            )}
                             <button type="button">Edit</button>
                             <button type="button">Mark fulfilled</button>
                           </div>

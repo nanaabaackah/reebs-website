@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AuthProvider, { useAuth } from "./components/AuthContext";
+import { CartProvider } from "./components/CartContext";
 import PortalSidebar from "./components/PortalSidebar";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
@@ -227,9 +228,11 @@ function App() {
 
   return (
     <Router>
-      <AuthProvider>
-        <AppLayout />
-      </AuthProvider>
+      <CartProvider>
+        <AuthProvider>
+          <AppLayout />
+        </AuthProvider>
+      </CartProvider>
     </Router>
   );
 }
