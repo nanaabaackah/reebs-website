@@ -615,10 +615,6 @@ const Navbar = ({ scrollContainerRef }) => {
                 Sign out
               </button>
             ) : null}
-            <Link to="/book" className="navbar-demo-btn" onClick={() => setMobileOpen(false)}>
-              <span>Book your party</span>
-              <span aria-hidden="true">→</span>
-            </Link>
           </div>
         </div>
       </nav>

@@ -718,8 +718,13 @@
 
   .navbar-mobile {
     display: block;
-    top: 0.8rem;
+    width: 100%;
+    top: 0;
     padding: 0.6rem 0.74rem;
+  }
+
+  .navbar-mobile-actions {
+    display: flex;
   }
 
   .navbar-search-dialog {

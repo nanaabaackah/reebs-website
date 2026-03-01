@@ -380,10 +380,11 @@ body.admin-readonly::after {
   }
 
   .shell-bottom-cta {
-    bottom: 8px;
+    bottom: 0;
     padding: 0.3rem;
     border-radius: 14px;
     gap: 0.4rem;
+    width: 100%;
   }
 
   .shell-bottom-cta-corner {
