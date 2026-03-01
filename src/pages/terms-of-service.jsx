@@ -1,166 +1,105 @@
-import React from 'react';
-import './public.css';
+import React from "react";
+import LegalDocumentPage from "../components/LegalDocumentPage";
+import "../styles/public.css";
+import "../styles/TermsOfService.css";
 
-const termsSections = [
+const LAST_UPDATED = "February 28, 2026";
+
+const sections = [
   {
-    id: 'acceptance',
-    kicker: '1. Agreement',
-    title: 'Acceptance of terms',
-    description: 'By browsing, booking, or purchasing from REEBS Party Themes, you agree to these terms.',
+    id: "acceptance",
+    label: "1.",
+    title: "Online orders and acceptance",
+    summary:
+      "These terms apply to rentals, shop purchases, styling work, and other services supplied by REEBS in Ghana.",
+    paragraphs: [
+      "REEBS may contract with you through the website, email, invoices, or direct messaging. Electronic quotations, approvals, invoices, and confirmations are treated as valid records and notices.",
+      "A booking or order becomes binding when we confirm availability and receive any required deposit or other agreed payment.",
+    ],
     items: [
-      'You confirm you are at least 18 or have guardian permission to place orders.',
-      'You provide accurate contact, delivery, and payment information.',
-      'You agree to communicate changes quickly so we can keep your booking on track.'
-    ]
+      "You confirm that you are at least 18 years old, or that you have authority to place the order for your household or organisation.",
+      "You must provide accurate names, phone numbers, delivery details, venue access information, and event dates.",
+      "Please review quantities, colours, dates, and setup notes before you authorise payment.",
+    ],
   },
   {
-    id: 'bookings',
-    kicker: '2. Bookings',
-    title: 'Bookings & payments',
-    description: 'We make reservations simple and transparent.',
+    id: "pricing",
+    label: "2.",
+    title: "Pricing, payments, and taxes",
+    summary:
+      "We aim to make pricing straightforward for Ghana-based bookings and online orders.",
     items: [
-      'Quotes are valid for 5 business days unless otherwise stated.',
-      'Full payment (or agreed deposit) secures inventory, decor, and crew.',
-      'Outstanding balances are due before delivery or setup begins.',
-      'Promotions or discounts cannot be combined unless explicitly stated.'
-    ]
+      "Quotes are in Ghana cedis unless we clearly state another currency.",
+      "Deposits reserve stock, labour, transport capacity, custom materials, or event dates.",
+      "Unless we agree otherwise in writing, any outstanding balance must be cleared before dispatch, setup, or collection.",
+      "You are responsible for any bank, mobile money, card, tax, levy, or transfer charges that apply to your payment method.",
+    ],
   },
   {
-    id: 'rentals',
-    kicker: '3. Rentals',
-    title: 'Rental care & responsibility',
-    description: 'Keep rentals safe and ready for the next celebration.',
+    id: "delivery-service",
+    label: "3.",
+    title: "Delivery, setup, and event timing",
+    summary:
+      "Event work is time-sensitive, so communication and venue readiness matter.",
     items: [
-      'You are responsible for rentals from drop-off to pickup.',
-      'Do not sub-rent or loan items to third parties without written approval.',
-      'Damage, loss, or excessive cleaning may incur repair or replacement fees.',
-      'Follow all safety instructions for inflatables, electrical items, and decor.'
-    ]
+      "Delivery and setup windows are estimates and may shift because of traffic, venue access, weather, public holidays, or security checks.",
+      "A responsible adult must be available to receive goods, inspect rentals, and confirm setup instructions.",
+      "If you change the venue, access conditions, or timing after confirmation, pricing and availability may change.",
+      "If we cannot fulfil the agreed service window, we will offer a revised time, substitute item, store credit, or refund where appropriate.",
+    ],
   },
   {
-    id: 'decor',
-    kicker: '4. Decor & styling',
-    title: 'Custom decor & styling',
-    description: 'We tailor designs to your brief while maintaining safety and venue rules.',
+    id: "rentals",
+    label: "4.",
+    title: "Rental equipment and customer responsibilities",
+    summary:
+      "You are responsible for rentals from handover until the items are collected by REEBS.",
     items: [
-      'Renderings and moodboards represent intent; slight variations may occur on-site.',
-      'Venue restrictions (tape, balloons, rigging) must be disclosed during booking.',
-      'We remove decor we installed unless otherwise agreed in writing.'
-    ]
+      "Use rentals only as instructed and keep children supervised at all times around inflatables, games, electrical machines, and moving equipment.",
+      "Do not sub-hire, alter, or relocate rented items without our approval.",
+      "Protect rentals from rain, theft, fire, sand, sharp objects, pets, and misuse.",
+      "Loss, damage, missing parts, or excessive cleaning may be charged at repair or replacement cost.",
+    ],
   },
   {
-    id: 'liability',
-    kicker: '5. Liability',
-    title: 'Safety & liability',
-    description: 'We prioritize safety for guests, equipment, and venues.',
+    id: "consumer-rights",
+    label: "5.",
+    title: "Consumer rights, cancellations, and refunds",
+    summary:
+      "Ghana's Electronic Transactions Act, 2008 (Act 772) gives consumers specific protections for online contracts, supplier disclosures, and delivery timing.",
     items: [
-      'Our team performs safety checks at setup; please maintain safe use afterward.',
-      'REEBS is not liable for injuries arising from misuse or unsupervised play.',
-      'In the unlikely event of service failure, our liability is limited to the amounts paid for that booking.'
-    ]
+      "Eligible stock goods may qualify for statutory cancellation rights when they are unused, resalable, and not excluded by law.",
+      "Date-specific services, staffed setups, and custom or personalised work may be excluded once sourcing, scheduling, or performance has started.",
+      "If an item becomes unavailable after payment, we will contact you promptly to agree on a substitute, credit, or refund.",
+      "Our refund and delivery pages explain how REEBS applies these rules to goods, services, and event bookings.",
+    ],
   },
   {
-    id: 'changes',
-    kicker: '6. Changes',
-    title: 'Policy updates',
-    description: 'We refine these terms as we grow.',
+    id: "governing-law",
+    label: "6.",
+    title: "Governing law and disputes",
+    summary:
+      "These terms are governed by the laws of Ghana.",
     items: [
-      'Updates take effect when posted on this page with the new date.',
-      'If material changes affect an active booking, we will notify you via your provided contact.'
-    ]
-  }
+      "Please contact REEBS first if something goes wrong so that we can try to resolve the issue quickly.",
+      "If a dispute cannot be resolved informally, it may be handled through negotiation, mediation, or the courts of Ghana, depending on the issue.",
+      "Nothing in these terms removes rights you cannot lawfully waive under applicable Ghanaian law.",
+    ],
+  },
 ];
 
-const TermsOfService = () => {
+function TermsOfService() {
   return (
-    <main className="policy" role="main" id="policy-main">
-      <section className="policy-hero" aria-labelledby="tos-heading">
-        <div className="policy-hero-copy">
-          <p className="policy-pill">Updated: July 2025</p>
-          <h1 id="tos-heading">Terms of Service</h1>
-          <p className="policy-sub">
-            The friendly fine print for rentals, decor, and party supplies—built to keep every booking smooth.
-          </p>
-          <div className="policy-meta" aria-label="Terms highlights">
-            <span className="policy-chip">Clear bookings</span>
-            <span className="policy-chip">Safety focused</span>
-            <span className="policy-chip">Fair use</span>
-          </div>
-        </div>
-        <div className="policy-hero-card glass-card">
-          <p className="policy-hero-lede">Know what to expect before we roll up.</p>
-          <ul>
-            <li>Paying secures inventory, decor, and crew.</li>
-            <li>Keep rentals safe; report issues quickly.</li>
-            <li>We keep liability fair and transparent.</li>
-          </ul>
-          <div className="policy-ribbon">
-            <span>Less hustle. More confidence.</span>
-          </div>
-        </div>
-        <span className="policy-bubble bubble-a" aria-hidden="true" />
-        <span className="policy-bubble bubble-b" aria-hidden="true" />
-        <span className="policy-bubble bubble-c" aria-hidden="true" />
-      </section>
-
-      <section className="policy-highlights" aria-labelledby="tos-quick-look">
-        <div className="section-header">
-          <p className="kicker">Quick look</p>
-          <h2 id="tos-quick-look">What these terms cover</h2>
-        </div>
-        <div className="policy-grid">
-          <article className="policy-card">
-            <p className="policy-card-kicker">Bookings</p>
-            <h3>Reservations that stick</h3>
-            <p>Quotes hold items briefly; payment locks them in along with your setup crew.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">Use</p>
-            <h3>Care in your space</h3>
-            <p>Follow safety guidance for inflatables, decor installs, and powered equipment.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">Accountability</p>
-            <h3>Fair remedies</h3>
-            <p>Issues? We work quickly to resolve them; liability is limited to what you paid for the booking.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="policy-sections" aria-label="Terms of service details">
-        {termsSections.map((section) => (
-          <article key={section.id} className="policy-detail" id={section.id}>
-            <p className="policy-card-kicker">{section.kicker}</p>
-            <div className="policy-detail-header">
-              <h2>{section.title}</h2>
-              <p>{section.description}</p>
-            </div>
-            <ul>
-              {section.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
-      </section>
-
-      <section className="policy-cta" aria-labelledby="tos-cta-heading">
-        <div>
-          <p className="kicker">Questions?</p>
-          <h2 id="tos-cta-heading">Chat with REEBS</h2>
-          <p className="policy-sub">
-            Clarify booking rules, ask about safety guidelines, or request a copy of these terms.
-          </p>
-        </div>
-        <div className="policy-contact">
-          <a href="mailto:info@reebspartythemes.com" className="policy-chip solid">info@reebspartythemes.com</a>
-          <a href="https://wa.me/233244238419" className="policy-chip" target="_blank" rel="noopener noreferrer">
-            WhatsApp: +233 244 238 419
-          </a>
-        </div>
-      </section>
-    </main>
+    <LegalDocumentPage
+      title="Terms of Service"
+      lastUpdated={LAST_UPDATED}
+      intro="These terms set the ground rules for party rentals, party supplies, deliveries, and styling services booked from REEBS Party Themes."
+      marketNote="This version is written for Ghana-based transactions and references the Electronic Transactions Act, 2008 (Act 772) for online contracting standards."
+      sections={sections}
+      contactHeading="Questions before you book?"
+      contactBody="If you want help interpreting these terms for a specific booking, delivery, or rental, contact the REEBS team before payment."
+    />
   );
-};
+}
 
 export default TermsOfService;

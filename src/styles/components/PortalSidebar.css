@@ -1,6 +1,6 @@
 .portal-app-shell {
   --portal-sidebar-collapsed: 68px;
-  --portal-sidebar-expanded: 224px;
+  --portal-sidebar-expanded: 250px;
   position: relative;
   width: 100%;
   min-height: 100vh;
@@ -386,7 +386,6 @@
 .portal-sidebar__link .app-icon,
 .portal-sidebar__notifications-title .app-icon,
 .portal-sidebar__user-link .app-icon,
-.portal-sidebar__theme-toggle-btn .app-icon,
 .portal-sidebar__signout-btn .app-icon,
 .portal-sidebar__toggle-btn .app-icon,
 .portal-sidebar__overlay-close .app-icon {
@@ -471,33 +470,9 @@
   border-radius: 999px;
 }
 
-.portal-sidebar__theme-toggle {
-  width: 100%;
-  margin-top: 1rem;
-}
-
 .portal-sidebar__actions {
   width: 100%;
   margin-top: 0.5rem;
-}
-
-.portal-sidebar__theme-toggle-btn {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  background: var(--surface);
-  color: var(--muted);
-  padding: 0.5rem 0.75rem;
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: flex-start;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.portal-sidebar__theme-toggle-btn:hover {
-  color: var(--ink);
 }
 
 .portal-sidebar__signout-btn {
@@ -522,11 +497,6 @@
   color: #b91c1c;
 }
 
-[data-theme="dark"] .portal-sidebar__signout-btn:hover {
-  background: rgba(248, 113, 113, 0.18);
-  border-color: rgba(248, 113, 113, 0.45);
-  color: #fecaca;
-}
 
 .portal-sidebar__signout-btn span {
   flex: 1;
@@ -534,13 +504,6 @@
   transition: opacity 0.2s ease;
 }
 
-.portal-sidebar__theme-toggle-btn span {
-  flex: 1;
-  white-space: nowrap;
-  transition: opacity 0.2s ease;
-}
-
-.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn span,
 .portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn span {
   opacity: 0;
   width: 0;
@@ -549,7 +512,6 @@
   visibility: hidden;
 }
 
-.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn,
 .portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn {
   justify-content: center;
 }
@@ -627,7 +589,6 @@
 }
 
 .portal-sidebar:not(.is-expanded) .portal-sidebar__user-link,
-.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn,
 .portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn {
   width: 2.15rem;
   min-width: 2.15rem;
@@ -639,7 +600,6 @@
 }
 
 .portal-sidebar:not(.is-expanded) .portal-sidebar__user-link span,
-.portal-sidebar:not(.is-expanded) .portal-sidebar__theme-toggle-btn span,
 .portal-sidebar:not(.is-expanded) .portal-sidebar__signout-btn span {
   display: none;
 }

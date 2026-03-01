@@ -1,61 +1,87 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AppIcon } from "/src/components/Icon";
-import { faMinus, faPlus, faTimes, faTrash } from "/src/icons/iconSet";
+import { faMinus, faPlus, faShoppingCart, faTimes, faTrash } from "/src/icons/iconSet";
 import { useCart } from "./CartContext";
+import {
+  getCatalogItemBackgroundStyle,
+  getCatalogItemImage,
+} from "/src/utils/itemMediaBackgrounds";
 
-const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
+const getCartItemKey = (item = {}) =>
+  String(item.id ?? item.productId ?? item.slug ?? item.name ?? "").trim();
 
 function CartOverlay({ open, onClose }) {
   const {
     cart,
+    cartOpen,
+    closeCart,
     updateQuantity,
     removeFromCart,
     clearCart,
     convertPrice,
     formatCurrency,
-    currency,
-    setCurrency,
   } = useCart();
+  const isOpen = typeof open === "boolean" ? open : cartOpen;
+  const handleClose = onClose || closeCart;
+  const getItemPrice = (item) =>
+    item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : 0);
   const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
   const subtotal = cart.reduce(
-    (acc, item) => acc + convertPrice(item.price) * item.cartQuantity,
+    (acc, item) => acc + convertPrice(getItemPrice(item)) * item.cartQuantity,
     0
   );
   const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
-  const getItemImage = (item) =>
-    item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
   const getItemCategory = (item) =>
     item.specificCategory || item.specificcategory || item.type || null;
+  const subtotalLabel = formatCurrency(subtotal);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleClose, isOpen]);
 
   return (
-    <div className={`cart-drawer ${open ? "open" : ""}`} aria-hidden={!open}>
-      <div className="cart-backdrop" onClick={onClose} />
+    <div className={`cart-drawer ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
+      <button
+        type="button"
+        className="cart-backdrop"
+        onClick={handleClose}
+        aria-label="Close cart"
+      />
       <aside
-        className={`cart-overlay ${open ? "open" : ""}`}
+        className={`cart-overlay ${isOpen ? "open" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cart-title"
       >
         <div className="cart-header">
-          <div>
+          <div className="cart-header-copy">
             <p className="cart-kicker">Bag</p>
-            <h2 id="cart-title">Your Cart ({itemCount})</h2>
+            <h2 id="cart-title">Your Cart</h2>
+            <p className="cart-header-summary">
+              {itemCount > 0
+                ? `${itemCount} ${itemCount === 1 ? "item" : "items"} ready`
+                : "No items added yet"}
+            </p>
           </div>
           <div className="cart-header-actions">
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="cart-currency"
-              aria-label="Select currency"
-            >
-              {CURRENCIES.map((cur) => (
-                <option key={cur} value={cur}>
-                  {cur}
-                </option>
-              ))}
-            </select>
-            <button className="close-cart" onClick={onClose} aria-label="Close cart">
+            <button type="button" className="close-cart" onClick={handleClose} aria-label="Close cart">
               <AppIcon icon={faTimes} />
             </button>
           </div>
@@ -63,34 +89,51 @@ function CartOverlay({ open, onClose }) {
 
         {cart.length === 0 ? (
           <div className="cart-empty">
-            <p>Your cart is empty.</p>
-            <Link to="/shop" className="checkout-btn ghost" onClick={onClose}>
-              Browse the shop
-            </Link>
+            <div className="cart-empty-illus" aria-hidden="true">
+              <AppIcon icon={faShoppingCart} />
+            </div>
+            <strong>Your cart is empty.</strong>
+            <p>Add balloons, supplies, or rentals to start building your order.</p>
+            <div className="cart-empty-actions">
+              <Link to="/shop" className="checkout-btn" onClick={handleClose}>
+                Browse the shop
+              </Link>
+              <Link to="/rentals" className="ghost-btn" onClick={handleClose}>
+                Explore rentals
+              </Link>
+            </div>
           </div>
         ) : (
           <>
             <div className="cart-items">
               {cart.map((item) => {
                 const available = getItemQuantity(item) - item.cartQuantity;
+                const itemKey = getCartItemKey(item);
+                const itemCategory = getItemCategory(item);
                 return (
-                  <div key={item.id} className="cart-item">
-                    <img
-                      className="cart-image"
-                      src={getItemImage(item)}
-                      alt={item.name}
-                    />
+                  <div key={itemKey} className="cart-item">
+                    <div
+                      className="cart-item-media category-image-bg"
+                      style={getCatalogItemBackgroundStyle(item)}
+                    >
+                      <img
+                        className="cart-image"
+                        src={getCatalogItemImage(item)}
+                        alt={item.name}
+                      />
+                    </div>
                     <div className="cart-item-body">
                       <div className="cart-item-top">
                         <div>
                           <p className="cart-item-name">{item.name}</p>
-                          {getItemCategory(item) && (
-                            <span className="cart-item-type">{getItemCategory(item)}</span>
+                          {itemCategory && (
+                            <span className="cart-item-type">{itemCategory}</span>
                           )}
                         </div>
                         <button
                           className="cart-remove"
-                          onClick={() => removeFromCart(item.id)}
+                          type="button"
+                          onClick={() => removeFromCart(item)}
                           aria-label="Remove item"
                         >
                           <AppIcon icon={faTrash} />
@@ -100,10 +143,11 @@ function CartOverlay({ open, onClose }) {
                       <div className="cart-item-meta">
                         <div className="cart-qty-controls">
                           <button
+                            type="button"
                             onClick={() =>
                               item.cartQuantity <= 1
-                                ? removeFromCart(item.id)
-                                : updateQuantity(item.id, -1)
+                                ? removeFromCart(item)
+                                : updateQuantity(item, -1)
                             }
                             aria-label="Decrease quantity"
                           >
@@ -111,7 +155,8 @@ function CartOverlay({ open, onClose }) {
                           </button>
                           <span>{item.cartQuantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, 1)}
+                            type="button"
+                            onClick={() => updateQuantity(item, 1)}
                             disabled={item.cartQuantity >= getItemQuantity(item)}
                             aria-label="Increase quantity"
                           >
@@ -123,10 +168,10 @@ function CartOverlay({ open, onClose }) {
                         </div>
                         <div className="cart-price">
                           <span className="cart-price-each">
-                            {formatCurrency(convertPrice(item.price))} ea
+                            {formatCurrency(convertPrice(getItemPrice(item)))} ea
                           </span>
                           <span className="cart-price-total">
-                            {formatCurrency(convertPrice(item.price * item.cartQuantity))}
+                            {formatCurrency(convertPrice(getItemPrice(item) * item.cartQuantity))}
                           </span>
                         </div>
                       </div>
@@ -138,23 +183,27 @@ function CartOverlay({ open, onClose }) {
 
             <div className="cart-footer">
               <div className="subtotal">
-                <div className="text">
+                <div className="cart-footer-copy">
                   <strong>Subtotal</strong>
                   <span>
                     {itemCount} {itemCount === 1 ? "item" : "items"}
                   </span>
                 </div>
-                <div className="amount">
-                  <strong>{formatCurrency(subtotal)}</strong>
+                <div className="cart-footer-total">
+                  <strong>{subtotalLabel}</strong>
                 </div>
               </div>
               <p className="cart-note">Taxes and pickup timing confirmed at checkout.</p>
-              <Link to="/Cart" onClick={onClose}>
-                <button className="checkout-btn">Proceed To Bag</button>
+              <Link to="/cart" className="checkout-btn cart-primary-action" onClick={handleClose}>
+                Go to cart
               </Link>
               <div className="foot-items">
-                <button className="clear-cart" onClick={clearCart}>Clear Cart</button>
-                <button className="ghost-btn" onClick={onClose}>Continue shopping</button>
+                <button type="button" className="clear-cart" onClick={clearCart}>
+                  Clear Cart
+                </button>
+                <button type="button" className="ghost-btn" onClick={handleClose}>
+                  Continue shopping
+                </button>
               </div>
             </div>
           </>

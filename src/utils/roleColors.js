@@ -7,6 +7,7 @@ const roleColors = {
   sales: "blue",
   custodian: "green",
   viewer: "purple",
+  water: "blue",
 };
 
 export default roleColors;

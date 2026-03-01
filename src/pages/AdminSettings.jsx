@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import "./admin.css";
+import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 
@@ -308,6 +308,7 @@ function AdminSettings() {
                       <option value="Admin">Admin</option>
                       <option value="Manager">Manager</option>
                       <option value="Staff">Staff</option>
+                      <option value="Water">Water</option>
                       <option value="Warehouse">Warehouse</option>
                     </select>
                   </label>

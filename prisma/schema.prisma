@@ -30,6 +30,10 @@ model Organization {
   indoorGames     IndoorGame[]
   machines        Machine[]
   shopItems       ShopItem[]
+  waterRestocks   WaterRestock[]
+  waterSales      WaterSale[]
+  waterExpenses   WaterExpense[]
+  waterAdjustments WaterAdjustment[]
 
   @@map("organization")
 }
@@ -329,12 +333,88 @@ model Customer {
   
   orders    Order[] 
   bookings Booking[]
+  waterSales WaterSale[]
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   @@unique([organizationId, email])
   @@map("customer")
+}
+
+model WaterRestock {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  productKey      String       @default("gwater-12pk")
+  productName     String       @default("12pk Gwater")
+  quantity        Int
+  unitCost        Int          @default(2200)
+  vendorId        Int?
+  vendorName      String?
+  notes           String?
+  date            DateTime
+  createdByUserId Int?
+  createdByName   String?
+  createdAt       DateTime     @default(now())
+
+  @@map("waterRestock")
+}
+
+model WaterSale {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  productKey      String       @default("gwater-12pk")
+  productName     String       @default("12pk Gwater")
+  quantity        Int
+  saleChannel     String
+  paymentMethod   String       @default("cash")
+  unitPrice       Int
+  totalAmount     Int
+  customerId      Int?
+  customer        Customer?    @relation(fields: [customerId], references: [id])
+  customerName    String?
+  notes           String?
+  date            DateTime
+  createdByUserId Int?
+  createdByName   String?
+  createdAt       DateTime     @default(now())
+
+  @@map("waterSale")
+}
+
+model WaterExpense {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  category        String
+  amount          Int
+  description     String
+  notes           String?
+  date            DateTime
+  createdByUserId Int?
+  createdByName   String?
+  createdAt       DateTime     @default(now())
+
+  @@map("waterExpense")
+}
+
+model WaterAdjustment {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  productKey      String       @default("gwater-12pk")
+  productName     String       @default("12pk Gwater")
+  quantityDelta   Int
+  reason          String
+  notes           String?
+  date            DateTime
+  createdByUserId Int?
+  createdByName   String?
+  createdAt       DateTime     @default(now())
+
+  @@map("waterAdjustment")
 }
 
 model Booking {

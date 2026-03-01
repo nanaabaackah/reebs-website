@@ -5,10 +5,15 @@ const DEFAULT_DESCRIPTION =
   "REEBS Party Themes provides party rentals, decor setup, and party supplies across Ghana with fast delivery and friendly support.";
 const DEFAULT_KEYWORDS =
   "kids party rentals Ghana, bouncy castle rental Accra, party decor Tema, party supplies Ghana, event setup services, kids birthday planning";
+const DEFAULT_LOCALE = "en_GH";
+const DEFAULT_LANGUAGE = "en-GH";
+const DEFAULT_TWITTER = "@reebspartythemes_";
+const DEFAULT_THEME_COLOR = "#f97316";
 
 const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": `${SITE_URL}#organization`,
   name: SITE_NAME,
   url: SITE_URL,
   logo: `${SITE_URL}/imgs/reebs_logo2.png`,
@@ -30,6 +35,7 @@ const ORGANIZATION_SCHEMA = {
 const LOCAL_BUSINESS_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "PartySupplyStore",
+  "@id": `${SITE_URL}#localbusiness`,
   name: SITE_NAME,
   image: DEFAULT_IMAGE,
   url: SITE_URL,
@@ -54,6 +60,7 @@ const LOCAL_BUSINESS_SCHEMA = {
 const WEBSITE_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": `${SITE_URL}#website`,
   name: SITE_NAME,
   url: SITE_URL,
   potentialAction: {
@@ -63,9 +70,42 @@ const WEBSITE_SCHEMA = {
   },
 };
 
+const RENTAL_SERVICE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "@id": `${SITE_URL}/rentals#service`,
+  name: "Party Rental and Setup Service",
+  serviceType: "Party rentals, decor setup, and event equipment delivery",
+  provider: {
+    "@id": `${SITE_URL}#organization`,
+  },
+  areaServed: {
+    "@type": "Country",
+    name: "Ghana",
+  },
+  url: `${SITE_URL}/rentals`,
+};
+
+const BOOKING_SERVICE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "@id": `${SITE_URL}/book#service`,
+  name: "Event Booking Service",
+  serviceType: "Party booking and event planning support",
+  provider: {
+    "@id": `${SITE_URL}#organization`,
+  },
+  areaServed: {
+    "@type": "Country",
+    name: "Ghana",
+  },
+  url: `${SITE_URL}/book`,
+};
+
 const FAQ_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
+  "@id": `${SITE_URL}/faq#faq`,
   mainEntity: [
     {
       "@type": "Question",
@@ -102,7 +142,7 @@ const PAGE_META = [
       "Plan your event with REEBS. Rent bouncy castles, decor, and party equipment, then shop balloons and supplies with delivery across Ghana.",
     keywords:
       "party rentals Ghana, kids party setup Accra, bouncy castles Tema, party decor and supplies Ghana",
-    schema: [ORGANIZATION_SCHEMA, LOCAL_BUSINESS_SCHEMA, WEBSITE_SCHEMA],
+    schema: [RENTAL_SERVICE_SCHEMA],
   },
   {
     match: (path) => path.startsWith("/about"),
@@ -124,6 +164,7 @@ const PAGE_META = [
     description:
       "Browse REEBS rental categories including bouncy castles, games, and event setup essentials for birthdays and celebrations.",
     keywords: "party rentals Accra, kids equipment rental Ghana, bouncy castles Ghana",
+    schema: [RENTAL_SERVICE_SCHEMA],
   },
   {
     match: (path) => path.startsWith("/shop"),
@@ -131,13 +172,6 @@ const PAGE_META = [
     description:
       "Shop party supplies, balloons, gifts, and celebration extras from REEBS Party Themes.",
     keywords: "party supplies Ghana, balloons shop Tema, birthday decorations Accra",
-  },
-  {
-    match: (path) => path.startsWith("/gallery"),
-    title: "Event Gallery | REEBS Party Themes",
-    description:
-      "See real REEBS event setups, decor installs, and rental highlights from parties across Ghana.",
-    keywords: "party gallery Ghana, event decor photos Accra, REEBS portfolio",
   },
   {
     match: (path) => path.startsWith("/contact"),
@@ -161,6 +195,39 @@ const PAGE_META = [
     description:
       "Submit your event details and let REEBS prepare a clear booking plan with rentals, decor, and delivery support.",
     keywords: "book party rentals Ghana, reserve bouncy castle Accra, event booking REEBS",
+    schema: [BOOKING_SERVICE_SCHEMA],
+  },
+  {
+    match: (path) => path.startsWith("/website-template"),
+    title: "Website Template Editor | REEBS Party Themes",
+    description:
+      "Preview and edit website template settings for REEBS Party Themes.",
+    keywords: "website template editor REEBS, REEBS configuration",
+    noIndex: true,
+  },
+  {
+    match: (path) => path.startsWith("/cart"),
+    title: "Cart | REEBS Party Themes",
+    description: "Review selected items before checkout.",
+    noIndex: true,
+  },
+  {
+    match: (path) => path.startsWith("/checkout"),
+    title: "Checkout | REEBS Party Themes",
+    description: "Confirm your order details and payment information.",
+    noIndex: true,
+  },
+  {
+    match: (path) => path === "/home",
+    title: "REEBS Party Themes",
+    description: DEFAULT_DESCRIPTION,
+    noIndex: true,
+  },
+  {
+    match: (path) => path.startsWith("/customer-login"),
+    title: "Customer Access | REEBS Party Themes",
+    description: "Customer access route for booking support.",
+    noIndex: true,
   },
   {
     match: (path) => path.startsWith("/privacy-policy"),
@@ -194,6 +261,37 @@ const normalizePath = (pathname = "/") => {
   return withSlash.toLowerCase();
 };
 
+const toTitleCase = (value = "") =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+const breadcrumbLabel = (segment = "") => {
+  const labelMap = {
+    about: "About",
+    rentals: "Rentals",
+    shop: "Shop",
+    gallery: "Gallery",
+    contact: "Contact",
+    faq: "FAQ",
+    book: "Book",
+    "privacy-policy": "Privacy Policy",
+    "refund-policy": "Refund Policy",
+    "delivery-policy": "Delivery Policy",
+    "terms-of-service": "Terms of Service",
+    cart: "Cart",
+    checkout: "Checkout",
+    login: "Sign in",
+    admin: "Admin",
+  };
+
+  if (!segment) return "Page";
+  if (labelMap[segment]) return labelMap[segment];
+  return toTitleCase(segment.replace(/-/g, " "));
+};
+
 const ensureMeta = (attribute, key) => {
   let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
   if (!element) {
@@ -214,6 +312,17 @@ const ensureLink = (rel) => {
   return element;
 };
 
+const ensureAlternateLink = (hreflang) => {
+  let element = document.head.querySelector(`link[rel="alternate"][hreflang="${hreflang}"]`);
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", "alternate");
+    element.setAttribute("hreflang", hreflang);
+    document.head.appendChild(element);
+  }
+  return element;
+};
+
 const getRouteMeta = (pathname) => {
   const normalizedPath = normalizePath(pathname);
   const match = PAGE_META.find((item) => item.match(normalizedPath));
@@ -222,7 +331,88 @@ const getRouteMeta = (pathname) => {
     description: match?.description || DEFAULT_DESCRIPTION,
     keywords: match?.keywords || DEFAULT_KEYWORDS,
     schema: match?.schema || null,
+    noIndex: Boolean(match?.noIndex),
   };
+};
+
+const getWebPageType = (pathname) => {
+  if (pathname === "/") return "WebPage";
+  if (pathname.startsWith("/about")) return "AboutPage";
+  if (pathname.startsWith("/contact")) return "ContactPage";
+  if (pathname.startsWith("/faq")) return "FAQPage";
+  if (pathname.startsWith("/shop")) return "CollectionPage";
+  if (pathname.startsWith("/rentals")) return "CollectionPage";
+  return "WebPage";
+};
+
+const buildBreadcrumbSchema = (pathname, canonical) => {
+  const normalizedPath = normalizePath(pathname);
+  const segments = normalizedPath.split("/").filter(Boolean);
+  const crumbs = [{ name: "Home", item: SITE_URL }];
+  let currentPath = "";
+  segments.forEach((segment) => {
+    currentPath += `/${segment}`;
+    crumbs.push({
+      name: breadcrumbLabel(segment),
+      item: `${SITE_URL}${currentPath}`,
+    });
+  });
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumb`,
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.item,
+    })),
+  };
+};
+
+const buildWebPageSchema = ({ pathname, canonical, title, description }) => ({
+  "@context": "https://schema.org",
+  "@type": getWebPageType(pathname),
+  "@id": `${canonical}#webpage`,
+  url: canonical,
+  name: title,
+  description,
+  inLanguage: DEFAULT_LANGUAGE,
+  isPartOf: {
+    "@id": `${SITE_URL}#website`,
+  },
+  about: {
+    "@id": `${SITE_URL}#organization`,
+  },
+  breadcrumb: {
+    "@id": `${canonical}#breadcrumb`,
+  },
+});
+
+const normalizeSchemaPayload = (schema) => {
+  const pending = Array.isArray(schema) ? [...schema] : [schema];
+  const flat = [];
+
+  while (pending.length) {
+    const current = pending.shift();
+    if (!current) continue;
+    if (Array.isArray(current)) {
+      pending.push(...current);
+      continue;
+    }
+    if (typeof current === "object") {
+      flat.push(current);
+    }
+  }
+
+  const seen = new Set();
+  return flat.filter((entry, index) => {
+    const key = entry["@id"] || `${entry["@type"] || "Schema"}-${index}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 const updateSchema = (schema) => {
@@ -248,9 +438,9 @@ export const applySeo = ({
   description,
   keywords,
   image = DEFAULT_IMAGE,
-  noIndex = false,
+  noIndex,
   type = "website",
-  locale = "en_GH",
+  locale = DEFAULT_LOCALE,
   schema,
 } = {}) => {
   if (typeof document === "undefined") return;
@@ -260,20 +450,49 @@ export const applySeo = ({
   const finalTitle = title || routeMeta.title;
   const finalDescription = description || routeMeta.description;
   const finalKeywords = keywords || routeMeta.keywords || DEFAULT_KEYWORDS;
+  const finalNoIndex = typeof noIndex === "boolean" ? noIndex : routeMeta.noIndex;
   const canonical = normalizedPath === "/" ? SITE_URL : `${SITE_URL}${normalizedPath}`;
-  const finalSchema = schema ?? routeMeta.schema ?? null;
+  const routeSchema = schema ?? routeMeta.schema ?? null;
+
+  const finalSchema = finalNoIndex
+    ? null
+    : normalizeSchemaPayload([
+        ORGANIZATION_SCHEMA,
+        LOCAL_BUSINESS_SCHEMA,
+        WEBSITE_SCHEMA,
+        routeSchema,
+        buildWebPageSchema({
+          pathname: normalizedPath,
+          canonical,
+          title: finalTitle,
+          description: finalDescription,
+        }),
+        buildBreadcrumbSchema(normalizedPath, canonical),
+      ]);
 
   document.title = finalTitle;
 
   ensureMeta("name", "description").setAttribute("content", finalDescription);
   ensureMeta("name", "keywords").setAttribute("content", finalKeywords);
-  ensureMeta("name", "robots").setAttribute("content", noIndex ? "noindex, nofollow" : "index, follow");
+  ensureMeta("name", "robots").setAttribute(
+    "content",
+    finalNoIndex ? "noindex, nofollow" : "index, follow"
+  );
+  ensureMeta("name", "googlebot").setAttribute(
+    "content",
+    finalNoIndex ? "noindex, nofollow" : "index, follow"
+  );
+  ensureMeta("name", "author").setAttribute("content", SITE_NAME);
 
   ensureMeta("property", "og:title").setAttribute("content", finalTitle);
   ensureMeta("property", "og:description").setAttribute("content", finalDescription);
   ensureMeta("property", "og:type").setAttribute("content", type);
   ensureMeta("property", "og:url").setAttribute("content", canonical);
   ensureMeta("property", "og:image").setAttribute("content", image);
+  ensureMeta("property", "og:image:alt").setAttribute(
+    "content",
+    "REEBS Party Themes event setup and rental showcase"
+  );
   ensureMeta("property", "og:site_name").setAttribute("content", SITE_NAME);
   ensureMeta("property", "og:locale").setAttribute("content", locale);
 
@@ -281,11 +500,13 @@ export const applySeo = ({
   ensureMeta("name", "twitter:title").setAttribute("content", finalTitle);
   ensureMeta("name", "twitter:description").setAttribute("content", finalDescription);
   ensureMeta("name", "twitter:image").setAttribute("content", image);
-  ensureMeta("name", "twitter:site").setAttribute("content", "@reebspartythemes_");
+  ensureMeta("name", "twitter:site").setAttribute("content", DEFAULT_TWITTER);
   ensureMeta("name", "twitter:url").setAttribute("content", canonical);
 
-  ensureMeta("name", "theme-color").setAttribute("content", "#f97316");
+  ensureMeta("name", "theme-color").setAttribute("content", DEFAULT_THEME_COLOR);
 
   ensureLink("canonical").setAttribute("href", canonical);
+  ensureAlternateLink("en-GH").setAttribute("href", canonical);
+  ensureAlternateLink("x-default").setAttribute("href", canonical);
   updateSchema(finalSchema);
 };

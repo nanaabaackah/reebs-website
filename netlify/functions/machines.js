@@ -9,27 +9,46 @@ export async function handler() {
   try {
     await client.connect();
 
+    const columnsResult = await client.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = ANY (current_schemas(false))
+        AND table_name = 'machines'
+    `);
+    const columns = new Set(columnsResult.rows.map((row) => row.column_name));
+    const hasColumn = (name) => columns.has(name);
+    const selectExpr = (columnName, presentExpr, fallbackExpr = `NULL AS "${columnName}"`) =>
+      hasColumn(columnName) ? presentExpr : fallbackExpr;
+    const availabilityExpr = hasColumn("availability")
+      ? "availability"
+      : hasColumn("status")
+        ? 'status AS availability'
+        : "NULL AS availability";
+    const orderBy = hasColumn("id")
+      ? "ORDER BY id ASC"
+      : hasColumn("name")
+        ? "ORDER BY name ASC"
+        : "";
+
     const result = await client.query(`
       SELECT
-        id,
-        name,
-        "productId",
-        quantity,
-        price,
-        rate,
-        availability,
-        category,
-        image,
-        page,
-        power,
-        footprint,
-        output,
-        notes
+        ${selectExpr("id", "id", "NULL AS id")},
+        ${selectExpr("name", "name", "NULL AS name")},
+        ${selectExpr("productId", '"productId"')},
+        ${selectExpr("quantity", "quantity")},
+        ${selectExpr("price", "price")},
+        ${selectExpr("rate", "rate")},
+        ${availabilityExpr},
+        ${selectExpr("category", "category")},
+        ${selectExpr("image", "image")},
+        ${selectExpr("page", "page")},
+        ${selectExpr("power", "power")},
+        ${selectExpr("footprint", "footprint")},
+        ${selectExpr("output", "output")},
+        ${selectExpr("notes", "notes")}
       FROM "machines"
-      ORDER BY id ASC
+      ${orderBy}
     `);
-
-    await client.end();
 
     return {
       statusCode: 200,
@@ -47,5 +66,11 @@ export async function handler() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: "Failed to fetch machines" }),
     };
+  } finally {
+    try {
+      await client.end();
+    } catch {
+      // ignore close errors
+    }
   }
 }

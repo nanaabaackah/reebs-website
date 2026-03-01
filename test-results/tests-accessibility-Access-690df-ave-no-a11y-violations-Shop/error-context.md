@@ -1,0 +1,240 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - link "Skip to main content" [ref=e32] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=e33]:
+    - region "Shop everyday and event essentials" [ref=e34]:
+      - generic [ref=e35]:
+        - paragraph [ref=e36]: Party essentials
+        - heading "Shop everyday and event essentials" [level=1] [ref=e37]
+        - paragraph [ref=e38]: Party picks, home supplies, stationery, and practical extras ready for quick pickup or delivery, with options that still pair smoothly with your rentals.
+        - generic [ref=e39]:
+          - button "View cart" [ref=e40] [cursor=pointer]
+          - link "Browse rentals" [ref=e41] [cursor=pointer]:
+            - /url: /rentals
+        - generic "Shop highlights" [ref=e42]:
+          - generic [ref=e43]:
+            - strong [ref=e44]: "2"
+            - generic [ref=e45]: Products live
+          - generic [ref=e46]:
+            - strong [ref=e47]: "1"
+            - generic [ref=e48]: Categories
+          - generic [ref=e49]:
+            - strong [ref=e50]: "2"
+            - generic [ref=e51]: In stock items
+      - list "Popular shop items" [ref=e52]:
+        - listitem [ref=e53] [cursor=pointer]:
+          - img "Cotton Candy Kit image not available" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55] [cursor=pointer]: Image not available
+          - generic [ref=e57] [cursor=pointer]:
+            - paragraph [ref=e58] [cursor=pointer]: Party Supplies
+            - heading "Cotton Candy Kit" [level=3] [ref=e59] [cursor=pointer]
+            - generic [ref=e60] [cursor=pointer]: Browse this category →
+        - listitem [ref=e61] [cursor=pointer]:
+          - img "Rainbow Balloon Set image not available" [ref=e62] [cursor=pointer]:
+            - generic [ref=e63] [cursor=pointer]: Image not available
+          - generic [ref=e65] [cursor=pointer]:
+            - paragraph [ref=e66] [cursor=pointer]: Party Supplies
+            - heading "Rainbow Balloon Set" [level=3] [ref=e67] [cursor=pointer]
+            - generic [ref=e68] [cursor=pointer]: Browse this category →
+    - generic [ref=e70]:
+      - navigation "Shop categories":
+        - list:
+          - listitem:
+            - link "Party Supplies":
+              - /url: "#party-supplies"
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - paragraph [ref=e75]: Shop catalog
+              - heading "Find your items quickly" [level=2] [ref=e76]
+              - paragraph [ref=e77]: 2 items shown · 1 categories
+            - generic [ref=e78]:
+              - combobox "Select currency" [ref=e79]:
+                - option "GHS" [selected]
+                - option "USD"
+                - option "CAD"
+                - option "GBP"
+                - option "EUR"
+                - option "NGN"
+              - generic [ref=e80]:
+                - checkbox "In stock only" [ref=e81]
+                - text: In stock only
+          - generic [ref=e83]:
+            - img [ref=e84]
+            - textbox "Search shop products" [ref=e86]
+          - list "Shop category filters" [ref=e87]:
+            - button "All" [pressed] [ref=e88] [cursor=pointer]
+            - button "Party Supplies" [ref=e89] [cursor=pointer]
+          - generic [ref=e91]: 2 items
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - generic [ref=e95]: 2 items
+            - heading "Party Supplies" [level=2] [ref=e96]
+          - generic [ref=e97]:
+            - article [ref=e98]:
+              - button "Image not available for Cotton Candy Kit" [disabled] [ref=e99]:
+                - img "Cotton Candy Kit image not available" [ref=e100]:
+                  - generic [ref=e101]: Image not available
+              - generic [ref=e102]:
+                - generic [ref=e103]: Party Supplies
+                - heading "Cotton Candy Kit" [level=3] [ref=e104]
+                - paragraph [ref=e105]: GHS 120.00
+                - paragraph [ref=e106]: 6 left in stock
+                - button "Add to cart" [ref=e107]:
+                  - img [ref=e108]
+            - article [ref=e110]:
+              - button "Image not available for Rainbow Balloon Set" [disabled] [ref=e111]:
+                - img "Rainbow Balloon Set image not available" [ref=e112]:
+                  - generic [ref=e113]: Image not available
+              - generic [ref=e114]:
+                - generic [ref=e115]: Party Supplies
+                - heading "Rainbow Balloon Set" [level=3] [ref=e116]
+                - paragraph [ref=e117]: GHS 50.00
+                - paragraph [ref=e118]: 4 left in stock
+                - button "Add to cart" [ref=e119]:
+                  - img [ref=e120]
+  - generic:
+    - dialog:
+      - generic:
+        - generic:
+          - paragraph: Bag
+          - heading [level=2]: Your Cart (0)
+        - generic:
+          - combobox
+          - button:
+            - img
+      - generic:
+        - paragraph: Your cart is empty.
+        - link:
+          - /url: /shop
+          - text: Browse the shop
+  - contentinfo "Site footer" [ref=e123]:
+    - heading "Site footer" [level=2] [ref=e124]
+    - region "Plan your party with REEBS" [ref=e125]:
+      - generic [ref=e126]:
+        - paragraph [ref=e127]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e128]
+        - generic [ref=e129]:
+          - generic [ref=e130]: Email address
+          - textbox "Email address" [ref=e131]
+          - button "Book your party" [ref=e132] [cursor=pointer]:
+            - generic [ref=e133] [cursor=pointer]: Book your party
+            - img [ref=e134] [cursor=pointer]
+    - generic [ref=e136]:
+      - link "REEBS Logo" [ref=e138] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e139] [cursor=pointer]
+      - generic [ref=e140]:
+        - generic [ref=e141]:
+          - navigation "Main links" [ref=e142]:
+            - heading "Menu" [level=3] [ref=e143]
+            - link "Home" [ref=e144] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e145] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e146] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e147] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e148] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e149] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e150] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e151]:
+            - heading "Accounts" [level=3] [ref=e152]
+            - link "Staff login" [ref=e153] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e154] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e155] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e156] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e157]:
+            - heading "Company" [level=3] [ref=e158]
+            - link "FAQ" [ref=e159] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e160] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e161] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e162] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e163] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e164]:
+            - heading "Social" [level=3] [ref=e165]
+            - link "Facebook" [ref=e166] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e167] [cursor=pointer]
+              - generic [ref=e169] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e170] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e171] [cursor=pointer]
+              - generic [ref=e174] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e175] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e176] [cursor=pointer]
+              - generic [ref=e178] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e179] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e180] [cursor=pointer]
+              - generic [ref=e182] [cursor=pointer]: WhatsApp
+        - generic [ref=e183]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e184] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e185] [cursor=pointer]
+            - generic [ref=e188] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e189] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e190] [cursor=pointer]
+            - generic [ref=e192] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e193] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e194] [cursor=pointer]
+            - generic [ref=e197] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e198]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e199]:
+      - generic [ref=e200]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e201]: Made to matter. Made By Nana.
+      - generic [ref=e202]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e203]
+```

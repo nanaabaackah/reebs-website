@@ -1,0 +1,227 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart with 2 items" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+          - generic [ref=e24] [cursor=pointer]: "2"
+        - link "Sign in" [ref=e25] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e26] [cursor=pointer]
+          - generic [ref=e29] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e30] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e31] [cursor=pointer]: Book your party
+          - generic [ref=e32] [cursor=pointer]: →
+  - main [ref=e33]:
+    - region "Your Cart" [ref=e34]:
+      - generic [ref=e35]:
+        - paragraph [ref=e36]: Check out your items
+        - heading "Your Cart" [level=1] [ref=e37]
+        - generic "Cart highlights" [ref=e38]:
+          - generic [ref=e39]: 2 items
+          - generic [ref=e40]: Subtotal GHS 100.00
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - paragraph [ref=e44]: Current subtotal
+            - strong [ref=e45]: GHS 100.00
+          - generic [ref=e46]:
+            - generic [ref=e47]: Currency
+            - combobox "Currency" [ref=e48]:
+              - option "GHS" [selected]
+              - option "USD"
+              - option "CAD"
+              - option "GBP"
+              - option "EUR"
+              - option "NGN"
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - img [ref=e51]
+            - text: In-store pickup only
+          - generic [ref=e55]:
+            - img [ref=e56]
+            - text: Secure checkout
+          - generic [ref=e59]:
+            - img [ref=e60]
+            - text: We pack with care
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - paragraph [ref=e68]: Bag
+            - heading "2 items saved" [level=3] [ref=e69]
+          - generic [ref=e70]:
+            - button "Clear cart" [ref=e71] [cursor=pointer]
+            - link "Continue shopping" [ref=e72] [cursor=pointer]:
+              - /url: /Shop
+              - img [ref=e73] [cursor=pointer]
+              - text: Continue shopping
+        - article [ref=e76]:
+          - generic [ref=e77]:
+            - img "Rainbow Balloon Set" [ref=e78]
+            - generic [ref=e79]: Party Supplies
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]:
+                - heading "Rainbow Balloon Set" [level=3] [ref=e83]
+                - paragraph [ref=e84]: 2 left in stock
+              - button "Remove Rainbow Balloon Set" [ref=e85] [cursor=pointer]: Remove
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - paragraph [ref=e88]: Price
+                - strong [ref=e89]: GHS 50.00
+                - generic [ref=e90]: per item
+              - generic [ref=e91]:
+                - paragraph [ref=e92]: Quantity
+                - generic [ref=e93]:
+                  - button "Decrease Rainbow Balloon Set quantity" [ref=e94] [cursor=pointer]: −
+                  - spinbutton "Rainbow Balloon Set quantity" [ref=e95]: "2"
+                  - button "Increase Rainbow Balloon Set quantity" [ref=e96] [cursor=pointer]: +
+                - generic [ref=e97]: 4 available • GHS 100.00
+              - generic [ref=e98]:
+                - paragraph [ref=e99]: Line total
+                - strong [ref=e100]: GHS 100.00
+                - generic [ref=e101]: 2 spare
+      - complementary "Order summary" [ref=e102]:
+        - generic [ref=e103]:
+          - paragraph [ref=e104]: Summary
+          - heading "Ready to book?" [level=3] [ref=e105]
+          - paragraph [ref=e106]: Taxes and pickup timing confirmed at checkout.
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]: Items
+            - generic [ref=e110]: "2"
+          - generic [ref=e111]:
+            - generic [ref=e112]: Subtotal
+            - strong [ref=e113]: GHS 100.00
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - img [ref=e116]
+            - text: Safe checkout
+          - generic [ref=e119]:
+            - img [ref=e120]
+            - text: In-store pickup only
+          - generic [ref=e124]:
+            - img [ref=e125]
+            - text: Styled for fun
+        - link "Proceed to Checkout" [ref=e128] [cursor=pointer]:
+          - /url: /Checkout
+        - link "Add more items" [ref=e129] [cursor=pointer]:
+          - /url: /Shop
+  - contentinfo "Site footer" [ref=e130]:
+    - heading "Site footer" [level=2] [ref=e131]
+    - region "Plan your party with REEBS" [ref=e132]:
+      - generic [ref=e133]:
+        - paragraph [ref=e134]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e135]
+        - generic [ref=e136]:
+          - generic [ref=e137]: Email address
+          - textbox "Email address" [ref=e138]
+          - button "Book your party" [ref=e139] [cursor=pointer]:
+            - generic [ref=e140] [cursor=pointer]: Book your party
+            - img [ref=e141] [cursor=pointer]
+    - generic [ref=e143]:
+      - link "REEBS Logo" [ref=e145] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e146] [cursor=pointer]
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - navigation "Main links" [ref=e149]:
+            - heading "Menu" [level=3] [ref=e150]
+            - link "Home" [ref=e151] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e152] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e153] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e154] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e155] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e156] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e157] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e158]:
+            - heading "Accounts" [level=3] [ref=e159]
+            - link "Staff login" [ref=e160] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e161] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e162] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e163] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e164]:
+            - heading "Company" [level=3] [ref=e165]
+            - link "FAQ" [ref=e166] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e167] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e168] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e169] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e170] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e171]:
+            - heading "Social" [level=3] [ref=e172]
+            - link "Facebook" [ref=e173] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e174] [cursor=pointer]
+              - generic [ref=e176] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e177] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e178] [cursor=pointer]
+              - generic [ref=e181] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e182] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e183] [cursor=pointer]
+              - generic [ref=e185] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e186] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e187] [cursor=pointer]
+              - generic [ref=e189] [cursor=pointer]: WhatsApp
+        - generic [ref=e190]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e191] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e192] [cursor=pointer]
+            - generic [ref=e195] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e196] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e197] [cursor=pointer]
+            - generic [ref=e199] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e200] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e201] [cursor=pointer]
+            - generic [ref=e204] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e205]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e206]:
+      - generic [ref=e207]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e208]: Made to matter. Made By Nana.
+      - generic [ref=e209]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e210]
+```

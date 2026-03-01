@@ -22,6 +22,14 @@ export async function handler() {
         b."motorsToPump",
         p."attendantsNeeded" AS "attendantsNeeded",
         p.rate AS rate,
+        p.stock AS quantity,
+        p."isActive" AS status,
+        CASE
+          WHEN p.id IS NULL THEN 'Available'
+          WHEN COALESCE(p."isActive", true) = false THEN 'Unavailable'
+          WHEN p.stock IS NOT NULL AND p.stock <= 0 THEN 'Unavailable'
+          ELSE 'Available'
+        END AS availability,
         b."bestFor",
         b.features,
         b.image,

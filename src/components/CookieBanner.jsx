@@ -1,14 +1,38 @@
 import { useEffect, useState } from 'react';
-import CookieConsent from 'react-cookie-consent';
+import '/src/styles/components/CookieBanner.css';
+
+const CONSENT_COOKIE_NAME = 'reebsCookieConsent_v2';
+const PREFS_STORAGE_KEY = 'reebsCookiePrefs';
+const CONSENT_MAX_AGE_SECONDS = 150 * 24 * 60 * 60;
+
+const readConsentCookie = () => {
+  if (typeof document === 'undefined') return '';
+  const prefix = `${CONSENT_COOKIE_NAME}=`;
+  const cookiePart = document.cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(prefix));
+  return cookiePart ? decodeURIComponent(cookiePart.slice(prefix.length)) : '';
+};
+
+const writeConsentCookie = (value) => {
+  if (typeof document === 'undefined') return;
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  document.cookie = `${CONSENT_COOKIE_NAME}=${encodeURIComponent(value)}; Max-Age=${CONSENT_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+};
 
 const CookieBanner = () => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [analyticsAllowed, setAnalyticsAllowed] = useState(true);
   const [marketingAllowed, setMarketingAllowed] = useState(false);
 
   useEffect(() => {
+    const consentValue = readConsentCookie();
+    setIsVisible(!consentValue);
+
     try {
-      const savedPrefs = localStorage.getItem('reebsCookiePrefs');
+      const savedPrefs = localStorage.getItem(PREFS_STORAGE_KEY);
       if (savedPrefs) {
         const parsed = JSON.parse(savedPrefs);
         setAnalyticsAllowed(Boolean(parsed.analytics));
@@ -21,12 +45,12 @@ const CookieBanner = () => {
 
   const persistPreferences = (prefs) => {
     try {
-      localStorage.setItem('reebsCookiePrefs', JSON.stringify(prefs));
+      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
     } catch (err) {
       console.warn('Unable to store cookie preferences', err);
     }
 
-    if (window.gtag) {
+    if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('consent', 'update', {
         ad_storage: prefs.marketing ? 'granted' : 'denied',
         analytics_storage: prefs.analytics ? 'granted' : 'denied',
@@ -34,15 +58,12 @@ const CookieBanner = () => {
     }
   };
 
-  const handleSave = () => {
-    persistPreferences({
-      necessary: true,
-      analytics: analyticsAllowed,
-      marketing: marketingAllowed,
-    });
+  const closeBanner = () => {
+    setIsVisible(false);
+    setIsExpanded(false);
   };
 
-  const handleDecline = () => {
+  const handleRejectAll = () => {
     setAnalyticsAllowed(false);
     setMarketingAllowed(false);
     persistPreferences({
@@ -50,51 +71,77 @@ const CookieBanner = () => {
       analytics: false,
       marketing: false,
     });
+    writeConsentCookie('rejected');
+    closeBanner();
   };
 
+  const handleAcceptAll = () => {
+    setAnalyticsAllowed(true);
+    setMarketingAllowed(true);
+    persistPreferences({
+      necessary: true,
+      analytics: true,
+      marketing: true,
+    });
+    writeConsentCookie('accepted');
+    closeBanner();
+  };
+
+  const handleSavePreferences = () => {
+    persistPreferences({
+      necessary: true,
+      analytics: analyticsAllowed,
+      marketing: marketingAllowed,
+    });
+    writeConsentCookie('customized');
+    closeBanner();
+  };
+
+  if (!isVisible) return null;
+
   return (
-    <CookieConsent
-      location="bottom"
-      buttonText="Save & continue"
-      declineButtonText="Reject all"
-      enableDeclineButton
-      cookieName="reebsCookieConsent"
-      containerClasses={`cookie-banner ${isExpanded ? 'is-expanded' : ''}`}
-      contentClasses="cookie-content"
-      buttonClasses="cookie-accept"
-      declineButtonClasses="cookie-decline"
-      buttonWrapperClasses="cookie-actions"
-      expires={150}
-      disableStyles
-      extraCookieOptions={{ sameSite: 'lax', path: '/' }}
-      onAccept={handleSave}
-      onDecline={handleDecline}
+    <aside
+      className={`cookie-banner ${isExpanded ? 'is-expanded' : ''}`}
+      role="dialog"
+      aria-modal="false"
+      aria-live="polite"
+      aria-label="Cookie settings"
     >
-      <div className="cookie-shell" role="region" aria-label="Cookie preferences">
+      <div className="cookie-shell">
         <div className="cookie-copy">
-          <p className="cookie-pill">Cookies</p>
-          <h3 className="cookie-title">Make yourself at home</h3>
+          <h3 className="cookie-title">Cookie Settings</h3>
           <p className="cookie-sub">
-            We use cookies to keep the site speedy, learn what sparks joy, and share the right party inspo.
+            We use cookies to enhance your experience, analyze site traffic, and deliver personalized content.
+            {' '}
+            Read our
+            {' '}
+            <a href="/privacy-policy" className="cookie-link">Cookie Policy</a>
+            .
           </p>
-          <div className="cookie-links">
-            <button
-              type="button"
-              className="cookie-link-btn"
-              onClick={() => setIsExpanded((open) => !open)}
-              aria-expanded={isExpanded}
-            >
-              {isExpanded ? 'Hide cookie settings' : 'Cookie settings'}
-            </button>
-            <a href="/privacy-policy" className="cookie-link">Privacy policy</a>
-          </div>
+        </div>
+
+        <div className="cookie-actions">
+          <button type="button" className="cookie-btn cookie-decline" onClick={handleRejectAll}>
+            Reject all
+          </button>
+          <button
+            type="button"
+            className="cookie-btn cookie-customize-btn"
+            onClick={() => setIsExpanded((open) => !open)}
+            aria-expanded={isExpanded}
+          >
+            Customize
+          </button>
+          <button type="button" className="cookie-btn cookie-accept" onClick={handleAcceptAll}>
+            Accept all
+          </button>
         </div>
 
         <div className={`cookie-preferences ${isExpanded ? 'is-open' : ''}`}>
           <div className="cookie-preference-card is-locked">
             <div>
               <p>Essential</p>
-              <small>Needed for checkout, cart, and keeping your session safe.</small>
+              <small>Required for cart, checkout, and basic site security.</small>
             </div>
             <span className="cookie-chip">Always on</span>
           </div>
@@ -102,7 +149,7 @@ const CookieBanner = () => {
           <div className="cookie-preference-card">
             <div>
               <p>Analytics</p>
-              <small>Helps us see what pages party lovers enjoy most so we can improve.</small>
+              <small>Helps us improve pages and performance.</small>
             </div>
             <label className="cookie-switch">
               <input
@@ -118,7 +165,7 @@ const CookieBanner = () => {
           <div className="cookie-preference-card">
             <div>
               <p>Marketing</p>
-              <small>Lets us share new rentals, promos, and inspo that match your vibe.</small>
+              <small>Used for promos and personalized campaigns.</small>
             </div>
             <label className="cookie-switch">
               <input
@@ -131,12 +178,14 @@ const CookieBanner = () => {
             </label>
           </div>
 
-          <p className="cookie-note">
-            Your preferences are saved for 5 months. You can adjust them now or clear cookies later to review again.
-          </p>
+          <div className="cookie-preferences-actions">
+            <button type="button" className="cookie-btn cookie-save-btn" onClick={handleSavePreferences}>
+              Save choices
+            </button>
+          </div>
         </div>
       </div>
-    </CookieConsent>
+    </aside>
   );
 };
 

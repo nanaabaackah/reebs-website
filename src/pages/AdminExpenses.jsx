@@ -10,7 +10,7 @@ import {
   inferExpenseCategory,
   normalizeExpenseCategory,
 } from "../data/expenseCategories";
-import "./admin.css";
+import "../styles/admin.css";
 
 const AUTO_CATEGORY_VALUE = "auto";
 

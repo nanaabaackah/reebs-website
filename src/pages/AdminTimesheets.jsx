@@ -9,7 +9,7 @@ import {
 } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
-import "./admin.css";
+import "../styles/admin.css";
 
 const formatTime = (value) => {
   if (!value) return "-";

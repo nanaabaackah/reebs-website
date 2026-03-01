@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import "./admin.css";
+import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import { useCart } from "../components/CartContext";
@@ -60,6 +60,7 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
+const LIMITED_INVENTORY_EDIT_FIELDS = new Set(["name", "price", "stock", "description"]);
 
 const getIsMobileView = () =>
   typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
@@ -102,6 +103,10 @@ function Admin() {
   const [detailForm, setDetailForm] = useState(null);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [editRequests, setEditRequests] = useState([]);
+  const [editRequestsLoading, setEditRequestsLoading] = useState(false);
+  const [editRequestsError, setEditRequestsError] = useState("");
+  const [activeEditRequestId, setActiveEditRequestId] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
   const [updatingStockId, setUpdatingStockId] = useState(null);
   const [newItemOpen, setNewItemOpen] = useState(false);
@@ -136,7 +141,20 @@ function Admin() {
   const [newItemRows, setNewItemRows] = useState([{ ...newItemTemplate }]);
   const { user } = useAuth();
   const { rates } = useCart();
-  const isSystemAdmin = (user?.role || "").toLowerCase() === "admin";
+  const userRole = (user?.role || "").toLowerCase();
+  const isSystemAdmin = userRole === "admin";
+  const canApproveInventoryEdits = userRole === "admin" || userRole === "manager";
+  const canSubmitInventoryEdits = userRole === "admin" || userRole === "manager" || userRole === "staff";
+  const canEditAllInventoryFields = userRole === "admin";
+  const canAdjustInventoryStockDirectly = userRole === "admin" || userRole === "manager";
+  const detailAccessMessage = canEditAllInventoryFields
+    ? "Admins can update every editable field on this item."
+    : userRole === "manager"
+      ? "Managers can update the name, stock, price, and description."
+      : userRole === "staff"
+        ? "Staff can edit the name, stock, price, and description. A manager must approve the changes before they apply."
+        : "This item is read only for your role.";
+  const detailSubmitLabel = userRole === "staff" ? "Send for approval" : "Save changes";
   const location = useLocation();
   const gbpRate = useMemo(() => {
     const rawRate = Number(rates?.GBP);
@@ -222,6 +240,34 @@ function Admin() {
     refreshInventory();
   }, [refreshInventory]);
 
+  const loadEditRequests = useCallback(async () => {
+    if (!canApproveInventoryEdits) {
+      setEditRequests([]);
+      setEditRequestsError("");
+      return;
+    }
+
+    setEditRequestsLoading(true);
+    setEditRequestsError("");
+    try {
+      const response = await fetch("/.netlify/functions/inventory?view=edit-requests");
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to load edit requests.");
+      }
+      setEditRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load inventory edit requests", err);
+      setEditRequestsError(err.message || "Unable to load edit requests.");
+    } finally {
+      setEditRequestsLoading(false);
+    }
+  }, [canApproveInventoryEdits]);
+
+  useEffect(() => {
+    loadEditRequests();
+  }, [loadEditRequests]);
+
   const loadStatusItems = useCallback(async (view) => {
     const setter = view === "archived" ? setArchivedItems : setDeletedItems;
     const setLoading = view === "archived" ? setArchivedLoading : setDeletedLoading;
@@ -240,6 +286,38 @@ function Admin() {
       setLoading(false);
     }
   }, []);
+
+  const loadStockActivity = useCallback(async () => {
+    setStockActivityError("");
+    try {
+      const res = await fetch("/.netlify/functions/stockActivity");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Unable to load stock history.");
+      setStockActivity(Array.isArray(data?.months) ? data.months : []);
+    } catch (err) {
+      console.error("Failed to load stock activity", err);
+      setStockActivity([]);
+      setStockActivityError(err.message || "Unable to load stock history.");
+    }
+  }, []);
+
+  const refreshInventorySurface = useCallback(async () => {
+    await Promise.all([
+      refreshInventory(),
+      loadStockActivity(),
+      canApproveInventoryEdits ? loadEditRequests() : Promise.resolve(),
+      archivedOpen ? loadStatusItems("archived") : Promise.resolve(),
+      deletedOpen ? loadStatusItems("deleted") : Promise.resolve(),
+    ]);
+  }, [
+    archivedOpen,
+    canApproveInventoryEdits,
+    deletedOpen,
+    loadEditRequests,
+    loadStatusItems,
+    loadStockActivity,
+    refreshInventory,
+  ]);
 
   const toggleArchivedSelection = (id) => {
     setArchivedSelected((prev) => {
@@ -377,21 +455,8 @@ function Admin() {
   };
 
   useEffect(() => {
-    const fetchStockActivity = async () => {
-      setStockActivityError("");
-      try {
-        const res = await fetch("/.netlify/functions/stockActivity");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Unable to load stock history.");
-        setStockActivity(Array.isArray(data?.months) ? data.months : []);
-      } catch (err) {
-        console.error("Failed to load stock activity", err);
-        setStockActivity([]);
-        setStockActivityError(err.message || "Unable to load stock history.");
-      }
-    };
-    fetchStockActivity();
-  }, []);
+    loadStockActivity();
+  }, [loadStockActivity]);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -566,7 +631,11 @@ function Admin() {
   };
 
   const openAdjustForm = (item) => {
-    if (isMobileView) return;
+    if (!canAdjustInventoryStockDirectly) return;
+    closeMenu();
+    setDetailItem(null);
+    setDetailForm(null);
+    setDetailError("");
     const currentMonth = new Date().toISOString().slice(0, 7);
     setActiveItem(item);
     setFormState({
@@ -803,7 +872,7 @@ function Admin() {
     setDetailForm((prev) =>
       prev ? { ...prev, purchasePriceGhs: nextGhsValue.toFixed(2) } : prev
     );
-  }, [detailPurchasePriceGbp, gbpRate]);
+  }, [detailForm, detailPurchasePriceGbp, gbpRate]);
 
   const copyToClipboard = async (value) => {
     if (!value) return;
@@ -991,7 +1060,8 @@ function Admin() {
   };
 
   const openItemDetails = (item) => {
-    if (isMobileView) return;
+    closeMenu();
+    setActiveItem(null);
     setDetailFromItem(item);
   };
 
@@ -1005,8 +1075,23 @@ function Admin() {
     setDetailForm((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
+  const isDetailFieldEditable = (field) => {
+    if (!canSubmitInventoryEdits) return false;
+    if (canEditAllInventoryFields) return true;
+    return LIMITED_INVENTORY_EDIT_FIELDS.has(field);
+  };
+
+  const openItemEditor = (item) => {
+    openItemDetails(item);
+  };
+
   const saveItemDetails = async () => {
     if (!detailForm) return;
+    if (!canSubmitInventoryEdits) {
+      setDetailError("You do not have permission to edit inventory items.");
+      return;
+    }
+
     const name = detailForm.name.trim();
     const stockValue = Number.parseInt(detailForm.stock, 10);
     const priceValue = Number(detailForm.price);
@@ -1052,17 +1137,22 @@ function Admin() {
           id: detailForm.id,
           name,
           barcode: detailForm.barcode || undefined,
-          price: priceValue,
+          priceCents: Math.round(priceValue * 100),
           stock: stockValue,
           sourceCategoryCode: detailForm.sourceCategoryCode,
           specificCategory: detailForm.specificCategory || undefined,
           description: detailForm.description || undefined,
           currency: detailForm.currency || "GHS",
-          purchasePriceGbp:
-            detailForm.purchasePriceGbp !== "" ? Number(detailForm.purchasePriceGbp) : undefined,
-          purchasePriceGhs:
-            detailForm.purchasePriceGhs !== "" ? Number(detailForm.purchasePriceGhs) : undefined,
-          saleValue: detailForm.saleValue !== "" ? Number(detailForm.saleValue) : undefined,
+          purchasePriceGbpCents:
+            detailForm.purchasePriceGbp !== ""
+              ? Math.round(Number(detailForm.purchasePriceGbp) * 100)
+              : undefined,
+          purchasePriceGhsCents:
+            detailForm.purchasePriceGhs !== ""
+              ? Math.round(Number(detailForm.purchasePriceGhs) * 100)
+              : undefined,
+          saleValueCents:
+            detailForm.saleValue !== "" ? Math.round(Number(detailForm.saleValue) * 100) : undefined,
           attendantsNeeded:
             detailForm.attendantsNeeded !== "" ? Number(detailForm.attendantsNeeded) : undefined,
           reorderLevel: Number.isFinite(reorderLevelValue) ? reorderLevelValue : undefined,
@@ -1085,6 +1175,12 @@ function Admin() {
         throw new Error(payload?.detail || payload?.error || "Failed to update item.");
       }
 
+      if (response.status === 202 || payload?.status === "pending_approval") {
+        closeItemDetails();
+        setSuccess(payload?.message || "Changes sent for manager approval.");
+        return;
+      }
+
       setItems((prev) => prev.map((row) => (row.id === payload.id ? { ...row, ...payload } : row)));
       closeItemDetails();
       setSuccess(`Updated ${payload.name || "item"}.`);
@@ -1096,7 +1192,71 @@ function Admin() {
     }
   };
 
+  const formatEditRequestSummary = (request) => {
+    const requestedFields =
+      request?.requestedFields && typeof request.requestedFields === "object"
+        ? request.requestedFields
+        : {};
+    const parts = [];
+    if (Object.prototype.hasOwnProperty.call(requestedFields, "name")) {
+      parts.push(`Name: ${requestedFields.name || "Untitled"}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(requestedFields, "priceCents")) {
+      parts.push(`Price: ${formatMoney(Number(requestedFields.priceCents) / 100, "GHS")}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(requestedFields, "stock")) {
+      parts.push(`Qty: ${requestedFields.stock}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(requestedFields, "description")) {
+      parts.push(
+        `Description: ${requestedFields.description ? "Update requested" : "Clear description"}`
+      );
+    }
+    return parts.join(" • ") || "Pending item changes";
+  };
+
+  const reviewEditRequest = async (request, action) => {
+    if (!request?.id || activeEditRequestId) return;
+    const approve = action === "approve-edit-request";
+    setActiveEditRequestId(request.id);
+    setEditRequestsError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/.netlify/functions/inventory", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: request.id, action }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Unable to review edit request.");
+      }
+
+      setEditRequests((prev) => prev.filter((row) => row.id !== request.id));
+      if (approve && data?.item?.id) {
+        setItems((prev) =>
+          prev.map((row) => (row.id === data.item.id ? { ...row, ...data.item } : row))
+        );
+        if (detailItem?.id === data.item.id) {
+          setDetailFromItem({ ...detailItem, ...data.item });
+        }
+        setSuccess(`Approved changes for ${data?.item?.name || request.productName || "item"}.`);
+      } else {
+        setSuccess(`Rejected changes for ${request.productName || "item"}.`);
+      }
+    } catch (err) {
+      console.error("Review edit request failed", err);
+      setEditRequestsError(err.message || "Unable to review edit request.");
+    } finally {
+      setActiveEditRequestId(null);
+    }
+  };
+
   const adjustStockInline = async (item, delta) => {
+    if (!canAdjustInventoryStockDirectly) {
+      setSubmitError("Only admins and managers can adjust stock directly.");
+      return;
+    }
     if (!delta) return;
     const currentQty = getQuantity(item);
     if (delta < 0 && currentQty <= 0) {
@@ -1154,6 +1314,7 @@ function Admin() {
             : row
         )
       );
+      await loadStockActivity();
       setSuccess(payload?.message || "Stock updated.");
     } catch (err) {
       console.error("Inline stock update failed", err);
@@ -1166,6 +1327,10 @@ function Admin() {
   const onSubmit = async (event) => {
     event.preventDefault();
     if (!activeItem) return;
+    if (!canAdjustInventoryStockDirectly) {
+      setSubmitError("Only admins and managers can adjust stock directly.");
+      return;
+    }
     setSubmitError("");
     setSuccess("");
 
@@ -1216,6 +1381,7 @@ function Admin() {
           };
         })
       );
+      await loadStockActivity();
       setSuccess(payload?.message || "Stock updated.");
     } catch (err) {
       console.error("Stock update failed", err);
@@ -1239,48 +1405,46 @@ function Admin() {
             <div className="admin-simple-steps" aria-label="Quick stock entry steps">
               <span>1. Search an item</span>
               <span>2. Click it</span>
-              <span>3. Add or remove stock</span>
+              <span>3. Update and save</span>
             </div>
           </div>
-          {!isMobileView && (
-            <div className="admin-header-actions">
-              <button
-                type="button"
-                className="admin-chip"
-                onClick={() => {
-                  setNewItemError("");
-                  setSuccess("");
-                  setNewItemOpen((open) => !open);
-                }}
-              >
-                {newItemOpen ? "Close" : "Add items"}
-              </button>
-              <button
-                type="button"
-                className="admin-chip"
-                onClick={() => {
-                  setArchivedOpen(true);
-                  clearArchivedSelection();
-                  loadStatusItems("archived");
-                }}
-              >
-                Archived
-              </button>
-              <button
-                type="button"
-                className="admin-chip"
-                onClick={() => {
-                  setDeletedOpen(true);
-                  loadStatusItems("deleted");
-                }}
-              >
-                Recently deleted
-              </button>
-              <button className="admin-refresh" onClick={refreshInventory}>
-                Refresh
-              </button>
-            </div>
-          )}
+          <div className="admin-header-actions">
+            <button
+              type="button"
+              className="admin-chip"
+              onClick={() => {
+                setNewItemError("");
+                setSuccess("");
+                setNewItemOpen((open) => !open);
+              }}
+            >
+              {newItemOpen ? "Close" : "Add items"}
+            </button>
+            <button
+              type="button"
+              className="admin-chip"
+              onClick={() => {
+                setArchivedOpen(true);
+                clearArchivedSelection();
+                loadStatusItems("archived");
+              }}
+            >
+              Archived
+            </button>
+            <button
+              type="button"
+              className="admin-chip"
+              onClick={() => {
+                setDeletedOpen(true);
+                loadStatusItems("deleted");
+              }}
+            >
+              Recently deleted
+            </button>
+            <button type="button" className="admin-refresh" onClick={refreshInventorySurface}>
+              Refresh
+            </button>
+          </div>
         </header>
 
         <section className="inventory-kpi-panel" aria-label="Inventory KPIs">
@@ -1404,6 +1568,61 @@ function Admin() {
             </article>
           </div>
         </section>
+
+        {canApproveInventoryEdits && (
+          <section className="admin-card inventory-edit-approvals" aria-label="Inventory edit approvals">
+            <div className="admin-focus-header">
+              <div>
+                <p className="admin-eyebrow">Approvals</p>
+                <h3>Pending stock item edits</h3>
+              </div>
+              <span className="admin-focus-count">{editRequests.length} waiting</span>
+            </div>
+            {editRequestsLoading && <p className="admin-focus-muted">Loading edit requests...</p>}
+            {!editRequestsLoading && editRequestsError && (
+              <p className="admin-focus-error">{editRequestsError}</p>
+            )}
+            {!editRequestsLoading && !editRequestsError && editRequests.length === 0 && (
+              <p className="admin-focus-muted">No staff edit requests waiting.</p>
+            )}
+            {!editRequestsLoading && !editRequestsError && editRequests.length > 0 && (
+              <ul className="admin-approvals-list">
+                {editRequests.map((request) => (
+                  <li key={request.id} className="admin-approval-item">
+                    <div>
+                      <strong className="admin-approval-title">
+                        {request.productName || `Item #${request.productId}`}
+                      </strong>
+                      <p className="admin-approval-meta">
+                        Requested by {request.submittedByName || "Staff"} on{" "}
+                        {formatDateTime(request.createdAt)}
+                      </p>
+                      <p className="admin-approval-meta">{formatEditRequestSummary(request)}</p>
+                    </div>
+                    <div className="admin-approval-actions">
+                      <button
+                        type="button"
+                        className="admin-approval-btn"
+                        onClick={() => reviewEditRequest(request, "approve-edit-request")}
+                        disabled={activeEditRequestId === request.id}
+                      >
+                        {activeEditRequestId === request.id ? "Working..." : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-chip"
+                        onClick={() => reviewEditRequest(request, "reject-edit-request")}
+                        disabled={activeEditRequestId === request.id}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <section className="admin-table">
           <div className="admin-table-header">
@@ -1580,13 +1799,13 @@ function Admin() {
                       <tr
                         key={item.id}
                         className={[isLow ? "is-low" : "", isMenuOpen ? "menu-open" : ""].filter(Boolean).join(" ")}
-                        onClick={() => openAdjustForm(item)}
+                        onClick={() => openItemEditor(item)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            openAdjustForm(item);
+                            openItemEditor(item);
                           }
                         }}
                       >
@@ -1607,32 +1826,36 @@ function Admin() {
                         </td>
                         <td>{getCategory(item)}</td>
                         <td>
-                          <div
-                            className="admin-stock-ctrl"
-                            onClick={(e) => e.stopPropagation()}
-                            role="group"
-                            aria-label={`Adjust stock for ${item.name || "item"}`}
-                          >
-                            <button
-                              type="button"
-                              className="admin-stock-btn"
-                              onClick={() => adjustStockInline(item, -1)}
-                              disabled={updatingStockId === item.id}
+                          {canAdjustInventoryStockDirectly ? (
+                            <div
+                              className="admin-stock-ctrl"
+                              onClick={(e) => e.stopPropagation()}
+                              role="group"
+                              aria-label={`Adjust stock for ${item.name || "item"}`}
                             >
-                              −
-                            </button>
-                            <span className="admin-stock">
-                              {updatingStockId === item.id ? "…" : quantity}
-                            </span>
-                            <button
-                              type="button"
-                              className="admin-stock-btn"
-                              onClick={() => adjustStockInline(item, 1)}
-                              disabled={updatingStockId === item.id}
-                            >
-                              +
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                className="admin-stock-btn"
+                                onClick={() => adjustStockInline(item, -1)}
+                                disabled={updatingStockId === item.id}
+                              >
+                                −
+                              </button>
+                              <span className="admin-stock">
+                                {updatingStockId === item.id ? "…" : quantity}
+                              </span>
+                              <button
+                                type="button"
+                                className="admin-stock-btn"
+                                onClick={() => adjustStockInline(item, 1)}
+                                disabled={updatingStockId === item.id}
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="admin-stock">{quantity}</span>
+                          )}
                         </td>
                         <td>
                           <div className="admin-reorder">
@@ -1647,7 +1870,7 @@ function Admin() {
                             <div className="bookings-menu inventory-menu">
                               <button
                                 type="button"
-                                className="bookings-edit"
+                                className="bookings-edit inventory-menu-trigger"
                                 aria-haspopup="true"
                                 aria-expanded={openMenuId === item.id}
                                 onClick={(e) => {
@@ -1658,33 +1881,36 @@ function Admin() {
                                 ⋮
                               </button>
                               <div
-                                className={`bookings-menu-list ${openMenuId === item.id ? "open" : ""}`}
+                                className={`bookings-menu-list inventory-menu-list ${openMenuId === item.id ? "open" : ""}`}
                                 style={openMenuId === item.id ? menuPosition : undefined}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <div className="bookings-menu-actions">
+                                <div className="bookings-menu-actions inventory-menu-actions">
                                   <button
                                     type="button"
                                     className="inventory-menu-edit"
-                                    onClick={() => {
-                                      openItemDetails(item);
-                                      closeMenu();
-                                    }}
-                                  >
-                                    Edit details
-                                  </button>
+                                  onClick={() => {
+                                    openItemDetails(item);
+                                    closeMenu();
+                                  }}
+                                >
+                                  Edit item
+                                </button>
+                                  {canAdjustInventoryStockDirectly && (
+                                    <button
+                                      type="button"
+                                      className="inventory-menu-adjust"
+                                      onClick={() => {
+                                        openAdjustForm(item);
+                                        closeMenu();
+                                      }}
+                                    >
+                                      Adjust stock
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
-                                    className="inventory-menu-adjust"
-                                    onClick={() => {
-                                      openAdjustForm(item);
-                                      closeMenu();
-                                    }}
-                                  >
-                                    Adjust stock
-                                  </button>
-                                  <button
-                                    type="button"
+                                    className="inventory-menu-archive"
                                     onClick={() => {
                                       closeMenu();
                                       archiveItem(item);
@@ -1696,6 +1922,7 @@ function Admin() {
                                   {isSystemAdmin && (
                                     <button
                                       type="button"
+                                      className="inventory-menu-delete"
                                       onClick={() => {
                                         closeMenu();
                                         deleteItem(item);
@@ -1705,15 +1932,27 @@ function Admin() {
                                       Delete item
                                     </button>
                                   )}
-                                  <button type="button" onClick={() => copyToClipboard(item.sku || item.id)}>
+                                  <button
+                                    type="button"
+                                    className="inventory-menu-copy"
+                                    onClick={() => copyToClipboard(item.sku || item.id)}
+                                  >
                                     Copy SKU
                                   </button>
                                   {item.barcode && (
-                                    <button type="button" onClick={() => copyToClipboard(item.barcode)}>
+                                    <button
+                                      type="button"
+                                      className="inventory-menu-copy"
+                                      onClick={() => copyToClipboard(item.barcode)}
+                                    >
                                       Copy barcode
                                     </button>
                                   )}
-                                  <button type="button" onClick={() => copyToClipboard(item.id)}>
+                                  <button
+                                    type="button"
+                                    className="inventory-menu-copy"
+                                    onClick={() => copyToClipboard(item.id)}
+                                  >
                                     Copy ID
                                   </button>
                                 </div>
@@ -1755,128 +1994,174 @@ function Admin() {
                 )}
                 {paginatedInventory.map((item) => {
                 const quantity = getQuantity(item);
-                const isLow = quantity <= getReorderLevel(item);
-                const isInteractive = !isMobileView;
+                const isOut = quantity <= 0;
+                const isLow = !isOut && quantity <= getReorderLevel(item);
+                const isInteractive = true;
                 const isMenuOpen = openMenuId === `card-${item.id}`;
                 return (
                   <div
                     key={item.id}
-                    className={`inventory-card ${isLow ? "is-low" : ""} ${isMenuOpen ? "menu-open" : ""}`}
+                    className={`inventory-card ${isOut ? "is-out" : isLow ? "is-low" : ""} ${isMenuOpen ? "menu-open" : ""}`}
                     role={isInteractive ? "button" : undefined}
                     tabIndex={isInteractive ? 0 : undefined}
-                    onClick={isInteractive ? () => openAdjustForm(item) : undefined}
+                    onClick={isInteractive ? () => openItemEditor(item) : undefined}
                     onKeyDown={
                       isInteractive
                         ? (event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              openAdjustForm(item);
+                              openItemEditor(item);
                             }
                           }
                         : undefined
                     }
-                  >
-                    <div className="inventory-card-head">
-                      <span className="admin-product-id">ID {item.id}</span>
-                      <span className="admin-stock">{quantity}</span>
-                      {!isMobileView && (
-                        <div
-                          className="bookings-menu inventory-menu inventory-card-menu"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            className="bookings-edit"
-                            aria-haspopup="true"
-                            aria-expanded={openMenuId === `card-${item.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRowMenu(`card-${item.id}`, e);
-                            }}
-                          >
-                            ⋮
-                          </button>
-                          <div
-                            className={`bookings-menu-list ${openMenuId === `card-${item.id}` ? "open" : ""}`}
-                            style={openMenuId === `card-${item.id}` ? menuPosition : undefined}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="bookings-menu-actions">
-                              <button
-                                type="button"
-                                className="inventory-menu-edit"
-                                onClick={() => {
-                                  openItemDetails(item);
-                                  closeMenu();
-                                }}
-                              >
-                                Edit details
-                              </button>
-                              <button
-                                type="button"
-                                className="inventory-menu-adjust"
-                                onClick={() => {
-                                  openAdjustForm(item);
-                                  closeMenu();
-                                }}
-                              >
-                                Adjust stock
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  closeMenu();
-                                  archiveItem(item);
-                                }}
-                                disabled={actionItemId === item.id}
-                              >
-                                Archive item
-                              </button>
-                              {isSystemAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    closeMenu();
-                                    deleteItem(item);
-                                  }}
-                                  disabled={actionItemId === item.id}
-                                >
-                                  Delete item
-                                </button>
-                              )}
-                              <button type="button" onClick={() => copyToClipboard(item.sku || item.id)}>
-                                Copy SKU
-                              </button>
-                              {item.barcode && (
-                                <button type="button" onClick={() => copyToClipboard(item.barcode)}>
-                                  Copy barcode
-                                </button>
-                              )}
-                              <button type="button" onClick={() => copyToClipboard(item.id)}>
-                                Copy ID
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <h4 className="inventory-card-title">{item.name || "Untitled"}</h4>
-                    <p className="inventory-card-sub">
-                      {item.sku ? `SKU ${item.sku}` : "No SKU"}
-                    </p>
-                    {item.barcode && (
-                      <p className="inventory-card-sub">Barcode {item.barcode}</p>
-                    )}
-                    <p className="inventory-card-sub">{getCategory(item)}</p>
-                    <p className="inventory-card-sub">
-                      Reorder at {getReorderLevel(item)} · Qty {getReorderQuantity(item)}
-                    </p>
-                    <p className="inventory-card-sub">
-                      Updated {formatDateTime(item.lastUpdatedAt || item.updatedAt)}
-                    </p>
-                  </div>
-                );
-              })}
+	                  >
+	                    <div className="inventory-card-head">
+	                      <div className="inventory-card-head-main">
+	                        <span className="admin-product-id">ID {item.id}</span>
+	                        <span className={`inventory-card-state ${isOut ? "is-out" : isLow ? "is-low" : "is-healthy"}`}>
+	                          {isOut ? "Out of stock" : isLow ? "Low stock" : "In stock"}
+	                        </span>
+	                      </div>
+	                      <div className="inventory-card-head-actions">
+	                        <span className="admin-stock">Qty {quantity}</span>
+	                        <div
+	                          className="bookings-menu inventory-menu inventory-card-menu"
+	                          onClick={(e) => e.stopPropagation()}
+	                        >
+	                          <button
+	                            type="button"
+	                            className="bookings-edit inventory-menu-trigger"
+	                            aria-haspopup="true"
+	                            aria-expanded={openMenuId === `card-${item.id}`}
+	                            onClick={(e) => {
+	                              e.stopPropagation();
+	                              toggleRowMenu(`card-${item.id}`, e);
+	                            }}
+	                          >
+	                            ⋮
+	                          </button>
+	                          <div
+	                            className={`bookings-menu-list inventory-menu-list ${openMenuId === `card-${item.id}` ? "open" : ""}`}
+	                            style={openMenuId === `card-${item.id}` ? menuPosition : undefined}
+	                            onClick={(e) => e.stopPropagation()}
+	                          >
+	                            <div className="bookings-menu-actions inventory-menu-actions">
+	                              <button
+	                                type="button"
+	                                className="inventory-menu-edit"
+	                                onClick={() => {
+	                                  openItemDetails(item);
+	                                  closeMenu();
+	                                }}
+	                              >
+	                                Edit item
+	                              </button>
+	                              {canAdjustInventoryStockDirectly && (
+	                                <button
+	                                  type="button"
+	                                  className="inventory-menu-adjust"
+	                                  onClick={() => {
+	                                    openAdjustForm(item);
+	                                    closeMenu();
+	                                  }}
+	                                >
+	                                  Adjust stock
+	                                </button>
+	                              )}
+	                              <button
+	                                type="button"
+	                                className="inventory-menu-archive"
+	                                onClick={() => {
+	                                  closeMenu();
+	                                  archiveItem(item);
+	                                }}
+	                                disabled={actionItemId === item.id}
+	                              >
+	                                Archive item
+	                              </button>
+	                              {isSystemAdmin && (
+	                                <button
+	                                  type="button"
+	                                  className="inventory-menu-delete"
+	                                  onClick={() => {
+	                                    closeMenu();
+	                                    deleteItem(item);
+	                                  }}
+	                                  disabled={actionItemId === item.id}
+	                                >
+	                                  Delete item
+	                                </button>
+	                              )}
+	                              <button
+	                                type="button"
+	                                className="inventory-menu-copy"
+	                                onClick={() => copyToClipboard(item.sku || item.id)}
+	                              >
+	                                Copy SKU
+	                              </button>
+	                              {item.barcode && (
+	                                <button
+	                                  type="button"
+	                                  className="inventory-menu-copy"
+	                                  onClick={() => copyToClipboard(item.barcode)}
+	                                >
+	                                  Copy barcode
+	                                </button>
+	                              )}
+	                              <button
+	                                type="button"
+	                                className="inventory-menu-copy"
+	                                onClick={() => copyToClipboard(item.id)}
+	                              >
+	                                Copy ID
+	                              </button>
+	                            </div>
+	                          </div>
+	                        </div>
+	                      </div>
+	                    </div>
+	                    <h4 className="inventory-card-title">{item.name || "Untitled"}</h4>
+	                    <div className="inventory-card-details">
+	                      <p className="inventory-card-sub">
+	                        {item.sku ? `SKU ${item.sku}` : "No SKU"}
+	                      </p>
+	                      {item.barcode && (
+	                        <p className="inventory-card-sub">Barcode {item.barcode}</p>
+	                      )}
+	                      <p className="inventory-card-sub">{getCategory(item)}</p>
+	                    </div>
+	                    <div className="inventory-card-footer">
+	                      <div className="inventory-card-meta">
+	                        <p className="inventory-card-sub inventory-card-subtle">
+	                          Reorder at {getReorderLevel(item)} · Restock {getReorderQuantity(item)}
+	                        </p>
+	                        <p className="inventory-card-sub inventory-card-subtle">
+	                          Updated {formatDateTime(item.lastUpdatedAt || item.updatedAt)}
+	                        </p>
+	                      </div>
+	                      <div className="inventory-card-actions" onClick={(e) => e.stopPropagation()}>
+	                        <button
+	                          type="button"
+	                          className="inventory-card-quick inventory-card-quick-secondary"
+	                          onClick={() => openItemDetails(item)}
+	                        >
+	                          Edit
+	                        </button>
+	                        {canAdjustInventoryStockDirectly && (
+	                          <button
+	                            type="button"
+	                            className="inventory-card-quick inventory-card-quick-primary"
+	                            onClick={() => openAdjustForm(item)}
+	                          >
+	                            Adjust
+	                          </button>
+	                        )}
+	                      </div>
+	                    </div>
+	                  </div>
+	                );
+	              })}
               </div>
               <div className="table-pagination">
                 <span>
@@ -2304,6 +2589,7 @@ function Admin() {
                 saveItemDetails();
               }}
             >
+              <p className="admin-form-tip">{detailAccessMessage}</p>
               <div className="admin-detail-grid">
                 <label>
                   Name
@@ -2311,6 +2597,7 @@ function Admin() {
                     type="text"
                     value={detailForm.name}
                     onChange={(event) => updateDetailForm("name", event.target.value)}
+                    disabled={!isDetailFieldEditable("name")}
                   />
                 </label>
                 <label>
@@ -2318,6 +2605,7 @@ function Admin() {
                   <select
                     value={detailForm.sourceCategoryCode}
                     onChange={(event) => updateDetailForm("sourceCategoryCode", event.target.value)}
+                    disabled={!isDetailFieldEditable("sourceCategoryCode")}
                   >
                     <option value="CLOTHES">CLOTHES</option>
                     <option value="TOYS">TOYS</option>
@@ -2331,6 +2619,7 @@ function Admin() {
                     type="text"
                     value={detailForm.specificCategory}
                     onChange={(event) => updateDetailForm("specificCategory", event.target.value)}
+                    disabled={!isDetailFieldEditable("specificCategory")}
                   />
                 </label>
                 <label>
@@ -2340,6 +2629,7 @@ function Admin() {
                     value={detailForm.barcode}
                     onChange={(event) => updateDetailForm("barcode", event.target.value)}
                     placeholder="Scan code (optional)"
+                    disabled={!isDetailFieldEditable("barcode")}
                   />
                 </label>
                 <label>
@@ -2350,6 +2640,7 @@ function Admin() {
                     step="0.01"
                     value={detailForm.price}
                     onChange={(event) => updateDetailForm("price", event.target.value)}
+                    disabled={!isDetailFieldEditable("price")}
                   />
                 </label>
                 <label>
@@ -2360,6 +2651,7 @@ function Admin() {
                     step="1"
                     value={detailForm.stock}
                     onChange={(event) => updateDetailForm("stock", event.target.value)}
+                    disabled={!isDetailFieldEditable("stock")}
                   />
                 </label>
                 <label>
@@ -2370,6 +2662,7 @@ function Admin() {
                     step="1"
                     value={detailForm.reorderLevel}
                     onChange={(event) => updateDetailForm("reorderLevel", event.target.value)}
+                    disabled={!isDetailFieldEditable("reorderLevel")}
                   />
                 </label>
                 <label>
@@ -2380,6 +2673,7 @@ function Admin() {
                     step="1"
                     value={detailForm.reorderQuantity}
                     onChange={(event) => updateDetailForm("reorderQuantity", event.target.value)}
+                    disabled={!isDetailFieldEditable("reorderQuantity")}
                   />
                 </label>
                 <label>
@@ -2390,6 +2684,7 @@ function Admin() {
                     step="0.01"
                     value={detailForm.purchasePriceGbp}
                     onChange={(event) => updateDetailForm("purchasePriceGbp", event.target.value)}
+                    disabled={!isDetailFieldEditable("purchasePriceGbp")}
                   />
                 </label>
                 <label>
@@ -2400,6 +2695,7 @@ function Admin() {
                     step="0.01"
                     value={detailForm.purchasePriceGhs}
                     readOnly
+                    disabled={!canEditAllInventoryFields}
                   />
                 </label>
                 <label>
@@ -2410,6 +2706,7 @@ function Admin() {
                     step="0.01"
                     value={detailForm.saleValue}
                     onChange={(event) => updateDetailForm("saleValue", event.target.value)}
+                    disabled={!isDetailFieldEditable("saleValue")}
                   />
                 </label>
                 <label>
@@ -2420,6 +2717,7 @@ function Admin() {
                     step="1"
                     value={detailForm.attendantsNeeded}
                     onChange={(event) => updateDetailForm("attendantsNeeded", event.target.value)}
+                    disabled={!isDetailFieldEditable("attendantsNeeded")}
                   />
                 </label>
                 <label>
@@ -2428,6 +2726,7 @@ function Admin() {
                     type="text"
                     value={detailForm.rate}
                     onChange={(event) => updateDetailForm("rate", event.target.value)}
+                    disabled={!isDetailFieldEditable("rate")}
                   />
                 </label>
                 <label>
@@ -2436,6 +2735,7 @@ function Admin() {
                     type="text"
                     value={detailForm.age}
                     onChange={(event) => updateDetailForm("age", event.target.value)}
+                    disabled={!isDetailFieldEditable("age")}
                   />
                 </label>
                 <label>
@@ -2444,6 +2744,7 @@ function Admin() {
                     type="text"
                     value={detailForm.imageUrl}
                     onChange={(event) => updateDetailForm("imageUrl", event.target.value)}
+                    disabled={!isDetailFieldEditable("imageUrl")}
                   />
                 </label>
               </div>
@@ -2463,6 +2764,7 @@ function Admin() {
                   rows="3"
                   value={detailForm.description}
                   onChange={(event) => updateDetailForm("description", event.target.value)}
+                  disabled={!isDetailFieldEditable("description")}
                 />
               </label>
 
@@ -2471,8 +2773,12 @@ function Admin() {
                 <button type="button" className="admin-secondary" onClick={closeItemDetails}>
                   Cancel
                 </button>
-                <button type="submit" className="admin-primary" disabled={detailSaving}>
-                  {detailSaving ? "Saving..." : "Save changes"}
+                <button
+                  type="submit"
+                  className="admin-primary"
+                  disabled={detailSaving || !canSubmitInventoryEdits}
+                >
+                  {detailSaving ? (userRole === "staff" ? "Sending..." : "Saving...") : detailSubmitLabel}
                 </button>
               </div>
             </form>

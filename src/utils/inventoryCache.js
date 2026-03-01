@@ -1,5 +1,6 @@
 const INVENTORY_CACHE_KEY = "reebs_inventory_cache_v1";
 const INVENTORY_CACHE_TTL = 5 * 60 * 1000;
+let inventoryRequestPromise = null;
 
 const normalizeSource = (item) =>
   (item?.sourceCategoryCode || item?.sourcecategorycode || "")
@@ -33,20 +34,64 @@ export const writeInventoryCache = (items) => {
   }
 };
 
+const createAbortError = () => {
+  if (typeof DOMException === "function") {
+    return new DOMException("The operation was aborted.", "AbortError");
+  }
+  const error = new Error("The operation was aborted.");
+  error.name = "AbortError";
+  return error;
+};
+
+const withAbortSignal = (promise, signal) => {
+  if (!signal) return promise;
+  if (signal.aborted) {
+    return Promise.reject(createAbortError());
+  }
+
+  return new Promise((resolve, reject) => {
+    const handleAbort = () => {
+      signal.removeEventListener("abort", handleAbort);
+      reject(createAbortError());
+    };
+
+    signal.addEventListener("abort", handleAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", handleAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", handleAbort);
+        reject(error);
+      }
+    );
+  });
+};
+
 export const fetchInventoryWithCache = async ({ signal } = {}) => {
   const cached = readInventoryCache();
   if (cached) {
     return { items: cached, cached: true };
   }
 
-  const response = await fetch("/.netlify/functions/inventory", { signal });
-  if (!response.ok) {
-    throw new Error(`Inventory request failed: ${response.status}`);
+  if (!inventoryRequestPromise) {
+    inventoryRequestPromise = (async () => {
+      const response = await fetch("/.netlify/functions/inventory");
+      if (!response.ok) {
+        throw new Error(`Inventory request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : [];
+      writeInventoryCache(items);
+      return items;
+    })().finally(() => {
+      inventoryRequestPromise = null;
+    });
   }
 
-  const data = await response.json();
-  const items = Array.isArray(data) ? data : [];
-  writeInventoryCache(items);
+  const items = await withAbortSignal(inventoryRequestPromise, signal);
   return { items, cached: false };
 };
 

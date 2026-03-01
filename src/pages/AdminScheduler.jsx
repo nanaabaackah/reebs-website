@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import "./admin.css";
+import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 
 import { GoogleMap, InfoWindowF, MarkerF, useJsApiLoader } from "@react-google-maps/api";

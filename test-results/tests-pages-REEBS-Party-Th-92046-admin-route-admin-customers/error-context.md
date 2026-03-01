@@ -1,0 +1,222 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary "Portal navigation" [ref=e4]:
+    - generic [ref=e6]: Reebs ERP
+    - button "Open user menu" [ref=e8] [cursor=pointer]:
+      - generic [ref=e9] [cursor=pointer]: AU
+      - generic [ref=e10] [cursor=pointer]:
+        - generic [ref=e11] [cursor=pointer]: Admin User
+        - generic [ref=e12] [cursor=pointer]: admin@reebs.test
+      - img [ref=e13] [cursor=pointer]
+    - button "Toggle navigation" [ref=e16] [cursor=pointer]:
+      - img [ref=e17] [cursor=pointer]
+      - generic [ref=e19] [cursor=pointer]: Collapse
+    - generic [ref=e20]:
+      - button "Toggle notifications" [expanded] [ref=e21] [cursor=pointer]:
+        - generic [ref=e22] [cursor=pointer]:
+          - img [ref=e23] [cursor=pointer]
+          - generic [ref=e27] [cursor=pointer]: Notifications
+        - generic [ref=e28] [cursor=pointer]: "0"
+        - img [ref=e29] [cursor=pointer]
+      - paragraph [ref=e32]: No recent activity.
+    - navigation "Portal apps" [ref=e33]:
+      - list [ref=e34]:
+        - listitem [ref=e35]:
+          - link "Dashboard" [ref=e36] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e37] [cursor=pointer]
+            - generic [ref=e39] [cursor=pointer]: Dashboard
+        - listitem [ref=e40]:
+          - 'link "Website: Open the public website" [ref=e41] [cursor=pointer]':
+            - /url: https://reebspartythemes.com
+            - img [ref=e42] [cursor=pointer]
+            - generic [ref=e46] [cursor=pointer]: Website
+        - listitem [ref=e47]:
+          - link "Inventory" [ref=e48] [cursor=pointer]:
+            - /url: /admin/inventory
+            - img [ref=e49] [cursor=pointer]
+            - generic [ref=e53] [cursor=pointer]: Inventory
+        - listitem [ref=e54]:
+          - link "CRM" [ref=e55] [cursor=pointer]:
+            - /url: /admin/crm
+            - img [ref=e56] [cursor=pointer]
+            - generic [ref=e58] [cursor=pointer]: CRM
+        - listitem [ref=e59]:
+          - link "Orders" [ref=e60] [cursor=pointer]:
+            - /url: /admin/orders
+            - img [ref=e61] [cursor=pointer]
+            - generic [ref=e64] [cursor=pointer]: Orders
+        - listitem [ref=e65]:
+          - link "Bookings" [ref=e66] [cursor=pointer]:
+            - /url: /admin/bookings
+            - img [ref=e67] [cursor=pointer]
+            - generic [ref=e70] [cursor=pointer]: Bookings
+        - listitem [ref=e71]:
+          - link "Scheduling" [ref=e72] [cursor=pointer]:
+            - /url: /admin/schedule
+            - img [ref=e73] [cursor=pointer]
+            - generic [ref=e78] [cursor=pointer]: Scheduling
+        - listitem [ref=e79]:
+          - link "Accounting" [ref=e80] [cursor=pointer]:
+            - /url: /admin/accounting
+            - img [ref=e81] [cursor=pointer]
+            - generic [ref=e83] [cursor=pointer]: Accounting
+        - listitem [ref=e84]:
+          - link "Invoicing" [ref=e85] [cursor=pointer]:
+            - /url: /admin/invoicing
+            - img [ref=e86] [cursor=pointer]
+            - generic [ref=e90] [cursor=pointer]: Invoicing
+        - listitem [ref=e91]:
+          - link "Directory" [ref=e92] [cursor=pointer]:
+            - /url: /admin/directory
+            - img [ref=e93] [cursor=pointer]
+            - generic [ref=e95] [cursor=pointer]: Directory
+        - listitem [ref=e96]:
+          - link "Expenses" [ref=e97] [cursor=pointer]:
+            - /url: /admin/expenses
+            - img [ref=e98] [cursor=pointer]
+            - generic [ref=e102] [cursor=pointer]: Expenses
+        - listitem [ref=e103]:
+          - link "Human Resources" [ref=e104] [cursor=pointer]:
+            - /url: /admin/hr
+            - img [ref=e105] [cursor=pointer]
+            - generic [ref=e107] [cursor=pointer]: Human Resources
+        - listitem [ref=e108]:
+          - link "Vendors" [ref=e109] [cursor=pointer]:
+            - /url: /admin/vendors
+            - img [ref=e110] [cursor=pointer]
+            - generic [ref=e114] [cursor=pointer]: Vendors
+        - listitem [ref=e115]:
+          - link "Maintenance" [ref=e116] [cursor=pointer]:
+            - /url: /admin/maintenance
+            - img [ref=e117] [cursor=pointer]
+            - generic [ref=e120] [cursor=pointer]: Maintenance
+        - listitem [ref=e121]:
+          - link "Delivery" [ref=e122] [cursor=pointer]:
+            - /url: /admin/delivery
+            - img [ref=e123] [cursor=pointer]
+            - generic [ref=e127] [cursor=pointer]: Delivery
+        - listitem [ref=e128]:
+          - link "Documents" [ref=e129] [cursor=pointer]:
+            - /url: /admin/documents
+            - img [ref=e130] [cursor=pointer]
+            - generic [ref=e133] [cursor=pointer]: Documents
+        - listitem [ref=e134]:
+          - link "Timesheets" [ref=e135] [cursor=pointer]:
+            - /url: /admin/timesheets
+            - img [ref=e136] [cursor=pointer]
+            - generic [ref=e139] [cursor=pointer]: Timesheets
+        - listitem [ref=e140]:
+          - link "Users" [ref=e141] [cursor=pointer]:
+            - /url: /admin/roles
+            - img [ref=e142] [cursor=pointer]
+            - generic [ref=e144] [cursor=pointer]: Users
+        - listitem [ref=e145]:
+          - link "Marketing" [ref=e146] [cursor=pointer]:
+            - /url: /admin/marketing
+            - img [ref=e147] [cursor=pointer]
+            - generic [ref=e151] [cursor=pointer]: Marketing
+        - listitem [ref=e152]:
+          - link "Settings" [ref=e153] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e154] [cursor=pointer]
+            - generic [ref=e156] [cursor=pointer]: Settings
+        - listitem [ref=e157]:
+          - link "Advanced" [ref=e158] [cursor=pointer]:
+            - /url: /admin/advanced
+            - img [ref=e159] [cursor=pointer]
+            - generic [ref=e163] [cursor=pointer]: Advanced
+  - generic [ref=e166]:
+    - navigation "Breadcrumb" [ref=e167]:
+      - list [ref=e168]:
+        - listitem [ref=e169]:
+          - link "Admin" [ref=e170] [cursor=pointer]:
+            - /url: /admin
+        - listitem [ref=e171]:
+          - generic [ref=e172]: /
+          - generic [ref=e173]: Customers
+    - banner [ref=e174]:
+      - generic [ref=e175]:
+        - paragraph [ref=e176]: Customer CRM
+        - heading "Customer relationships" [level=1] [ref=e177]
+        - paragraph [ref=e178]: Track the full customer journey, from first inquiry to loyal repeat renter.
+      - generic [ref=e179]:
+        - button "Refresh" [ref=e180] [cursor=pointer]:
+          - img [ref=e181] [cursor=pointer]
+          - text: Refresh
+        - button "Add Customer" [ref=e183] [cursor=pointer]:
+          - img [ref=e184] [cursor=pointer]
+          - text: Add Customer
+    - generic [ref=e187]:
+      - article [ref=e188]:
+        - paragraph [ref=e189]: Total customers
+        - heading "0" [level=3] [ref=e190]
+        - generic [ref=e191]: 0 new in 30 days
+      - article [ref=e192]:
+        - paragraph [ref=e193]: Active relationships
+        - heading "0" [level=3] [ref=e194]
+        - generic [ref=e195]: 0 prospects
+      - article [ref=e196]:
+        - paragraph [ref=e197]: Lifetime revenue
+        - heading "GH₵0" [level=3] [ref=e198]
+        - generic [ref=e199]: Avg LTV GH₵0
+      - article [ref=e200]:
+        - paragraph [ref=e201]: Needs follow-up
+        - heading "0" [level=3] [ref=e202]
+        - generic [ref=e203]: At-risk accounts
+    - generic [ref=e204]:
+      - generic [ref=e205]:
+        - generic [ref=e206]: Search
+        - textbox "Search" [ref=e207]
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - generic [ref=e210]: Segment
+          - combobox "Segment" [ref=e211]:
+            - option "All segments" [selected]
+            - option "Prospects"
+            - option "Nurture"
+            - option "Active"
+            - option "Loyal"
+            - option "At risk"
+        - generic [ref=e212]:
+          - generic [ref=e213]: Sort by
+          - combobox "Sort by" [ref=e214]:
+            - option "Lifetime value" [selected]
+            - option "Activity volume"
+            - option "Last touch"
+            - option "Name (A-Z)"
+      - tablist "CRM views" [ref=e215]:
+        - tab "Board" [selected] [ref=e216] [cursor=pointer]:
+          - img [ref=e217] [cursor=pointer]
+          - text: Board
+        - tab "List" [ref=e220] [cursor=pointer]:
+          - img [ref=e221] [cursor=pointer]
+          - text: List
+        - tab "Timeline" [ref=e223] [cursor=pointer]:
+          - img [ref=e224] [cursor=pointer]
+          - text: Timeline
+      - paragraph [ref=e227]: Showing 0 of 0 customers
+    - generic [ref=e228]:
+      - generic [ref=e229]:
+        - generic [ref=e230]:
+          - heading "Prospects" [level=3] [ref=e231]
+          - generic [ref=e232]: "0"
+        - paragraph [ref=e234]: No customers in this stage.
+      - generic [ref=e235]:
+        - generic [ref=e236]:
+          - heading "Active" [level=3] [ref=e237]
+          - generic [ref=e238]: "0"
+        - paragraph [ref=e240]: No customers in this stage.
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - heading "Loyal" [level=3] [ref=e243]
+          - generic [ref=e244]: "0"
+        - paragraph [ref=e246]: No customers in this stage.
+      - generic [ref=e247]:
+        - generic [ref=e248]:
+          - heading "At risk" [level=3] [ref=e249]
+          - generic [ref=e250]: "0"
+        - paragraph [ref=e252]: No customers in this stage.
+```

@@ -6,7 +6,7 @@ import {
   faFloppyDisk,
   faPenToSquare,
 } from "/src/icons/iconSet";
-import "./admin.css";
+import "../styles/admin.css";
 
 import { useTemplateConfig } from "../context/TemplateConfigContext";
 import { WEBSITE_URL } from "../utils/website";

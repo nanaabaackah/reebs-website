@@ -8,7 +8,12 @@ import {
   faTruckFast,
 } from "/src/icons/iconSet";
 import { useCart } from "../components/CartContext";
-import "./public.css";
+import "../styles/public.css";
+import "../styles/Checkout.css";
+import {
+  getCatalogItemBackgroundStyle,
+  getCatalogItemImage,
+} from "/src/utils/itemMediaBackgrounds";
 
 const TIME_WINDOW_OPTIONS = [
   { value: "9am-11am", label: "9:00am – 11:00am", endMinutes: 11 * 60 },
@@ -124,9 +129,6 @@ const Checkout = () => {
         fulfillmentHint: "Choose how you want to receive your items and fill in the details.",
         summaryNote: "Taxes and delivery are confirmed in the final invoice.",
       };
-
-  const getItemImage = (item) =>
-    item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
 
   useEffect(() => {
     if (!pickupOnly) return;
@@ -406,11 +408,11 @@ const Checkout = () => {
   };
 
   return (
-    <main className="checkout-shell" id="main">
-      <section className="checkout-hero" aria-labelledby="checkout-heading">
-        <div className="checkout-hero-copy">
+    <main className="checkout-shell page-shell" id="main">
+      <section className="checkout-hero page-hero" aria-labelledby="checkout-heading">
+        <div className="checkout-hero-copy page-hero-copy">
           <p className="checkout-kicker">Checkout</p>
-          <h1 id="checkout-heading">Finalize your bag</h1>
+          <h1 id="checkout-heading" className="page-hero-title">Finalize your bag</h1>
           <p className="checkout-sub">{fulfillmentCopy.checkoutSub}</p>
           <div className="checkout-highlights" aria-label="Order highlights">
             <span className="pill">{itemCount} {itemLabel}</span>
@@ -655,7 +657,12 @@ const Checkout = () => {
             <div className="checkout-items">
               {cart.map((item) => (
                 <div className="checkout-item" key={item.id}>
-                  <img src={getItemImage(item)} alt={item.name} loading="lazy" />
+                  <div
+                    className="checkout-item-media category-image-bg"
+                    style={getCatalogItemBackgroundStyle(item)}
+                  >
+                    <img src={getCatalogItemImage(item)} alt={item.name} loading="lazy" />
+                  </div>
                   <div>
                     <p className="checkout-item-name">{item.name}</p>
                     <p className="checkout-item-meta">

@@ -8,7 +8,7 @@ import {
   faPlus,
 } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./admin.css";
+import "../styles/admin.css";
 
 const TYPE_OPTIONS = [
   { value: "PERCENTAGE", label: "% Off" },

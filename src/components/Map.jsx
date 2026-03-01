@@ -47,39 +47,19 @@ const whiteBlackMapStyle = [
   }
 ];
 
-const darkMapStyle = [
-  { elementType: "geometry", stylers: [{ color: "#1c1f2a" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#cfd8dc" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1c1f2a" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#445159" }] },
-  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#263238" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#b0bec5" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#37474f" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#263238" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#cfd8dc" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d1720" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9ea7ad" }] }
-];
-
 function MapComponent() {
   const [userLocation, setUserLocation] = useState(null);
   const [selected, setSelected] = useState(null);
   const [scriptError, setScriptError] = useState(null);
   const [geoStatus, setGeoStatus] = useState("idle");
   const [mapInstance, setMapInstance] = useState(null);
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof document !== "undefined") {
-      return document.documentElement.dataset.theme === "dark";
-    }
-    return false;
-  });
   const [isOpen, setIsOpen] = useState(false);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
   const mapOptions = useMemo(
     () => ({
-      styles: isDark ? darkMapStyle : whiteBlackMapStyle,
+      styles: whiteBlackMapStyle,
       disableDefaultUI: false,
       zoomControl: true,
       fullscreenControl: false,
@@ -87,7 +67,7 @@ function MapComponent() {
       mapTypeControl: false,
       clickableIcons: false
     }),
-    [isDark]
+    []
   );
 
   const getUserLocation = useCallback(() => {
@@ -114,18 +94,6 @@ function MapComponent() {
   useEffect(() => {
     getUserLocation();
   }, [getUserLocation]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement;
-    const updateTheme = () => {
-      setIsDark(root.dataset.theme === "dark");
-    };
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const computeOpenStatus = () => {

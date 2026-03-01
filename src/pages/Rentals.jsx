@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 //import rentalItems from "/src/data/rentalItems.json"
-import { Link, useNavigate } from 'react-router-dom';
-import './public.css';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import '../styles/public.css';
+import '/src/styles/Rentals.css';
 import SideNav from '/src/components/SideNav';
 import { useCart } from "/src/components/CartContext";
-import { useAuth } from "/src/components/AuthContext";
 import { AppIcon } from '/src/components/Icon';
-import { faMagnifyingGlass, faShieldHeart, faTruckFast, faWandMagicSparkles } from '/src/icons/iconSet';
-import PartyConfetti from '/src/components/PartyConfetti';
+import { faMagnifyingGlass } from '/src/icons/iconSet';
+import SiteLoader from '/src/components/SiteLoader';
+import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
 
 const slugify = (value = "") =>
     value
@@ -17,9 +18,30 @@ const slugify = (value = "") =>
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
 
-const CATEGORY_ORDER = ["Kid's Party Rentals", "Indoor Games", "Machines", "Bouncy Castles"];
+const CATEGORY_ORDER = ["Bouncy Castles", "Kids Rentals", "Indoor Games", "Setup"];
+const CATEGORY_BG_MAP = {
+    "bouncy castles": "/imgs/rentalbg/img_1.png",
+    "kids rentals": "/imgs/rentalbg/img_2.png",
+    "indoor games": "/imgs/rentalbg/img_3.png",
+    "setup": "/imgs/rentalbg/img_4.png",
+};
 const RENTALS_CACHE_KEY = "reebs_rentals_cache_v1";
 const RENTALS_CACHE_TTL = 5 * 60 * 1000;
+
+const RENTALS_QUICK_STRIP = [
+    {
+        title: "Kids party favorites",
+        copy: "Bouncy castles, games, and treats in one coordinated setup."
+    },
+    {
+        title: "Corporate fun day picks",
+        copy: "Reliable group-friendly rentals with delivery and pickup support."
+    },
+    {
+        title: "Birthday setup bundles",
+        copy: "Decor, seating, and crowd-pleasers ready before guests arrive."
+    }
+];
 
 const readRentalsCache = () => {
     if (typeof window === "undefined") return null;
@@ -57,9 +79,10 @@ const sortCategories = (a, b) => {
 };
 
 const rentalPath = (item) => {
-    const pageSlug = item?.page?.split("/").filter(Boolean).pop();
+    const idSlug = String(item?.id || item?.productId || "").trim();
     const nameSlug = slugify(item?.name);
-    return `/Rentals/${pageSlug || nameSlug || item?.id || ""}`;
+    const pageSlug = slugify(item?.page?.split("/").filter(Boolean).pop() || "");
+    return `/Rentals/${idSlug || nameSlug || pageSlug || ""}`;
 };
 
 const normalizeCategory = (value) => {
@@ -67,8 +90,11 @@ const normalizeCategory = (value) => {
     const lowered = raw.toLowerCase();
     if (!raw) return "Other";
     if (lowered.includes("bouncy")) return "Bouncy Castles";
-    if (lowered.includes("machine") || lowered.includes("popcorn") || lowered.includes("snow cone") || lowered.includes("snowcone") || lowered.includes("cotton candy")) {
-        return "Machines";
+    if (lowered.includes("kid") && lowered.includes("rental")) {
+        return "Kids Rentals";
+    }
+    if (lowered.includes("machine") || lowered.includes("setup")) {
+        return "Setup";
     }
     if (lowered.includes("indoor") || lowered.includes("board game") || lowered.includes("jenga")) {
         return "Indoor Games";
@@ -87,13 +113,13 @@ const isKidsPartyMachine = (item = {}) => {
 };
 
 const getCategory = (item = {}) => {
-    if (isKidsPartyMachine(item)) return "Kid's Party Rentals";
+    if (isKidsPartyMachine(item)) return "Kids Rentals";
     return normalizeCategory(item.specificCategory || item.specificcategory || item.category || "Other");
 };
 const isKnownRentalCategory = (item = {}) => {
     const category = getCategory(item);
     if (!category) return false;
-    if (["Machines", "Indoor Games", "Bouncy Castles"].includes(category)) return true;
+    if (["Setup", "Indoor Games", "Bouncy Castles", "Kids Rentals"].includes(category)) return true;
     return category.toLowerCase().includes("rental");
 };
 const isCategoryStub = (item = {}) => {
@@ -111,7 +137,7 @@ const shouldExcludeFromRentals = (item = {}) => {
     if (source === "water") return true;
     const category = getCategory(item);
     if (category.toLowerCase() === "party supplies") return true;
-    if (category !== "Machines") return false;
+    if (category !== "Setup") return false;
     const name = `${item?.name || ""}`.toLowerCase();
     return (
         name.includes("air blower") ||
@@ -129,6 +155,41 @@ const isContactPricing = (item = {}) => {
     );
 };
 
+const getRentalImage = (item = {}) => item.image || item.imageUrl || "/imgs/placeholder.png";
+const getRentalCategoryBackground = (item = {}) => {
+    const category = getCategory(item).toLowerCase();
+    return CATEGORY_BG_MAP[category] || getRentalImage(item);
+};
+const asNumber = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+const getPopularityScore = (item = {}) => {
+    const name = `${item.name || ""}`.toLowerCase();
+    const category = getCategory(item);
+    const quantity = Math.max(0, asNumber(item.quantity ?? item.stock, 0));
+    const image = getRentalImage(item);
+    let score = 0;
+
+    if (name.includes("bouncy") || name.includes("castle")) score += 100;
+    if (name.includes("trampoline")) score += 86;
+    if (name.includes("popcorn")) score += 84;
+    if (name.includes("cotton candy")) score += 82;
+    if (name.includes("snow cone") || name.includes("snowcone")) score += 78;
+    if (name.includes("face paint") || name.includes("face painting")) score += 66;
+
+    if (category === "Kids Rentals") score += 42;
+    if (category === "Bouncy Castles") score += 32;
+    if (category === "Setup") score += 22;
+    if (category === "Indoor Games") score += 16;
+
+    score += Math.min(quantity, 40);
+    if (image.includes("placeholder")) score -= 40;
+    if ((item.status ?? item.isActive) === false) score -= 1000;
+
+    return score;
+};
+
 const uniqueByKey = (items = []) => {
     const unique = new Map();
     for (const item of items) {
@@ -142,29 +203,18 @@ const uniqueByKey = (items = []) => {
 
 function Rentals() {
     const [rentals, setRentals] = useState([]);
-    const { currency, setCurrency, convertPrice, formatCurrency } = useCart();
+    const { convertPrice, formatCurrency } = useCart();
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("All");
     const [loading, setLoading] = useState(true);
     const [showSideNav, setShowSideNav] = useState(false);
+    const [activeHeroPanelIndex, setActiveHeroPanelIndex] = useState(0);
     const navigate = useNavigate();
-    const { isAuthenticated, authReady } = useAuth();
+    const [searchParams] = useSearchParams();
+    const routeSearchQuery = (searchParams.get("q") || "").trim();
 
     useEffect(() => {
         let isMounted = true;
-        if (!authReady) return () => {
-            isMounted = false;
-        };
-        if (!isAuthenticated) {
-            if (isMounted) {
-                setRentals([]);
-                setLoading(false);
-            }
-            return () => {
-                isMounted = false;
-            };
-        }
-
         const controller = new AbortController();
         const loadRentals = async () => {
             const cached = readRentalsCache();
@@ -173,18 +223,12 @@ function Rentals() {
             }
             setLoading(!cached);
             try {
-                const inventoryPromise = fetch("/.netlify/functions/inventory", { signal: controller.signal });
+                const inventoryPromise = fetchInventoryWithCache({ signal: controller.signal });
                 const indoorPromise = fetch("/.netlify/functions/indoor_games", { signal: controller.signal });
                 const bouncyPromise = fetch("/.netlify/functions/bouncy_castles", { signal: controller.signal });
                 const machinesPromise = fetch("/.netlify/functions/machines", { signal: controller.signal });
 
-                const inventoryRes = await inventoryPromise;
-
-                if (!inventoryRes.ok) {
-                    console.error("Failed to fetch rentals:", inventoryRes.status);
-                }
-
-                const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+                const { items: inventoryData } = await inventoryPromise;
 
                 const rentalItems = (Array.isArray(inventoryData) ? inventoryData : [])
                     .filter((item) => {
@@ -254,7 +298,7 @@ function Rentals() {
                     ...item,
                     id: item.productId || item.id,
                     sourceCategoryCode: "RENTAL",
-                    specificCategory: "Machines",
+                    specificCategory: "Setup",
                     imageUrl: item.image,
                     rate: item.rate || "per day",
                     price: typeof item.price === "number" ? item.price / 100 : item.price,
@@ -282,12 +326,19 @@ function Rentals() {
             isMounted = false;
             controller.abort();
         };
-    }, [authReady, isAuthenticated]);
+    }, []);
 
     useEffect(() => {
         document.body.classList.add("rentals-theme");
         return () => document.body.classList.remove("rentals-theme");
     }, []);
+
+    useEffect(() => {
+        setSearchQuery(routeSearchQuery);
+        if (routeSearchQuery) {
+            setCategoryFilter("All");
+        }
+    }, [routeSearchQuery]);
 
     const filteredRentals = useMemo(() => {
         const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -316,6 +367,10 @@ function Rentals() {
             items: grouped.get(category),
         }));
     }, [filteredRentals]);
+    const visibleNavItems = useMemo(
+        () => groupedRentals.map(({ category, id }) => ({ id, label: category })),
+        [groupedRentals]
+    );
 
     // Track active section
     const [activeCategory, setActiveCategory] = useState(null);
@@ -327,40 +382,155 @@ function Rentals() {
         return Array.from(categories).sort(sortCategories);
     }, [rentals]);
     const categoryOptions = useMemo(() => ["All", ...allCategories], [allCategories]);
-    const heroStats = useMemo(
-        () => [
-            { label: "Rental items ready", value: rentals.length || "—" },
-            { label: "Same-day in Accra", value: "Available" },
-        ],
-        [rentals.length]
-    );
+    const popularHeroRentals = useMemo(() => {
+        return [...rentals]
+            .filter((item) => (item.status ?? item.isActive) !== false)
+            .sort((a, b) => {
+                const scoreDiff = getPopularityScore(b) - getPopularityScore(a);
+                if (scoreDiff !== 0) return scoreDiff;
+                return `${a.name || ""}`.localeCompare(`${b.name || ""}`);
+            })
+            .slice(0, 4);
+    }, [rentals]);
 
     useEffect(() => {
-        const sections = Array.from(document.querySelectorAll(".rent-category-section"));
+        if (!popularHeroRentals.length) {
+            setActiveHeroPanelIndex(0);
+            return;
+        }
+        setActiveHeroPanelIndex((prev) => Math.min(prev, popularHeroRentals.length - 1));
+    }, [popularHeroRentals.length]);
+
+    const normalizeAvailability = (value) => {
+        const raw = `${value || ""}`.trim().toLowerCase();
+        if (!raw) return null;
+        if (raw.includes("unavail") || raw.includes("out") || raw.includes("sold")) {
+            return "Unavailable";
+        }
+        return "Available";
+    };
+
+    const getRentalAvailability = (item = {}) => {
+        const explicitAvailability = normalizeAvailability(item.availability);
+        if (explicitAvailability) return explicitAvailability;
+
+        if (typeof item.status === "string" && item.status.trim()) {
+            return normalizeAvailability(item.status) || "Available";
+        }
+        if (item.status === false || item.isActive === false) return "Unavailable";
+
+        const quantity = Number(item.quantity ?? item.stock);
+        if (Number.isFinite(quantity) && quantity <= 0) return "Unavailable";
+
+        return "Available";
+    };
+
+    const getRentalAgeRange = (item = {}) => {
+        const ageValue = item.age ?? item.recommendedAge ?? item.recommendedage;
+        if (typeof ageValue === "string" && ageValue.trim()) return ageValue.trim();
+
+        const numericAge = Number(ageValue);
+        if (Number.isFinite(numericAge) && numericAge > 0) return `${numericAge}+ years`;
+
+        const name = `${item.name || ""}`.toLowerCase();
+        if (name.includes("bouncy") || name.includes("castle") || name.includes("trampoline")) {
+            return "3+ years";
+        }
+        return "All ages";
+    };
+
+    const getRentalPriceLabel = (item = {}) => {
+        const priceValue = item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
+
+        if (isContactPricing(item)) return "Contact us for pricing";
+        if (item.id === 8 || item.productId === 8) return "Contact for more info.";
+        if (priceValue == null || priceValue === "" || Number(priceValue) === 0) return "Contact for price";
+
+        const rateLabel = item.rate || "per day";
+
+        if (typeof priceValue === "string" && priceValue.includes("-")) {
+            const [rawMin, rawMax] = priceValue.split("-").map((part) => Number(part?.trim()));
+            if (Number.isFinite(rawMin) && Number.isFinite(rawMax)) {
+                return `${formatCurrency(convertPrice(rawMin))} - ${formatCurrency(convertPrice(rawMax))} ${rateLabel}`;
+            }
+            return "Contact us for pricing";
+        }
+
+        const numericPrice = Number(priceValue);
+        if (!Number.isFinite(numericPrice) || numericPrice <= 0) return "Contact for price";
+        return `${formatCurrency(convertPrice(numericPrice))} ${rateLabel}`;
+    };
+
+    const handleSideNavItemClick = useCallback((id) => {
+        const target = document.getElementById(id);
+        if (!target) return;
+
+        const scrollHost = document.querySelector(".main");
+        const offset = 108;
+
+        if (scrollHost) {
+            const hostRect = scrollHost.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const nextTop = scrollHost.scrollTop + (targetRect.top - hostRect.top) - offset;
+            scrollHost.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
+        } else {
+            const nextTop = (window.scrollY || window.pageYOffset || 0) + target.getBoundingClientRect().top - offset;
+            window.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
+        }
+
+        setActiveCategory(id);
+    }, []);
+
+    useEffect(() => {
         const scrollHost = document.querySelector(".main");
         const scrollTarget = scrollHost || window;
+        const sections = groupedRentals
+            .map(({ id }) => document.getElementById(id))
+            .filter((section) => section instanceof HTMLElement);
+
+        if (!sections.length) {
+            setActiveCategory(null);
+            setShowSideNav(false);
+            return undefined;
+        }
+
         const getScrollTop = () =>
             scrollHost ? scrollHost.scrollTop : window.scrollY || window.pageYOffset || 0;
+
+        const getOffsetTop = (element) => {
+            if (!scrollHost) {
+                return element.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || 0);
+            }
+            const hostRect = scrollHost.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+            return scrollHost.scrollTop + (elementRect.top - hostRect.top);
+        };
+
         let ticking = false;
         const handleScroll = () => {
             if (ticking) return;
             ticking = true;
+
             window.requestAnimationFrame(() => {
-                let current = "";
+                const scrollTop = getScrollTop();
+                const activeTrigger = scrollTop + 170;
+                let currentId = sections[0].id;
+
                 sections.forEach((section) => {
-                    const sectionTop = section.offsetTop - 150;
-                    if (getScrollTop() >= sectionTop) {
-                        current = section.getAttribute("id") || "";
+                    if (activeTrigger >= getOffsetTop(section)) {
+                        currentId = section.id;
                     }
                 });
-                setActiveCategory((prev) => (prev === current ? prev : current));
+
+                setActiveCategory((prev) => (prev === currentId ? prev : currentId));
 
                 const grid = document.getElementById("rentals-grid");
                 if (grid) {
-                    const showThreshold = grid.offsetTop - 140;
-                    const shouldShow = getScrollTop() >= showThreshold;
+                    const showThreshold = getOffsetTop(grid) - 140;
+                    const shouldShow = scrollTop >= showThreshold;
                     setShowSideNav((prev) => (prev === shouldShow ? prev : shouldShow));
                 }
+
                 ticking = false;
             });
         };
@@ -371,222 +541,183 @@ function Rentals() {
     }, [groupedRentals]);
 
     if (loading) return (
-        <div className="loader">
-        <img
-            src="/imgs/reebs.gif"
-            alt="Loading content..."
-            className="loader-gif"
+        <SiteLoader
+            label="Loading rentals"
+            sublabel="Pulling the latest party rental options."
         />
-        </div>
     );
 
     return (
         <>
             <a href="#main" className="skip-link">Skip to main content</a>
             <div className="rentals-page" id="main" role="main">
-                <main className="rentals-shell">
-                    <section id='rentals-intro' className="rentals-hero" aria-labelledby="rentals-hero-heading">
-                        <PartyConfetti className="party-confetti-rentals" />
-                        <div className="rentals-hero-copy">
-                            <h1 id="rentals-hero-heading">Party rentals styled the REEBS way</h1>
+                <main className="rentals-shell page-shell">
+                    <section id='rentals-intro' className="rentals-hero page-hero" aria-labelledby="rentals-hero-heading">
+                        <div className="rentals-hero-copy page-hero-copy">
+                            <h1 id="rentals-hero-heading" className="page-hero-title">Party rentals by REEBS</h1>
                             <p className="hero-sub rentals-sub">
                                 Bounce houses, decor, concessions, and full setup help. We prep, deliver, and style so you can enjoy the celebration.
                             </p>
-                            <div className="rentals-pill-row" aria-label="Rental highlights">
-                                <span className="rentals-pill">
-                                    <AppIcon icon={faWandMagicSparkles} aria-hidden="true" />
-                                    Styled setups
-                                </span>
-                                <span className="rentals-pill">
-                                    <AppIcon icon={faShieldHeart} aria-hidden="true" />
-                                    Cleaned + kid-safe
-                                </span>
-                                <span className="rentals-pill">
-                                    <AppIcon icon={faTruckFast} aria-hidden="true" />
-                                    Delivery & pickup
-                                </span>
-                            </div>
-                            <div className="hero-ctas">
-                                {isAuthenticated ? (
-                                    <a className="hero-btn hero-btn-primary" href="#rentals-grid">Browse rentals</a>
-                                ) : (
-                                    <Link className="hero-btn hero-btn-primary" to="/login">Staff login</Link>
-                                )}
-                                <Link className="hero-btn hero-btn-ghost" to="/contact">Book a setup</Link>
-                            </div>
-                            <div className="hero-stats rentals-stats" aria-label="Rental stats">
-                        {heroStats.map((stat) => (
-                            <div key={stat.label}>
-                                <strong>{stat.value}</strong>
-                                <span>{stat.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {!isAuthenticated && (
-                <section className="construction-banner glass-card" aria-live="polite">
-                    <p className="kicker-small">Under construction</p>
-                    <h2>Rentals are being updated</h2>
-                    <p>Full browsing is available to logged-in staff only right now.</p>
-                </section>
-            )}
-
-            {isAuthenticated && (
-                <section id='rentals-grid' className="rentals-section">
-                    <div className="rentals-main">
-                        <SideNav
-                            items={allCategories.map((category) => ({
-                                id: slugify(category),
-                                label: category,
-                            }))}
-                            activeId={activeCategory}
-                            label="Rental categories"
-                            className={`rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
-                        />
-
-                        <div className="rentals-main-content">
-                            <div className="rentals-toolbar glass-card">
-                                <div className="rentals-toolbar-head">
-                                    <div>
-                                        <p className="rentals-meta">
-                                            {filteredRentals.length} items shown · {allCategories.length} categories
-                                        </p>
-                                    </div>
-                                    <div className="rentals-toolbar-actions">
-                                        <label htmlFor="currencySelector" className="sr-only">Select currency</label>
-                                        <select
-                                            value={currency}
-                                            onChange={(e) => setCurrency(e.target.value)}
-                                            className="currency-selector"
-                                            id="currencySelector"
+                        </div>
+                        {popularHeroRentals.length > 0 && (
+                            <div className="rentals-popular-panels" role="list" aria-label="Most popular rentals">
+                                {popularHeroRentals.map((item, index) => {
+                                    const isActive = index === activeHeroPanelIndex;
+                                    return (
+                                        <Link
+                                            key={item.productId || item.id || `${item.name}-${index}`}
+                                            className={`rentals-popular-panel ${isActive ? "is-active" : ""}`}
+                                            to={rentalPath(item)}
+                                            role="listitem"
+                                            style={{ "--rent-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                                            onMouseEnter={() => setActiveHeroPanelIndex(index)}
+                                            onFocus={() => setActiveHeroPanelIndex(index)}
                                         >
-                                            {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
-                                                <option key={cur} value={cur}>
-                                                    {cur}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="rentals-controls">
-                                    <div className="search-wrapper rentals-search">
-                                        <AppIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search bounce houses, decor, concessions..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="search-bar"
-                                            aria-label="Search rental items"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="filter-chips" role="list" aria-label="Quick category filters">
-                                    {categoryOptions.map((cat) => (
-                                        <button
-                                            key={cat}
-                                            type="button"
-                                            className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
-                                            onClick={() => setCategoryFilter(cat)}
-                                            aria-pressed={categoryFilter === cat}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {groupedRentals.length === 0 && (
-                                <div className="rentals-empty glass-card">
-                                    <p>No rentals match that search. Try a different keyword or reset filters.</p>
-                                    <button className="hero-btn hero-btn-link" type="button" onClick={() => {
-                                        setSearchQuery("");
-                                        setCategoryFilter("All");
-                                    }}>
-                                        Reset filters
-                                    </button>
-                                </div>
-                            )}
-
-                            {groupedRentals.map(({ category, id, items }) => (
-                                <div id={id} key={id} className="rent-category-section">
-                                    <div className="section-header rent-section-header">
-                                        <p className="kicker">Category</p>
-                                        <h2>{category}</h2>
-                                    </div>
-                                    <div className='rent-grid'>
-                                        {items.map((item) => (
-                                            <div
-                                                key={item.id}
-                                                className={`rent-card glass-card ${getCategory(item) === "Indoor Games" ? "rent-card-indoor" : ""}`}
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={() => navigate(rentalPath(item))}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter" || e.key === " ") {
-                                                        e.preventDefault();
-                                                        navigate(rentalPath(item));
-                                                    }
-                                                }}
-                                            >
-                                                <div className={`rent-image ${getCategory(item) === "Indoor Games" ? "rent-image-indoor" : ""}`}>
-                                                    <img
-                                                        src={item.image || item.imageUrl || "/imgs/placeholder.png"}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                    />
-                                                    <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
-                                                </div>
-                                                <div className="rent-details">
-                                                    <div className="rent-title-row">
-                                                        <h3>{item.name}</h3>
-                                                    </div>
-                                                    <p className="price">
-                                                        {(() => {
-                                                            const priceValue = item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : undefined);
-                                                            // Bouncy castles and package deals are quoted per request
-                                                            if (isContactPricing(item)) return "Contact us for pricing";
-                                                            // Handle special “contact for info” item
-                                                            if (item.id === 8) return "Contact for more info.";
-
-                                                            // Handle missing price
-                                                            if (!priceValue || priceValue === "0" || priceValue === 0) {
-                                                            return "Contact for price";
-                                                            }
-
-                                                            // Handle price ranges (e.g., "20-40")
-                                                            if (typeof priceValue === "string" && priceValue.includes("-")) {
-                                                            const [min, max] = priceValue.split("-").map(Number);
-                                                            return `${formatCurrency(convertPrice(min))} - ${formatCurrency(convertPrice(max))} ${item.rate}`;
-                                                            }
-
-                                                            // Default fixed price
-                                                            return `${formatCurrency(convertPrice(Number(priceValue)))} ${item.rate}`;
-                                                        })()}
-                                                    </p>
-
-                                                    <div className="rent-actions">
-                                                        <Link className="hero-btn hero-btn-link" to={rentalPath(item)} aria-label={`View ${item.name}`}>
-                                                            View
-                                                        </Link>
-                                                    </div>
-                                                </div>
+                                            <img
+                                                src={getRentalImage(item)}
+                                                alt={item.name || "Popular rental item"}
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                            <span className="rentals-popular-overlay" aria-hidden="true" />
+                                            <div className="rentals-popular-copy">
+                                                <p>{getCategory(item)}</p>
+                                                <h3>{item.name}</h3>
+                                                <span className="rentals-popular-cta">View rental →</span>
                                             </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
+
+                    <section id='rentals-grid' className="rentals-section">
+                        <div className="rentals-main">
+                            <SideNav
+                                items={visibleNavItems}
+                                activeId={activeCategory}
+                                label="Rental categories"
+                                className={`glass-card rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
+                                onItemClick={handleSideNavItemClick}
+                            />
+
+                                <div className="rentals-main-content">
+                                    <div className="rentals-toolbar glass-card">
+                                        <div className="rentals-toolbar-head">
+                                            <div>
+                                                <p className="kicker-small">Rental catalog</p>
+                                                <h2 className="rentals-results-title">Find your party setup fast</h2>
+                                                <p className="rentals-meta">
+                                                    {filteredRentals.length} items shown · {allCategories.length} categories
+                                                </p>
+                                            </div>
+                                    </div>
+
+                                    <div className="rentals-controls">
+                                        <div className="search-wrapper rentals-search">
+                                            <AppIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search bounce houses, decor, concessions..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="search-bar"
+                                                aria-label="Search rental items"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="filter-chips" role="list" aria-label="Quick category filters">
+                                        {categoryOptions.map((cat) => (
+                                            <button
+                                                key={cat}
+                                                type="button"
+                                                className={`filter-chip ${categoryFilter === cat ? "active" : ""}`}
+                                                onClick={() => setCategoryFilter(cat)}
+                                                aria-pressed={categoryFilter === cat}
+                                            >
+                                                {cat}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
-                            ))}
+
+                                {groupedRentals.length === 0 && (
+                                    <div className="rentals-empty glass-card">
+                                        <p>No rentals match that search. Try a different keyword or reset filters.</p>
+                                        <button className="hero-btn hero-btn-link" type="button" onClick={() => {
+                                            setSearchQuery("");
+                                            setCategoryFilter("All");
+                                        }}>
+                                            Reset filters
+                                        </button>
+                                    </div>
+                                )}
+
+                                {groupedRentals.map(({ category, id, items }) => (
+                                    <div id={id} key={id} className="rent-category-section">
+                                        <div className="section-header rent-section-header">
+                                            <div className="rent-section-topline">
+                                                <span className="rent-section-count">{items.length} items</span>
+                                            </div>
+                                            <h2>{category}</h2>
+                                        </div>
+                                        <div className='rent-grid'>
+                                            {items.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className={`rent-card ${getCategory(item) === "Indoor Games" ? "rent-card-indoor" : ""}`}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label={`View ${item.name}`}
+                                                    onClick={() => navigate(rentalPath(item))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" || e.key === " ") {
+                                                            e.preventDefault();
+                                                            navigate(rentalPath(item));
+                                                        }
+                                                    }}
+                                                >
+                                                    <div
+                                                        className={`rent-image rent-card-bg ${getCategory(item) === "Indoor Games" ? "rent-image-indoor" : ""}`}
+                                                        style={{ "--rent-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                                                    >
+                                                        <img
+                                                            src={getRentalImage(item)}
+                                                            alt={item.name}
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                        />
+                                                        <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
+                                                    </div>
+                                                    <span className="rent-card-arrow" aria-hidden="true">→</span>
+                                                    <div className="rent-details">
+                                                        <div className="rent-title-row">
+                                                            <h3>{item.name}</h3>
+                                                        </div>
+                                                        <div className="rent-card-meta">
+                                                            <p className="price">{getRentalPriceLabel(item)}</p>
+                                                            <p className="rent-meta-line">
+                                                                <span>Availability</span>
+                                                                <strong>{getRentalAvailability(item)}</strong>
+                                                            </p>
+                                                            <p className="rent-meta-line">
+                                                                <span>Age Range</span>
+                                                                <strong>{getRentalAgeRange(item)}</strong>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </section>
-            )}
-        </main>
-    </div>
+                    </section>
+            </main>
+        </div>
         </>
     );
 }

@@ -10,7 +10,7 @@
   --aw-danger-soft: rgba(216, 74, 70, 0.12);
 }
 
-[data-theme="dark"] body.aw-theme {
+[data-admin-theme="dark"] body.aw-theme {
   --aw-ink: #e5e7eb;
   --aw-muted: #b4c0d0;
   --aw-card: #111827;
@@ -29,7 +29,7 @@
     linear-gradient(178deg, #f5f8f9 0%, #f0f4f5 100%);
 }
 
-[data-theme="dark"] .aw-theme {
+[data-admin-theme="dark"] .aw-theme {
   background:
     radial-gradient(45rem 24rem at 0% 0%, rgba(45, 212, 191, 0.16), transparent 60%),
     radial-gradient(38rem 20rem at 100% 0%, rgba(251, 146, 60, 0.16), transparent 56%),
@@ -868,33 +868,33 @@
   background: var(--aw-primary-soft);
 }
 
-[data-theme="dark"] body.admin-theme .aw-home-summary-card,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-card,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-chart-card {
+[data-admin-theme="dark"] body.admin-theme .aw-home-summary-card,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-card,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-chart-card {
   border-color: rgba(148, 163, 184, 0.22);
   background: linear-gradient(160deg, rgba(16, 22, 33, 0.88) 0%, rgba(17, 28, 36, 0.92) 100%);
 }
 
-[data-theme="dark"] body.admin-theme .aw-home-kpi-card-hero {
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-card-hero {
   background:
     radial-gradient(circle at 95% 0%, rgba(15, 143, 120, 0.22), transparent 55%),
     linear-gradient(160deg, rgba(16, 24, 32, 0.9) 0%, rgba(14, 26, 34, 0.95) 100%);
 }
 
-[data-theme="dark"] body.admin-theme .aw-home-summary-card span,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-card span,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-label,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-chart-head span,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-legend li em,
-[data-theme="dark"] body.admin-theme .aw-home-kpi-bar-label span {
+[data-admin-theme="dark"] body.admin-theme .aw-home-summary-card span,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-card span,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-label,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-chart-head span,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-legend li em,
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-bar-label span {
   color: rgba(226, 232, 240, 0.78);
 }
 
-[data-theme="dark"] body.admin-theme .aw-home-kpi-donut-track {
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-donut-track {
   stroke: rgba(148, 163, 184, 0.26);
 }
 
-[data-theme="dark"] body.admin-theme .aw-home-kpi-bar-track {
+[data-admin-theme="dark"] body.admin-theme .aw-home-kpi-bar-track {
   background: rgba(100, 116, 139, 0.3);
 }
 
@@ -917,5 +917,302 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     max-width: 760px;
     margin: 0 auto;
+  }
+}
+
+/* Glass-only dashboard redesign for the AdminWorkspace routes. */
+body.admin-theme.aw-theme {
+  --aw-ink: #112229;
+  --aw-muted: rgba(17, 34, 41, 0.66);
+  --aw-card: rgba(255, 255, 255, 0.34);
+  --aw-card-strong: rgba(255, 255, 255, 0.46);
+  --aw-card-soft: rgba(255, 255, 255, 0.24);
+  --aw-border: rgba(255, 255, 255, 0.42);
+  --aw-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+  --aw-primary: #0c6a60;
+  --aw-primary-soft: rgba(12, 106, 96, 0.12);
+  --aw-danger: #b74441;
+  --aw-danger-soft: rgba(183, 68, 65, 0.12);
+  --admin-bg: transparent;
+  --admin-card: var(--aw-card);
+  --admin-surface: var(--aw-card-soft);
+  --admin-border: var(--aw-border);
+  --shadow: var(--aw-shadow);
+  background: transparent;
+}
+
+body.admin-theme.aw-theme :is(
+  .portal-app-shell,
+  .portal-app-content,
+  .aw-shell
+) {
+  background: transparent;
+}
+
+body.admin-theme.aw-theme .portal-app-content {
+  padding: clamp(1rem, 2vw, 2rem);
+}
+
+body.admin-theme.aw-theme .aw-shell {
+  display: grid;
+  gap: 1rem;
+  padding: 0 0 calc(6.4rem + env(safe-area-inset-bottom));
+}
+
+body.admin-theme.aw-theme .aw-section-grid {
+  margin-top: 0;
+  gap: 1rem;
+}
+
+body.admin-theme.aw-theme :is(
+  .portal-sidebar,
+  .portal-sidebar__notifications-body,
+  .portal-sidebar__user-menu,
+  .portal-sidebar__overlay-content,
+  .aw-topbar,
+  .aw-user-strip,
+  .aw-panel,
+  .aw-kpi,
+  .aw-home-summary-card,
+  .aw-home-kpi-card,
+  .aw-home-kpi-chart-card,
+  .aw-stock-card,
+  .aw-basket-item,
+  .aw-queue-item,
+  .aw-link-card,
+  .aw-nav
+) {
+  background: var(--aw-card);
+  border-color: var(--aw-border);
+  box-shadow: var(--aw-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-secondary-btn,
+  .aw-link-btn,
+  .aw-search,
+  .aw-pill,
+  .aw-icon-btn,
+  .aw-select,
+  .aw-product-btn,
+  .aw-count-pill,
+  .aw-online-pill,
+  .portal-sidebar__brand-short,
+  .portal-sidebar__user-button,
+  .portal-sidebar__notifications-toggle,
+  .portal-sidebar__notifications-action,
+  .portal-sidebar__notification-item,
+  .portal-sidebar__toggle-btn,
+  .portal-sidebar__signout-btn,
+  .portal-sidebar__link--overlay
+) {
+  background: var(--aw-card-soft);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+body.admin-theme.aw-theme .aw-topbar {
+  top: 1rem;
+  padding: 1.15rem 1.2rem;
+  border-radius: 1.35rem;
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-user-strip,
+  .aw-panel
+) {
+  border-radius: 1.2rem;
+}
+
+body.admin-theme.aw-theme .aw-home-kpi-card-hero {
+  background: var(--aw-card-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    var(--aw-shadow);
+}
+
+body.admin-theme.aw-theme .aw-primary-btn {
+  background: rgba(12, 106, 96, 0.14);
+  color: var(--aw-primary);
+  border-color: rgba(12, 106, 96, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 12px 24px rgba(12, 106, 96, 0.08);
+}
+
+body.admin-theme.aw-theme .aw-link-btn {
+  border-style: solid;
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-secondary-btn,
+  .aw-primary-btn,
+  .aw-link-btn,
+  .aw-pill,
+  .aw-product-btn,
+  .aw-link-card,
+  .aw-icon-btn
+) {
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-secondary-btn,
+  .aw-primary-btn,
+  .aw-link-btn,
+  .aw-pill,
+  .aw-product-btn,
+  .aw-link-card,
+  .aw-icon-btn
+):hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.56);
+  background: var(--aw-card-strong);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+body.admin-theme.aw-theme .aw-icon-btn.success {
+  background: rgba(12, 106, 96, 0.16);
+  border-color: rgba(12, 106, 96, 0.22);
+  color: #0a5d52;
+}
+
+body.admin-theme.aw-theme .aw-icon-btn.danger {
+  background: rgba(183, 68, 65, 0.16);
+  border-color: rgba(183, 68, 65, 0.22);
+  color: #923634;
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-status-chip,
+  .aw-count-pill,
+  .aw-online-pill
+) {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+body.admin-theme.aw-theme .aw-feedback p {
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+body.admin-theme.aw-theme .aw-feedback-success {
+  background: rgba(12, 106, 96, 0.12);
+}
+
+body.admin-theme.aw-theme .aw-feedback-error {
+  background: rgba(183, 68, 65, 0.12);
+}
+
+body.admin-theme.aw-theme .aw-feedback-note {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+body.admin-theme.aw-theme :is(
+  .aw-home-kpi-meter,
+  .aw-home-kpi-bar-track
+) {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+body.admin-theme.aw-theme .aw-home-kpi-donut-track {
+  stroke: rgba(148, 163, 184, 0.3);
+}
+
+body.admin-theme.aw-theme .aw-nav-btn.is-active {
+  background: rgba(12, 106, 96, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme {
+  --aw-ink: #e5e7eb;
+  --aw-muted: rgba(203, 213, 225, 0.74);
+  --aw-card: rgba(15, 23, 42, 0.5);
+  --aw-card-strong: rgba(15, 23, 42, 0.64);
+  --aw-card-soft: rgba(15, 23, 42, 0.34);
+  --aw-border: rgba(148, 163, 184, 0.26);
+  --aw-shadow: 0 22px 52px rgba(2, 6, 23, 0.28);
+  --aw-primary: #5eead4;
+  --aw-primary-soft: rgba(94, 234, 212, 0.14);
+  --aw-danger: #fca5a5;
+  --aw-danger-soft: rgba(252, 165, 165, 0.14);
+  background:
+    radial-gradient(42rem 24rem at 0% 0%, rgba(94, 234, 212, 0.08), transparent 58%),
+    radial-gradient(34rem 20rem at 100% 0%, rgba(59, 130, 246, 0.08), transparent 54%),
+    linear-gradient(180deg, #07111b 0%, #0b1522 48%, #0a1624 100%);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .aw-home-kpi-card-hero {
+  background: var(--aw-card-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--aw-shadow);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .aw-primary-btn {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 24px rgba(2, 6, 23, 0.18);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme :is(
+  .aw-secondary-btn,
+  .aw-primary-btn,
+  .aw-link-btn,
+  .aw-pill,
+  .aw-product-btn,
+  .aw-link-card,
+  .aw-icon-btn
+):hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.38);
+  background: rgba(15, 23, 42, 0.66);
+  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.2);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .aw-icon-btn.success {
+  background: rgba(94, 234, 212, 0.14);
+  border-color: rgba(94, 234, 212, 0.2);
+  color: #99f6e4;
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .aw-icon-btn.danger {
+  background: rgba(252, 165, 165, 0.14);
+  border-color: rgba(252, 165, 165, 0.2);
+  color: #fecaca;
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme :is(
+  .aw-status-chip,
+  .aw-count-pill,
+  .aw-online-pill,
+  .aw-feedback p
+) {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme :is(
+  .aw-home-kpi-meter,
+  .aw-home-kpi-bar-track
+) {
+  background: rgba(51, 65, 85, 0.52);
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .aw-home-kpi-donut-track {
+  stroke: rgba(100, 116, 139, 0.42);
+}
+
+@media (min-width: 900px) {
+  body.admin-theme.aw-theme .aw-shell {
+    padding-bottom: 7rem;
   }
 }

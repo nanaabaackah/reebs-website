@@ -3,14 +3,15 @@ import { AppIcon } from "/src/components/Icon";
 import { faArrowLeft, faGift, faLock, faTruck } from "/src/icons/iconSet";
 import { Link } from "react-router-dom";
 import { useCart } from "../components/CartContext";
-import "./public.css";
-
-const CURRENCIES = ["GHS", "USD", "CAD", "GBP", "EUR", "NGN"];
+import "../styles/public.css";
+import "../styles/Cart.css";
+import {
+  getCatalogItemBackgroundStyle,
+  getCatalogItemImage,
+} from "/src/utils/itemMediaBackgrounds";
 
 const Cart = () => {
   const {
-    currency,
-    setCurrency,
     cart,
     removeFromCart,
     updateQuantity,
@@ -24,8 +25,6 @@ const Cart = () => {
   const convertedSubtotal = convertPrice(subtotal);
   const formattedSubtotal = formatCurrency(convertedSubtotal);
   const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
-  const getItemImage = (item) =>
-    item.image || item.imageUrl || item.image_url || "/imgs/placeholder.png";
   const getItemCategory = (item) =>
     item.specificCategory || item.specificcategory || item.type || null;
 
@@ -41,11 +40,11 @@ const Cart = () => {
     Math.max(getItemQuantity(item) - item.cartQuantity, 0);
 
   return (
-    <main className="cart-shell" id="main">
-      <section className="cart-hero" id="cart-intro" aria-labelledby="cart-heading">
-        <div className="cart-hero-copy back-heading">
+    <main className="cart-shell page-shell" id="main">
+      <section className="cart-hero page-hero" id="cart-intro" aria-labelledby="cart-heading">
+        <div className="cart-hero-copy back-heading page-hero-copy">
           <p className="cart-hero-kicker">Check out your items</p>
-          <h1 id="cart-heading">Your Cart</h1>
+          <h1 id="cart-heading" className="page-hero-title">Your Cart</h1>
           <div className="cart-hero-pills" aria-label="Cart highlights">
             <span className="pill">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
             <span className="pill pill-accent">Subtotal {formattedSubtotal}</span>
@@ -56,20 +55,6 @@ const Cart = () => {
             <div>
               <p className="kicker">Current subtotal</p>
               <strong>{formattedSubtotal}</strong>
-            </div>
-            <div className="currency-picker">
-              <label htmlFor="currency-select">Currency</label>
-              <select
-                id="currency-select"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                {CURRENCIES.map((cur) => (
-                  <option key={cur} value={cur}>
-                    {cur}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
           <div className="hero-card-perks">
@@ -114,8 +99,11 @@ const Cart = () => {
                     key={item.id}
                     style={{ "--cart-delay": `${Math.min(index, 8) * 0.05}s` }}
                   >
-                    <div className="cart-line-media">
-                      <img src={getItemImage(item)} alt={item.name} loading="lazy" />
+                    <div
+                      className="cart-line-media category-image-bg"
+                      style={getCatalogItemBackgroundStyle(item)}
+                    >
+                      <img src={getCatalogItemImage(item)} alt={item.name} loading="lazy" />
                       {getItemCategory(item) && (
                         <span className="cart-chip">{getItemCategory(item)}</span>
                       )}

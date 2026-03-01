@@ -8,7 +8,7 @@ import {
   getExpenseCategoryStyle,
   normalizeExpenseCategory,
 } from "../data/expenseCategories";
-import "./admin.css";
+import "../styles/admin.css";
 
 const formatCurrency = (amount) => {
   try {

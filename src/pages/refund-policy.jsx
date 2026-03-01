@@ -1,156 +1,89 @@
-import React from 'react';
-import './public.css';
+import React from "react";
+import LegalDocumentPage from "../components/LegalDocumentPage";
+import "../styles/public.css";
+import "../styles/RefundPolicy.css";
 
-const refundSections = [
+const LAST_UPDATED = "February 28, 2026";
+
+const sections = [
   {
-    id: 'cancellations',
-    kicker: '1. Changing plans',
-    title: 'Cancellations & tweaks',
-    description: 'Life happens. Here’s how we handle shifts in your booking.',
+    id: "goods",
+    label: "1.",
+    title: "Online cancellation rights for standard goods",
+    summary:
+      "For eligible stock goods bought online, Ghana's Electronic Transactions Act, 2008 (Act 772) may give you cancellation rights after delivery.",
     items: [
-      'Hold requests are free until we confirm availability and send your invoice.',
-      'Cancel within 48 hours of payment for a full refund on rentals and supplies.',
-      'Cancel after 48 hours: 30% service fee to cover prep and reserved inventory.',
-      'Same-week cancellations: delivery/setup fees are non-refundable; we credit rentals for a future date within 60 days.'
-    ]
+      "Where the law applies, you may request cancellation within 14 days after delivery of a standard, non-customised item.",
+      "Returned goods must be unused, unopened where applicable, and in resalable condition with original packaging.",
+      "Return transport is normally your responsibility unless the item is faulty, incorrect, or materially different from what was ordered.",
+    ],
   },
   {
-    id: 'reschedules',
-    kicker: '2. New dates',
-    title: 'Reschedules',
-    description: 'We’ll always try to move with you when dates change.',
+    id: "services",
+    label: "2.",
+    title: "Services, rentals, and event-date bookings",
+    summary:
+      "Services booked online may have shorter cancellation windows, and date-specific event work is often affected once planning starts.",
     items: [
-      'One free reschedule if you give 72+ hours’ notice.',
-      'Less than 72 hours: ₵150 retainer to secure crew and logistics.',
-      'If the exact items are unavailable on the new date, we’ll suggest close alternatives or apply a credit to similar items.'
-    ]
+      "Where the law applies, eligible services may be cancelled within 7 days of contracting if the service has not started.",
+      "Date-specific rentals, reserved crew time, setup appointments, and sourced event stock may begin planning immediately, so once preparation starts we may offer a reschedule or credit instead of a cash refund.",
+      "If you ask us to start urgently before any cooling-off period ends, the refundable amount may be reduced to reflect work already completed.",
+    ],
   },
   {
-    id: 'weather',
-    kicker: '3. Weather',
-    title: 'Rainy-day backup',
-    description: 'Ghana weather can surprise us; here’s our rainy-day flow.',
+    id: "exclusions",
+    label: "3.",
+    title: "Items and situations that are not refundable",
+    summary:
+      "Some products and services cannot reasonably be returned or reversed.",
     items: [
-      'Light rain: we proceed with covered setup or indoor placement when safe.',
-      'Heavy rain or storms: we can pause delivery and reschedule without fees to the nearest available date.',
-      'Partially delivered orders that pause for weather will have unused items credited for future use.'
-    ]
+      "Custom, personalised, printed, or specially sourced goods.",
+      "Perishable goods, food items, or hygiene-sensitive items once opened or delivered.",
+      "Balloons, decor materials, or consumables already used for your event.",
+      "Loss, breakage, staining, or damage that happens after delivery or setup.",
+    ],
   },
   {
-    id: 'timing',
-    kicker: '4. Refund timing',
-    title: 'When refunds land',
-    description: 'We process refunds quickly so you can plan your next celebration.',
+    id: "supplier",
+    label: "4.",
+    title: "Stock issues, failed fulfilment, and supplier cancellations",
+    summary:
+      "If REEBS cannot fulfil the order, we will communicate quickly and offer a lawful remedy.",
+    paragraphs: [
+      "If we cannot supply within the agreed timeline, or within 14 days where no fulfilment period was agreed, you may cancel the order and choose a substitute, credit, or refund.",
+    ],
     items: [
-      'Processed within 3 business days after confirmation from our team.',
-      'Bank or mobile money timelines may add 3–7 business days.',
-      'Credits are issued instantly to your REEBS account email/phone.'
-    ]
+      "If an item is unavailable after payment, we will notify you and agree the next step before dispatch.",
+      "If a delivered item is faulty, damaged on arrival, or incorrect, we may inspect it and then replace it, repair it, or refund it as appropriate.",
+      "Where cancellation is accepted because REEBS could not fulfil the order, approved refunds are issued within 7 days after confirmation.",
+    ],
   },
   {
-    id: 'exceptions',
-    kicker: '5. Exceptions',
-    title: 'Non-refundable items',
-    description: 'A few items are purchased just for you and can’t be returned.',
+    id: "processing",
+    label: "5.",
+    title: "How refunds are paid",
+    summary:
+      "Approved refunds are returned using the original payment rail where possible.",
     items: [
-      'Custom-printed backdrops, balloons, or branded decor once ordered.',
-      'Perishable goods like snacks or personalized favors after procurement.',
-      'Severe damage to rentals (burns, tears, water damage beyond safe use).'
-    ]
-  }
+      "Bank, card, and mobile money providers may take around 5 to 10 business days to complete the reversal after approval.",
+      "Where the law allows and where clearly disclosed, non-recoverable fees already incurred may be deducted from the refund.",
+      "Nothing in this policy removes any consumer rights you cannot legally waive.",
+    ],
+  },
 ];
 
-const RefundPolicy = () => {
+function RefundPolicy() {
   return (
-    <main className="policy" role="main" id="policy-main">
-      <section className="policy-hero" aria-labelledby="refund-heading">
-        <div className="policy-hero-copy">
-          <p className="policy-pill">Updated: July 2025</p>
-          <h1 id="refund-heading">Refund & Cancellation Policy</h1>
-          <p className="policy-sub">
-            Transparent steps for cancellations, reschedules, and weather surprises—so your party plans
-            stay stress-free.
-          </p>
-          <div className="policy-meta" aria-label="Refund highlights">
-            <span className="policy-chip">Fast processing</span>
-            <span className="policy-chip">Flexible reschedules</span>
-            <span className="policy-chip">No hidden fees</span>
-          </div>
-        </div>
-        <div className="policy-hero-card glass-card">
-          <p className="policy-hero-lede">Clear outcomes before you click pay.</p>
-          <ul>
-            <li>Cancel within 48 hours for a full refund.</li>
-            <li>Weather issues? We reschedule first.</li>
-            <li>Custom-made items are final sale once ordered.</li>
-          </ul>
-          <div className="policy-ribbon">
-            <span>Less hustle. More clarity.</span>
-          </div>
-        </div>
-        <span className="policy-bubble bubble-a" aria-hidden="true" />
-        <span className="policy-bubble bubble-b" aria-hidden="true" />
-        <span className="policy-bubble bubble-c" aria-hidden="true" />
-      </section>
-
-      <section className="policy-highlights" aria-labelledby="refund-quick-look">
-        <div className="section-header">
-          <p className="kicker">Quick look</p>
-          <h2 id="refund-quick-look">How refunds work</h2>
-        </div>
-        <div className="policy-grid">
-          <article className="policy-card">
-            <p className="policy-card-kicker">Before delivery</p>
-            <h3>48-hour grace</h3>
-            <p>Full refunds on rentals and supplies within the first 48 hours after payment.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">Closer to your date</p>
-            <h3>Fair prep fees</h3>
-            <p>Late cancellations keep delivery/setup fees; rentals convert to credits where possible.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">After setup</p>
-            <h3>Protection rules</h3>
-            <p>Damage or missing items may reduce refunds; we’ll document everything with photos.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="policy-sections" aria-label="Refund policy details">
-        {refundSections.map((section) => (
-          <article key={section.id} className="policy-detail" id={section.id}>
-            <p className="policy-card-kicker">{section.kicker}</p>
-            <div className="policy-detail-header">
-              <h2>{section.title}</h2>
-              <p>{section.description}</p>
-            </div>
-            <ul>
-              {section.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
-      </section>
-
-      <section className="policy-cta" aria-labelledby="refund-cta-heading">
-        <div>
-          <p className="kicker">Need help fast?</p>
-          <h2 id="refund-cta-heading">Talk to the REEBS team</h2>
-          <p className="policy-sub">
-            Ask about a cancellation, reschedule an order, or request a refund status update.
-          </p>
-        </div>
-        <div className="policy-contact">
-          <a href="mailto:info@reebspartythemes.com" className="policy-chip solid">info@reebspartythemes.com</a>
-          <a href="https://wa.me/233244238419" className="policy-chip" target="_blank" rel="noopener noreferrer">
-            WhatsApp: +233 244 238 419
-          </a>
-        </div>
-      </section>
-    </main>
+    <LegalDocumentPage
+      title="Refund Policy"
+      lastUpdated={LAST_UPDATED}
+      intro="This page explains when REEBS offers refunds, when credits or reschedules may apply instead, and how statutory online cancellation rights work for Ghana-based customers."
+      marketNote="This version is written for Ghana-based online sales and references the Electronic Transactions Act, 2008 (Act 772) for supplier disclosures, fulfilment timing, and cooling-off rules."
+      sections={sections}
+      contactHeading="Need to cancel or request a refund?"
+      contactBody="Contact REEBS as soon as possible with your order number, booking date, and reason so that we can confirm the correct remedy."
+    />
   );
-};
+}
 
 export default RefundPolicy;

@@ -1,0 +1,221 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - main [ref=e32]:
+    - region "Refund & Cancellation Policy" [ref=e33]:
+      - generic [ref=e34]:
+        - paragraph [ref=e35]: "Updated: July 2025"
+        - heading "Refund & Cancellation Policy" [level=1] [ref=e36]
+        - paragraph [ref=e37]: Transparent steps for cancellations, reschedules, and weather surprises—so your party plans stay stress-free.
+        - generic "Refund highlights" [ref=e38]:
+          - generic [ref=e39]: Fast processing
+          - generic [ref=e40]: Flexible reschedules
+          - generic [ref=e41]: No hidden fees
+      - generic [ref=e42]:
+        - paragraph [ref=e43]: Clear outcomes before you click pay.
+        - list [ref=e44]:
+          - listitem [ref=e45]: Cancel within 48 hours for a full refund.
+          - listitem [ref=e46]: Weather issues? We reschedule first.
+          - listitem [ref=e47]: Custom-made items are final sale once ordered.
+        - generic [ref=e49]: Less hustle. More clarity.
+    - region "How refunds work" [ref=e50]:
+      - generic [ref=e51]:
+        - paragraph [ref=e52]: Quick look
+        - heading "How refunds work" [level=2] [ref=e53]
+      - generic [ref=e54]:
+        - article [ref=e55]:
+          - paragraph [ref=e56]: Before delivery
+          - heading "48-hour grace" [level=3] [ref=e57]
+          - paragraph [ref=e58]: Full refunds on rentals and supplies within the first 48 hours after payment.
+        - article [ref=e59]:
+          - paragraph [ref=e60]: Closer to your date
+          - heading "Fair prep fees" [level=3] [ref=e61]
+          - paragraph [ref=e62]: Late cancellations keep delivery/setup fees; rentals convert to credits where possible.
+        - article [ref=e63]:
+          - paragraph [ref=e64]: After setup
+          - heading "Protection rules" [level=3] [ref=e65]
+          - paragraph [ref=e66]: Damage or missing items may reduce refunds; we’ll document everything with photos.
+    - region "Refund policy details" [ref=e67]:
+      - article [ref=e68]:
+        - paragraph [ref=e69]: 1. Changing plans
+        - generic [ref=e70]:
+          - heading "Cancellations & tweaks" [level=2] [ref=e71]
+          - paragraph [ref=e72]: Life happens. Here’s how we handle shifts in your booking.
+        - list [ref=e73]:
+          - listitem [ref=e74]: Hold requests are free until we confirm availability and send your invoice.
+          - listitem [ref=e75]: Cancel within 48 hours of payment for a full refund on rentals and supplies.
+          - listitem [ref=e76]: "Cancel after 48 hours: 30% service fee to cover prep and reserved inventory."
+          - listitem [ref=e77]: "Same-week cancellations: delivery/setup fees are non-refundable; we credit rentals for a future date within 60 days."
+      - article [ref=e78]:
+        - paragraph [ref=e79]: 2. New dates
+        - generic [ref=e80]:
+          - heading "Reschedules" [level=2] [ref=e81]
+          - paragraph [ref=e82]: We’ll always try to move with you when dates change.
+        - list [ref=e83]:
+          - listitem [ref=e84]: One free reschedule if you give 72+ hours’ notice.
+          - listitem [ref=e85]: "Less than 72 hours: ₵150 retainer to secure crew and logistics."
+          - listitem [ref=e86]: If the exact items are unavailable on the new date, we’ll suggest close alternatives or apply a credit to similar items.
+      - article [ref=e87]:
+        - paragraph [ref=e88]: 3. Weather
+        - generic [ref=e89]:
+          - heading "Rainy-day backup" [level=2] [ref=e90]
+          - paragraph [ref=e91]: Ghana weather can surprise us; here’s our rainy-day flow.
+        - list [ref=e92]:
+          - listitem [ref=e93]: "Light rain: we proceed with covered setup or indoor placement when safe."
+          - listitem [ref=e94]: "Heavy rain or storms: we can pause delivery and reschedule without fees to the nearest available date."
+          - listitem [ref=e95]: Partially delivered orders that pause for weather will have unused items credited for future use.
+      - article [ref=e96]:
+        - paragraph [ref=e97]: 4. Refund timing
+        - generic [ref=e98]:
+          - heading "When refunds land" [level=2] [ref=e99]
+          - paragraph [ref=e100]: We process refunds quickly so you can plan your next celebration.
+        - list [ref=e101]:
+          - listitem [ref=e102]: Processed within 3 business days after confirmation from our team.
+          - listitem [ref=e103]: Bank or mobile money timelines may add 3–7 business days.
+          - listitem [ref=e104]: Credits are issued instantly to your REEBS account email/phone.
+      - article [ref=e105]:
+        - paragraph [ref=e106]: 5. Exceptions
+        - generic [ref=e107]:
+          - heading "Non-refundable items" [level=2] [ref=e108]
+          - paragraph [ref=e109]: A few items are purchased just for you and can’t be returned.
+        - list [ref=e110]:
+          - listitem [ref=e111]: Custom-printed backdrops, balloons, or branded decor once ordered.
+          - listitem [ref=e112]: Perishable goods like snacks or personalized favors after procurement.
+          - listitem [ref=e113]: Severe damage to rentals (burns, tears, water damage beyond safe use).
+    - region "Talk to the REEBS team" [ref=e114]:
+      - generic:
+        - paragraph [ref=e115]: Need help fast?
+        - heading "Talk to the REEBS team" [level=2] [ref=e116]
+        - paragraph [ref=e117]: Ask about a cancellation, reschedule an order, or request a refund status update.
+      - generic [ref=e118]:
+        - link "info@reebspartythemes.com" [ref=e119] [cursor=pointer]:
+          - /url: mailto:info@reebspartythemes.com
+        - 'link "WhatsApp: +233 244 238 419" [ref=e120] [cursor=pointer]':
+          - /url: https://wa.me/233244238419
+  - contentinfo "Site footer" [ref=e121]:
+    - heading "Site footer" [level=2] [ref=e122]
+    - region "Plan your party with REEBS" [ref=e123]:
+      - generic [ref=e124]:
+        - paragraph [ref=e125]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e126]
+        - generic [ref=e127]:
+          - generic [ref=e128]: Email address
+          - textbox "Email address" [ref=e129]
+          - button "Book your party" [ref=e130] [cursor=pointer]:
+            - generic [ref=e131] [cursor=pointer]: Book your party
+            - img [ref=e132] [cursor=pointer]
+    - generic [ref=e134]:
+      - link "REEBS Logo" [ref=e136] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e137] [cursor=pointer]
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - navigation "Main links" [ref=e140]:
+            - heading "Menu" [level=3] [ref=e141]
+            - link "Home" [ref=e142] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e143] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e144] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e145] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e146] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e147] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e148] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e149]:
+            - heading "Accounts" [level=3] [ref=e150]
+            - link "Staff login" [ref=e151] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e152] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e153] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e154] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e155]:
+            - heading "Company" [level=3] [ref=e156]
+            - link "FAQ" [ref=e157] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e158] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e159] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e160] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e161] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e162]:
+            - heading "Social" [level=3] [ref=e163]
+            - link "Facebook" [ref=e164] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e165] [cursor=pointer]
+              - generic [ref=e167] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e168] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e169] [cursor=pointer]
+              - generic [ref=e172] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e173] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e174] [cursor=pointer]
+              - generic [ref=e176] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e177] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e178] [cursor=pointer]
+              - generic [ref=e180] [cursor=pointer]: WhatsApp
+        - generic [ref=e181]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e182] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e183] [cursor=pointer]
+            - generic [ref=e186] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e187] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e188] [cursor=pointer]
+            - generic [ref=e190] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e191] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e192] [cursor=pointer]
+            - generic [ref=e195] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e196]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e197]:
+      - generic [ref=e198]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e199]: Made to matter. Made By Nana.
+      - generic [ref=e200]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e201]
+```

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./admin.css";
+import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import { AppIcon } from "/src/components/Icon";
@@ -15,6 +15,7 @@ const ROLE_OPTIONS = [
   "Viewer",
   "Custodian",
   "Sales",
+  "Water",
 ];
 const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 
@@ -458,6 +459,7 @@ function AdminRoles() {
                   <option value="Staff">Staff</option>
                   <option value="Custodian">Custodian</option>
                   <option value="Manager">Manager</option>
+                  <option value="Water">Water</option>
                 </select>
               </label>
               {inviteError && <p className="customers-error">{inviteError}</p>}

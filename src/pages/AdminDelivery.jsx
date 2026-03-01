@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import { faTruck, faRotateRight, faLocationDot } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./admin.css";
+import "../styles/admin.css";
 
 const STATUS_OPTIONS = [
   { value: "scheduled", label: "Scheduled" },

@@ -10,7 +10,9 @@ import {
   resolveActor,
   normalizeActor,
 } from "./auditHelpers.js";
+import { notifyManager } from "./_shared/managerPush.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
+import { requireUser } from "./_shared/userAuth.js";
 
 const corsHeaders = {
   "Content-Type": "application/json",
@@ -35,6 +37,42 @@ const barcodeColumnStatements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "product_barcode_org_unique"
     ON "product" ("organizationId", "barcode")`,
 ];
+const inventoryEditRequestStatements = [
+  `CREATE TABLE IF NOT EXISTS "inventoryEditRequest" (
+    "id" SERIAL PRIMARY KEY,
+    "organizationId" INTEGER NOT NULL,
+    "productId" INTEGER NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "requestedFields" JSONB NOT NULL DEFAULT '{}'::jsonb,
+    "submittedByUserId" INTEGER,
+    "submittedByName" TEXT,
+    "submittedByEmail" TEXT,
+    "submittedByRole" TEXT,
+    "reviewedByUserId" INTEGER,
+    "reviewedByName" TEXT,
+    "reviewedByEmail" TEXT,
+    "reviewedAt" TIMESTAMPTZ,
+    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "organizationId" INTEGER`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "productId" INTEGER`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "status" TEXT DEFAULT 'pending'`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "requestedFields" JSONB DEFAULT '{}'::jsonb`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "submittedByUserId" INTEGER`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "submittedByName" TEXT`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "submittedByEmail" TEXT`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "submittedByRole" TEXT`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "reviewedByUserId" INTEGER`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "reviewedByName" TEXT`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "reviewedByEmail" TEXT`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "reviewedAt" TIMESTAMPTZ`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+  `ALTER TABLE "inventoryEditRequest" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+  `CREATE INDEX IF NOT EXISTS "inventoryEditRequest_org_status_idx"
+    ON "inventoryEditRequest" ("organizationId", "status", "createdAt")`,
+];
+const EDITABLE_FIELDS_BY_MANAGER = new Set(["name", "description", "priceCents", "stock"]);
 
 const parseNumber = (value, fallback = 0) => {
   const num = Number(value);
@@ -103,6 +141,16 @@ const ensureProductBarcodeColumn = async (client) => {
   }
 };
 
+const ensureInventoryEditRequestTable = async (client) => {
+  for (const statement of inventoryEditRequestStatements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Inventory edit request table check failed:", err?.message || err);
+    }
+  }
+};
+
 const isSystemAdmin = async (client, userId, organizationId = null) => {
   const parsedId = Number(userId);
   if (!Number.isFinite(parsedId)) return false;
@@ -114,6 +162,28 @@ const isSystemAdmin = async (client, userId, organizationId = null) => {
   const role = result.rows[0]?.role || "";
   return role.toLowerCase() === "admin";
 };
+
+const normalizeRole = (value) => String(value || "").trim().toLowerCase();
+
+const isAdminRole = (role) => normalizeRole(role) === "admin";
+
+const canApproveInventoryEditRequests = (role) => {
+  const normalized = normalizeRole(role);
+  return normalized === "admin" || normalized === "manager";
+};
+
+const canEditInventoryDirectly = (role) => {
+  const normalized = normalizeRole(role);
+  return normalized === "admin" || normalized === "manager";
+};
+
+const canRequestInventoryEdit = (role) => normalizeRole(role) === "staff";
+
+const buildActorFromUser = (user) => ({
+  userId: user?.id ?? null,
+  userName: user?.fullName || user?.email || "Admin",
+  userEmail: user?.email || null,
+});
 
 const slugify = (value, max = 10) => {
   if (!value) return "ITEM";
@@ -162,6 +232,7 @@ export async function handler(event = {}) {
     await ensureAuditColumns(client);
     await ensureProductStatusColumns(client);
     await ensureProductBarcodeColumn(client);
+    await ensureInventoryEditRequestTable(client);
     await ensureSourceCategoryValue(client, "WATER");
     const admin = await findDefaultAdmin(client, organizationId);
     if (admin?.id) {
@@ -170,6 +241,45 @@ export async function handler(event = {}) {
 
     if (method === "GET") {
       const view = (event.queryStringParameters?.view || "").toLowerCase();
+      if (view === "edit-requests") {
+        const authUser = await requireUser(client, event);
+        if (!authUser || !canApproveInventoryEditRequests(authUser.role)) {
+          return {
+            statusCode: 403,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: "Only admins and managers can view edit approvals." }),
+          };
+        }
+
+        const result = await client.query(
+          `SELECT
+             r.id,
+             r."productId" AS "productId",
+             r."requestedFields" AS "requestedFields",
+             r."submittedByUserId" AS "submittedByUserId",
+             r."submittedByName" AS "submittedByName",
+             r."submittedByEmail" AS "submittedByEmail",
+             r."submittedByRole" AS "submittedByRole",
+             r."createdAt" AS "createdAt",
+             p.name AS "productName",
+             p.sku AS "productSku"
+           FROM "inventoryEditRequest" r
+           JOIN "product" p
+             ON p.id = r."productId"
+            AND p."organizationId" = r."organizationId"
+           WHERE r."organizationId" = $1
+             AND LOWER(COALESCE(r.status, 'pending')) = 'pending'
+           ORDER BY r."createdAt" ASC`,
+          [organizationId]
+        );
+
+        return {
+          statusCode: 200,
+          headers: corsHeaders,
+          body: JSON.stringify(result.rows),
+        };
+      }
+
       let whereClause = `WHERE p."organizationId" = $1
         AND COALESCE(p."isDeleted", false) = false
         AND COALESCE(p."isArchived", false) = false`;
@@ -203,6 +313,11 @@ export async function handler(event = {}) {
           p."imageUrl" AS image,
           p."imageUrl" AS "imageUrl",
           p."isActive" AS status,
+          CASE
+            WHEN COALESCE(p."isActive", true) = false THEN 'Unavailable'
+            WHEN p.stock IS NOT NULL AND p.stock <= 0 THEN 'Unavailable'
+            ELSE 'Available'
+          END AS availability,
           p."attendantsNeeded" AS "attendantsNeeded",
           p."isArchived" AS "isArchived",
           p."archivedAt" AS "archivedAt",
@@ -229,6 +344,192 @@ export async function handler(event = {}) {
     }
 
     if (method === "PATCH") {
+      const action = String(payload.action || "").toLowerCase();
+      if (action === "approve-edit-request" || action === "reject-edit-request") {
+        const authUser = await requireUser(client, event);
+        if (!authUser || !canApproveInventoryEditRequests(authUser.role)) {
+          return {
+            statusCode: 403,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: "Only admins and managers can review edit requests." }),
+          };
+        }
+
+        const requestId = Number(payload.requestId);
+        if (!Number.isFinite(requestId)) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: "Request id is required." }),
+          };
+        }
+
+        const reviewer = buildActorFromUser(authUser);
+
+        if (action === "reject-edit-request") {
+          const result = await client.query(
+            `UPDATE "inventoryEditRequest"
+             SET status = 'rejected',
+                 "reviewedByUserId" = $2,
+                 "reviewedByName" = $3,
+                 "reviewedByEmail" = $4,
+                 "reviewedAt" = NOW(),
+                 "updatedAt" = NOW()
+             WHERE id = $1
+               AND "organizationId" = $5
+               AND LOWER(COALESCE(status, 'pending')) = 'pending'
+             RETURNING id, status`,
+            [requestId, reviewer.userId, reviewer.userName, reviewer.userEmail, organizationId]
+          );
+
+          if (result.rowCount === 0) {
+            return {
+              statusCode: 404,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: "Pending edit request not found." }),
+            };
+          }
+
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify(result.rows[0]),
+          };
+        }
+
+        await client.query("BEGIN");
+        try {
+          const requestRes = await client.query(
+            `SELECT
+               r.id,
+               r."productId" AS "productId",
+               r."requestedFields" AS "requestedFields"
+             FROM "inventoryEditRequest" r
+             WHERE r.id = $1
+               AND r."organizationId" = $2
+               AND LOWER(COALESCE(r.status, 'pending')) = 'pending'
+             FOR UPDATE`,
+            [requestId, organizationId]
+          );
+
+          if (requestRes.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return {
+              statusCode: 404,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: "Pending edit request not found." }),
+            };
+          }
+
+          const requestRow = requestRes.rows[0];
+          const requestedFields =
+            requestRow.requestedFields && typeof requestRow.requestedFields === "object"
+              ? requestRow.requestedFields
+              : {};
+
+          const productRes = await client.query(
+            `SELECT
+               id,
+               name,
+               description,
+               price,
+               stock
+             FROM "product"
+             WHERE id = $1
+               AND "organizationId" = $2
+             LIMIT 1`,
+            [requestRow.productId, organizationId]
+          );
+
+          if (productRes.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return {
+              statusCode: 404,
+              headers: corsHeaders,
+              body: JSON.stringify({ error: "Product not found for this request." }),
+            };
+          }
+
+          const currentProduct = productRes.rows[0];
+          const nextName = Object.prototype.hasOwnProperty.call(requestedFields, "name")
+            ? sanitizeString(requestedFields.name, 160) || currentProduct.name
+            : currentProduct.name;
+          const nextDescription = Object.prototype.hasOwnProperty.call(requestedFields, "description")
+            ? sanitizeString(requestedFields.description || "", 400) || null
+            : currentProduct.description;
+          const nextPriceCents = Object.prototype.hasOwnProperty.call(requestedFields, "priceCents")
+            ? Math.max(0, Math.round(parseNumber(requestedFields.priceCents)))
+            : Number(currentProduct.price || 0);
+          const nextStock = Object.prototype.hasOwnProperty.call(requestedFields, "stock")
+            ? Math.max(0, Math.round(parseNumber(requestedFields.stock)))
+            : Number(currentProduct.stock || 0);
+          const nextStockValue = nextPriceCents * nextStock;
+
+          const productUpdateRes = await client.query(
+            `UPDATE "product"
+             SET name = $2,
+                 description = $3,
+                 price = $4,
+                 stock = $5,
+                 "stockValue" = $6,
+                 "lastUpdatedByUserId" = $7,
+                 "lastUpdatedAt" = NOW(),
+                 "updatedAt" = NOW()
+             WHERE id = $1
+               AND "organizationId" = $8
+             RETURNING
+               id,
+               name,
+               description,
+               (price::numeric / 100) AS price,
+               stock AS quantity,
+               "lastUpdatedAt",
+               "lastUpdatedByUserId"`,
+            [
+              requestRow.productId,
+              nextName,
+              nextDescription,
+              nextPriceCents,
+              nextStock,
+              nextStockValue,
+              reviewer.userId,
+              organizationId,
+            ]
+          );
+
+          await client.query(
+            `UPDATE "inventoryEditRequest"
+             SET status = 'approved',
+                 "reviewedByUserId" = $2,
+                 "reviewedByName" = $3,
+                 "reviewedByEmail" = $4,
+                 "reviewedAt" = NOW(),
+                 "updatedAt" = NOW()
+             WHERE id = $1`,
+            [requestId, reviewer.userId, reviewer.userName, reviewer.userEmail]
+          );
+
+          await client.query("COMMIT");
+
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              requestId,
+              status: "approved",
+              item: {
+                ...productUpdateRes.rows[0],
+                lastUpdatedByName: reviewer.userName,
+                lastUpdatedByEmail: reviewer.userEmail,
+              },
+            }),
+          };
+        } catch (approvalError) {
+          await client.query("ROLLBACK").catch(() => {});
+          throw approvalError;
+        }
+      }
+
       const parsedId = Number(payload.id);
       if (!Number.isFinite(parsedId)) {
         return {
@@ -238,7 +539,6 @@ export async function handler(event = {}) {
         };
       }
 
-      const action = String(payload.action || "").toLowerCase();
       const actor = await resolveActor(client, normalizeActor(payload), organizationId);
       if (action === "archive") {
         const result = await client.query(
@@ -392,7 +692,6 @@ export async function handler(event = {}) {
     const purchasePriceCad = toCents(purchasePriceCadInput);
     const saleValueInput = payload.saleValue ?? payload.saleValueCents ?? payload.sale_value;
     const saleValue = toCents(saleValueInput);
-    const stockValue = priceCents * stock;
     const parsedId = Number(payload.id);
     const reorderLevelRaw = Number(payload.reorderLevel ?? payload.reorder_level);
     const reorderQuantityRaw = Number(payload.reorderQuantity ?? payload.reorder_quantity);
@@ -408,13 +707,66 @@ export async function handler(event = {}) {
         ? null
         : 0;
 
-    const actor = await resolveActor(client, normalizeActor(payload), organizationId);
+    const authUser = isUpdate ? await requireUser(client, event) : null;
+    const actor = authUser
+      ? buildActorFromUser(authUser)
+      : await resolveActor(client, normalizeActor(payload), organizationId);
+    const actorRole = normalizeRole(authUser?.role);
 
-    // If updating an existing product, retain its SKU; otherwise generate one
+    // If updating an existing product, retain its SKU and current field values.
     let sku = null;
-    if (Number.isFinite(parsedId) && parsedId > 0) {
+    let nextBarcode = barcode;
+    let nextDescription = description || null;
+    let nextSourceCategoryCode = safeSource;
+    let nextSpecificCategory = specificCategory || null;
+    let nextRate = rate || null;
+    let nextAge = age || null;
+    let nextPriceCents = priceCents;
+    let nextCurrency = currency;
+    let nextStock = stock;
+    let nextPurchasePriceGbp = purchasePriceGbp;
+    let nextPurchasePriceGhs = purchasePriceGhs;
+    let nextPurchasePriceCad = purchasePriceCad;
+    let nextSaleValue = saleValue;
+    let nextAttendantsNeeded = attendantsNeeded;
+    let nextImageUrl = imageUrl || null;
+    let nextReorderLevel = reorderLevel;
+    let nextReorderQuantity = reorderQuantity;
+
+    if (isUpdate) {
+      if (!authUser) {
+        return {
+          statusCode: 401,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "Unauthorized" }),
+        };
+      }
+
       const existing = await client.query(
-        `SELECT id, sku FROM "product" WHERE id = $1 AND "organizationId" = $2 LIMIT 1`,
+        `SELECT
+           id,
+           sku,
+           barcode,
+           name,
+           description,
+           "sourceCategoryCode",
+           "specificCategory",
+           rate,
+           age,
+           price,
+           currency,
+           stock,
+           "purchasePriceGbp",
+           "purchasePriceGhs",
+           "purchasePriceCad",
+           "saleValue",
+           "attendantsNeeded",
+           "imageUrl",
+           "reorderLevel",
+           "reorderQuantity"
+         FROM "product"
+         WHERE id = $1 AND "organizationId" = $2
+         LIMIT 1`,
         [parsedId, organizationId]
       );
       if (existing.rowCount === 0) {
@@ -424,10 +776,121 @@ export async function handler(event = {}) {
           body: JSON.stringify({ error: `Product with id ${parsedId} not found.` }),
         };
       }
-      sku = existing.rows[0].sku;
+
+      const currentProduct = existing.rows[0];
+      sku = currentProduct.sku;
+
+      if (!canEditInventoryDirectly(actorRole) && !canRequestInventoryEdit(actorRole)) {
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ error: "You do not have permission to edit inventory items." }),
+        };
+      }
+
+      if (canRequestInventoryEdit(actorRole)) {
+        const requestedFields = {};
+        if (name !== currentProduct.name) requestedFields.name = name;
+        if (nextDescription !== (currentProduct.description || null)) {
+          requestedFields.description = nextDescription;
+        }
+        if (nextPriceCents !== Number(currentProduct.price || 0)) {
+          requestedFields.priceCents = nextPriceCents;
+        }
+        if (nextStock !== Number(currentProduct.stock || 0)) {
+          requestedFields.stock = nextStock;
+        }
+
+        const changedFieldKeys = Object.keys(requestedFields).filter((field) =>
+          EDITABLE_FIELDS_BY_MANAGER.has(field)
+        );
+        if (!changedFieldKeys.length) {
+          return {
+            statusCode: 400,
+            headers: corsHeaders,
+            body: JSON.stringify({ error: "No editable changes were submitted." }),
+          };
+        }
+
+        const requestResult = await client.query(
+          `INSERT INTO "inventoryEditRequest" (
+             "organizationId",
+             "productId",
+             "status",
+             "requestedFields",
+             "submittedByUserId",
+             "submittedByName",
+             "submittedByEmail",
+             "submittedByRole",
+             "createdAt",
+             "updatedAt"
+           )
+           VALUES ($1, $2, 'pending', $3::jsonb, $4, $5, $6, $7, NOW(), NOW())
+           RETURNING
+             id,
+             "productId" AS "productId",
+             "requestedFields" AS "requestedFields",
+             "submittedByName" AS "submittedByName",
+             "submittedByEmail" AS "submittedByEmail",
+             "submittedByRole" AS "submittedByRole",
+             "createdAt" AS "createdAt"`,
+          [
+            organizationId,
+            parsedId,
+            JSON.stringify(requestedFields),
+            actor.userId,
+            actor.userName,
+            actor.userEmail,
+            actorRole || "staff",
+          ]
+        );
+
+        try {
+          await notifyManager(client, {
+            title: "Inventory edit approval",
+            body: `${actor.userName || "Staff"} requested changes for ${currentProduct.name || `Item #${parsedId}`}.`,
+            data: {
+              type: "inventory-edit-request",
+              requestId: requestResult.rows[0]?.id,
+              productId: parsedId,
+            },
+          });
+        } catch (notifyError) {
+          console.warn("Inventory edit approval notification failed:", notifyError?.message || notifyError);
+        }
+
+        return {
+          statusCode: 202,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            status: "pending_approval",
+            message: "Changes sent for manager approval.",
+            request: requestResult.rows[0],
+          }),
+        };
+      }
+
+      if (!isAdminRole(actorRole)) {
+        nextBarcode = currentProduct.barcode;
+        nextSourceCategoryCode = currentProduct.sourceCategoryCode || nextSourceCategoryCode;
+        nextSpecificCategory = currentProduct.specificCategory || null;
+        nextRate = currentProduct.rate || null;
+        nextAge = currentProduct.age || null;
+        nextCurrency = currentProduct.currency || nextCurrency;
+        nextPurchasePriceGbp = currentProduct.purchasePriceGbp;
+        nextPurchasePriceGhs = currentProduct.purchasePriceGhs;
+        nextPurchasePriceCad = currentProduct.purchasePriceCad;
+        nextSaleValue = currentProduct.saleValue;
+        nextAttendantsNeeded = currentProduct.attendantsNeeded;
+        nextImageUrl = currentProduct.imageUrl || null;
+        nextReorderLevel = currentProduct.reorderLevel;
+        nextReorderQuantity = currentProduct.reorderQuantity;
+      }
     } else {
       sku = generateSku(name, safeSource);
     }
+
+    const stockValue = nextPriceCents * nextStock;
 
     const insertQuery = `
       INSERT INTO "product" (
@@ -505,6 +968,11 @@ export async function handler(event = {}) {
         "reorderLevel",
         "reorderQuantity",
         "isActive" AS status,
+        CASE
+          WHEN COALESCE("isActive", true) = false THEN 'Unavailable'
+          WHEN stock IS NOT NULL AND stock <= 0 THEN 'Unavailable'
+          ELSE 'Available'
+        END AS availability,
         currency,
         "lastUpdatedAt",
         "lastUpdatedByUserId"
@@ -513,31 +981,31 @@ export async function handler(event = {}) {
     const result = await client.query(insertQuery, [
       organizationId,
       sku,
-      barcode,
+      nextBarcode,
       name,
-      description || null,
-      safeSource,
-      specificCategory || null,
-      rate || null,
-      age || null,
-      priceCents,
-      currency,
-      stock,
-      purchasePriceGbp,
-      purchasePriceGhs,
-      purchasePriceCad,
+      nextDescription,
+      nextSourceCategoryCode,
+      nextSpecificCategory,
+      nextRate,
+      nextAge,
+      nextPriceCents,
+      nextCurrency,
+      nextStock,
+      nextPurchasePriceGbp,
+      nextPurchasePriceGhs,
+      nextPurchasePriceCad,
       stockValue,
-      saleValue,
-      attendantsNeeded,
-      imageUrl || null,
-      reorderLevel,
-      reorderQuantity,
+      nextSaleValue,
+      nextAttendantsNeeded,
+      nextImageUrl,
+      nextReorderLevel,
+      nextReorderQuantity,
       actor.userId,
     ]);
 
     const created = result.rows[0];
     return {
-      statusCode: 201,
+      statusCode: isUpdate ? 200 : 201,
       headers: corsHeaders,
       body: JSON.stringify({
         ...created,

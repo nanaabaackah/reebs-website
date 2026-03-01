@@ -26,7 +26,7 @@ import {
   saveOfflineQueue,
 } from "../utils/offlineQueue";
 import "../styles/AdminWorkspace.css";
-import "./admin.css";
+import "../styles/admin.css";
 
 const STOCK_ACTION_OPTIONS = [1, 5, 10];
 const LOW_STOCK_THRESHOLD = 5;
@@ -112,6 +112,7 @@ const SYSTEM_ADMIN_LINKS = [
   { label: "Directory", path: "/admin/directory" },
   { label: "Accounting", path: "/admin/accounting" },
   { label: "Expenses", path: "/admin/expenses" },
+  { label: "Water", path: "/admin/water" },
   { label: "Vendors", path: "/admin/vendors" },
   { label: "Delivery", path: "/admin/delivery" },
   { label: "Documents", path: "/admin/documents" },

@@ -1,20 +1,55 @@
 import React, { useEffect, useState } from 'react';
 import CookieBanner from '/src/components/CookieBanner';
-import InstagramFeed from '/src/components/InstagramFeed';
 import { Link } from 'react-router-dom';
 import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 
-import './public.css';
+import '../styles/public.css';
+import '../styles/About.css';
 
 const formatCount = (value) => (Number.isFinite(value) ? `${value}+` : '…');
+
+const ABOUT_HERO_BADGES = [
+    'Ghana-wide delivery',
+    'Same-day options',
+    'Free planning consult',
+    'Kid-friendly crew'
+];
+
+const ABOUT_MISSION_BULLETS = [
+    'Curated themes and decor that feel fresh every season.',
+    'Clear timelines so you always know what happens next.',
+    'Flexible options: full setup, partial styling, or DIY kits.'
+];
+
+const ABOUT_REACH_TAGS = [
+    'Corporate family days',
+    'Kid birthdays',
+    'School funfairs',
+    'Bridal & baby showers'
+];
+
+const ABOUT_VALUES = [
+    {
+        title: 'Playful design with polish',
+        copy: 'Modern palettes, curated props, and on-trend styling that still feels warm and family-friendly.'
+    },
+    {
+        title: 'Zero-stress coordination',
+        copy: 'We plan logistics, timelines, and vendor handoffs so you can stay present with your guests.'
+    },
+    {
+        title: 'Safety first, always',
+        copy: 'Sanitized rentals, kid-safe setups, and trained crew members who care about every detail.'
+    },
+    {
+        title: 'Flexible for every budget',
+        copy: 'From DIY party boxes to full-service decor, we tailor packages to what matters most to you.'
+    }
+];
 
 function About() {
     const [rentalsCount, setRentalsCount] = useState(null);
     const [productsCount, setProductsCount] = useState(null);
-    const [theme, setTheme] = useState(() => {
-        if (typeof document === 'undefined') return 'light';
-        return document.documentElement.getAttribute('data-theme') || 'light';
-    });
 
     useEffect(() => {
         let isMounted = true;
@@ -58,37 +93,8 @@ function About() {
         };
     }, []);
 
-    useEffect(() => {
-        if (typeof document === 'undefined') return;
-        const root = document.documentElement;
-        const updateTheme = () => setTheme(root.getAttribute('data-theme') || 'light');
-        const observer = new MutationObserver(updateTheme);
-        observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
-        updateTheme();
-        return () => observer.disconnect();
-    }, []);
-
-    const ownerImage = theme === 'dark' ? '/imgs/owner2.png' : '/imgs/owner.png';
-    const values = [
-        {
-            title: 'Playful design with polish',
-            copy: 'Modern palettes, curated props, and on-trend styling that still feels warm and family-friendly.'
-        },
-        {
-            title: 'Zero-stress coordination',
-            copy: 'We plan logistics, timelines, and vendor handoffs so you can stay present with your guests.'
-        },
-        {
-            title: 'Safety first, always',
-            copy: 'Sanitized rentals, kid-safe setups, and trained crew members who care about every detail.'
-        },
-        {
-            title: 'Flexible for every budget',
-            copy: 'From DIY party boxes to full-service decor, we tailor packages to what matters most to you.'
-        }
-    ];
-
-   const highlights = [
+    const ownerImage = '/imgs/owner.png';
+    const highlights = [
         { label: 'Rental items', value: formatCount(rentalsCount) },
         { label: 'Shop items', value: formatCount(productsCount) },
         { label: 'Parties styled', value: '2k+' },
@@ -96,28 +102,21 @@ function About() {
         { label: 'Average response', value: 'under 1 hr' }
     ];
 
-    const badges = [
-        'Ghana-wide delivery',
-        'Same-day options',
-        'Free planning consult',
-        'Kid-friendly crew'
-    ];
-
     return (
         <>
             <a href="#main" className="skip-link">Skip to main content</a>
             <CookieBanner />
-            <main className="about" role="main" id="main">
-                <section id="r2-intro" className="about-hero" aria-labelledby="about-heading about-tagline">
-                    <div className="about-hero-copy">
-                        <h1 id="about-heading">Sleek setups. Joyful memories.</h1>
+            <main className="about page-shell" role="main" id="main">
+                <section id="r2-intro" className="about-hero page-hero" aria-labelledby="about-heading about-tagline">
+                    <div className="about-hero-copy page-hero-copy">
+                        <h1 id="about-heading" className="page-hero-title">Sleek setups. <br/>Joyful memories.</h1>
                         <p id="about-tagline" className="about-lede">
                             REEBS Party Themes is your go-to team for playful, design-forward celebrations.
                             We pair modern decor with dependable logistics so you can show up, smile, and soak
                             in every moment.
                         </p>
                         <div className="about-tags" aria-label="What you can expect from us">
-                            {badges.map((item) => (
+                            {ABOUT_HERO_BADGES.map((item) => (
                                 <span key={item} className="about-pill">{item}</span>
                             ))}
                         </div>
@@ -180,9 +179,9 @@ function About() {
                                 everything on track.
                             </p>
                             <ul className="about-list">
-                                <li><span>▪</span><span>Curated themes and decor that feel fresh every season.</span></li>
-                                <li><span>▪</span><span>Clear timelines so you always know what happens next.</span></li>
-                                <li><span>▪</span><span>Flexible options: full setup, partial styling, or DIY kits.</span></li>
+                                {ABOUT_MISSION_BULLETS.map((item) => (
+                                    <li key={item}><span>▪</span><span>{item}</span></li>
+                                ))}
                             </ul>
                         </div>
                         <div className="about-card glass-card about-highlight">
@@ -192,10 +191,9 @@ function About() {
                                 Accra, Kumasi, Cape Coast, Takoradi, and beyond.
                             </p>
                             <div className="about-pill-row">
-                                <span className="about-pill">Corporate family days</span>
-                                <span className="about-pill">Kid birthdays</span>
-                                <span className="about-pill">School funfairs</span>
-                                <span className="about-pill">Bridal & baby showers</span>
+                                {ABOUT_REACH_TAGS.map((item) => (
+                                    <span className="about-pill" key={item}>{item}</span>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -207,7 +205,7 @@ function About() {
                         <h2 id="values-heading">Values you can feel on party day</h2>
                     </div>
                     <ul className="about-values-grid">
-                        {values.map((item) => (
+                        {ABOUT_VALUES.map((item) => (
                             <li key={item.title} className="about-card glass-card">
                                 <h3>{item.title}</h3>
                                 <p>{item.copy}</p>

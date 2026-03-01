@@ -1,0 +1,269 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - generic [ref=e32]:
+    - link "Skip to main content" [ref=e33] [cursor=pointer]:
+      - /url: "#main"
+    - main [ref=e34]:
+      - region "REEBS FAQ" [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - paragraph [ref=e38]: Answers in a snap
+            - heading "REEBS FAQ" [level=1] [ref=e39]
+            - paragraph [ref=e40]: Quick answers on rentals, styling, and delivery. If you want a human right now, tap one of the buttons below - we love planning parties.
+            - generic "Highlights" [ref=e41]:
+              - generic [ref=e42]: Same-day delivery windows
+              - generic [ref=e43]: Setup & teardown available
+              - generic [ref=e44]: Custom themes welcome
+            - group "Reach out" [ref=e45]:
+              - link "Chat with a planner" [ref=e46] [cursor=pointer]:
+                - /url: /contact
+              - link "View rentals" [ref=e47] [cursor=pointer]:
+                - /url: /rentals
+              - link "Call us" [ref=e48] [cursor=pointer]:
+                - /url: tel:+233244238419
+                - img [ref=e49] [cursor=pointer]
+                - text: Call us
+            - paragraph [ref=e51]:
+              - img [ref=e52]
+              - text: Fast replies between 8:30am - 7pm (Mon-Sat)
+          - generic "Popular quick answers" [ref=e55]:
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: Quick facts
+              - heading "Before you book" [level=3] [ref=e58]
+            - list [ref=e59]:
+              - listitem [ref=e60]:
+                - img [ref=e61]
+                - generic [ref=e66]: Lock your date early - weekends go first.
+              - listitem [ref=e67]:
+                - img [ref=e68]
+                - generic [ref=e72]: Delivery + pickup anywhere in Ghana; fees vary by distance.
+              - listitem [ref=e73]:
+                - img [ref=e74]
+                - generic [ref=e77]: "WhatsApp for fastest confirmations: +233 24 423 8419."
+            - generic [ref=e78]:
+              - link "Message on WhatsApp" [ref=e79] [cursor=pointer]:
+                - /url: https://wa.me/233244238419
+              - link "Email the team" [ref=e80] [cursor=pointer]:
+                - /url: mailto:info@reebspartythemes.com
+      - region "Frequently asked questions" [ref=e81]:
+        - article [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Start here
+            - heading "Planning & booking" [level=3] [ref=e85]
+            - paragraph [ref=e86]: What you need to know before locking in a date with REEBS.
+          - list [ref=e87]:
+            - group [ref=e88]:
+              - generic "How do I book rentals or a full setup?" [ref=e89] [cursor=pointer]:
+                - generic [ref=e90] [cursor=pointer]: How do I book rentals or a full setup?
+                - generic [ref=e91] [cursor=pointer]: ›
+              - paragraph [ref=e93]: Reserve rentals online or send us your date, venue, and theme. We confirm availability fast, share a simple quote, and secure your spot once payment is received.
+            - group [ref=e94]:
+              - generic "How early should I book?" [ref=e95] [cursor=pointer]:
+                - generic [ref=e96] [cursor=pointer]: How early should I book?
+                - generic [ref=e97] [cursor=pointer]: ›
+            - group [ref=e98]:
+              - generic "Can you help me pick a theme?" [ref=e99] [cursor=pointer]:
+                - generic [ref=e100] [cursor=pointer]: Can you help me pick a theme?
+                - generic [ref=e101] [cursor=pointer]: ›
+        - article [ref=e102]:
+          - generic [ref=e103]:
+            - paragraph [ref=e104]: Logistics
+            - heading "Delivery, setup & pickup" [level=3] [ref=e105]
+            - paragraph [ref=e106]: How your items get to you and back home.
+          - list [ref=e107]:
+            - group [ref=e108]:
+              - generic "Do you deliver and pick up?" [ref=e109] [cursor=pointer]:
+                - generic [ref=e110] [cursor=pointer]: Do you deliver and pick up?
+                - generic [ref=e111] [cursor=pointer]: ›
+              - paragraph [ref=e113]: Yes. We schedule 1-hour delivery windows across Accra, Tema, and beyond. Pickups are collected the same day or next morning depending on your venue hours.
+            - group [ref=e114]:
+              - generic "Will your team handle setup?" [ref=e115] [cursor=pointer]:
+                - generic [ref=e116] [cursor=pointer]: Will your team handle setup?
+                - generic [ref=e117] [cursor=pointer]: ›
+            - group [ref=e118]:
+              - generic "What happens if plans change?" [ref=e119] [cursor=pointer]:
+                - generic [ref=e120] [cursor=pointer]: What happens if plans change?
+                - generic [ref=e121] [cursor=pointer]: ›
+        - article [ref=e122]:
+          - generic [ref=e123]:
+            - paragraph [ref=e124]: Details
+            - heading "Payments & policies" [level=3] [ref=e125]
+            - paragraph [ref=e126]: How we hold your date and handle changes.
+          - list [ref=e127]:
+            - group [ref=e128]:
+              - generic "Do I pay a deposit?" [ref=e129] [cursor=pointer]:
+                - generic [ref=e130] [cursor=pointer]: Do I pay a deposit?
+                - generic [ref=e131] [cursor=pointer]: ›
+              - paragraph [ref=e133]: Yes, payment secures your inventory and team. The balance (if any) is due before delivery or setup.
+            - group [ref=e134]:
+              - generic "Can I reschedule or cancel?" [ref=e135] [cursor=pointer]:
+                - generic [ref=e136] [cursor=pointer]: Can I reschedule or cancel?
+                - generic [ref=e137] [cursor=pointer]: ›
+            - group [ref=e138]:
+              - generic "Is there a security fee?" [ref=e139] [cursor=pointer]:
+                - generic [ref=e140] [cursor=pointer]: Is there a security fee?
+                - generic [ref=e141] [cursor=pointer]: ›
+        - article [ref=e142]:
+          - generic [ref=e143]:
+            - paragraph [ref=e144]: Good to know
+            - heading "Care & special requests" [level=3] [ref=e145]
+            - paragraph [ref=e146]: Keeping items party-ready and tailored to you.
+          - list [ref=e147]:
+            - group [ref=e148]:
+              - generic "How do you clean rentals?" [ref=e149] [cursor=pointer]:
+                - generic [ref=e150] [cursor=pointer]: How do you clean rentals?
+                - generic [ref=e151] [cursor=pointer]: ›
+              - paragraph [ref=e153]: Every item is sanitized and checked before it leaves our studio. Bouncy castles are wiped down on-site during setup.
+            - group [ref=e154]:
+              - generic "Can you do custom balloon colors or backdrops?" [ref=e155] [cursor=pointer]:
+                - generic [ref=e156] [cursor=pointer]: Can you do custom balloon colors or backdrops?
+                - generic [ref=e157] [cursor=pointer]: ›
+            - group [ref=e158]:
+              - generic "Do you travel outside Accra/Tema?" [ref=e159] [cursor=pointer]:
+                - generic [ref=e160] [cursor=pointer]: Do you travel outside Accra/Tema?
+                - generic [ref=e161] [cursor=pointer]: ›
+      - region "Tell us about your party" [ref=e162]:
+        - generic [ref=e163]:
+          - generic [ref=e164]:
+            - paragraph [ref=e165]: Still curious?
+            - heading "Tell us about your party" [level=2] [ref=e166]
+            - paragraph [ref=e167]: Share your date, guest count, and vibe. We’ll reply with recommendations, pricing, and next steps.
+          - group "Contact options" [ref=e168]:
+            - link "Start a brief" [ref=e169] [cursor=pointer]:
+              - /url: /contact
+            - link "Call now" [ref=e170] [cursor=pointer]:
+              - /url: tel:+233244238419
+              - img [ref=e171] [cursor=pointer]
+              - text: Call now
+            - link "WhatsApp" [ref=e173] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e174] [cursor=pointer]
+              - text: WhatsApp
+  - contentinfo "Site footer" [ref=e177]:
+    - heading "Site footer" [level=2] [ref=e178]
+    - region "Plan your party with REEBS" [ref=e179]:
+      - generic [ref=e180]:
+        - paragraph [ref=e181]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e182]
+        - generic [ref=e183]:
+          - generic [ref=e184]: Email address
+          - textbox "Email address" [ref=e185]
+          - button "Book your party" [ref=e186] [cursor=pointer]:
+            - generic [ref=e187] [cursor=pointer]: Book your party
+            - img [ref=e188] [cursor=pointer]
+    - generic [ref=e190]:
+      - link "REEBS Logo" [ref=e192] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e193] [cursor=pointer]
+      - generic [ref=e194]:
+        - generic [ref=e195]:
+          - navigation "Main links" [ref=e196]:
+            - heading "Menu" [level=3] [ref=e197]
+            - link "Home" [ref=e198] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e199] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e200] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e201] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e202] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e203] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e204] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e205]:
+            - heading "Accounts" [level=3] [ref=e206]
+            - link "Staff login" [ref=e207] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e208] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e209] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e210] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e211]:
+            - heading "Company" [level=3] [ref=e212]
+            - link "FAQ" [ref=e213] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e214] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e215] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e216] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e217] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e218]:
+            - heading "Social" [level=3] [ref=e219]
+            - link "Facebook" [ref=e220] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e221] [cursor=pointer]
+              - generic [ref=e223] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e224] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e225] [cursor=pointer]
+              - generic [ref=e228] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e229] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e230] [cursor=pointer]
+              - generic [ref=e232] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e233] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e234] [cursor=pointer]
+              - generic [ref=e236] [cursor=pointer]: WhatsApp
+        - generic [ref=e237]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e238] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e239] [cursor=pointer]
+            - generic [ref=e242] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e243] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e244] [cursor=pointer]
+            - generic [ref=e246] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e247] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e248] [cursor=pointer]
+            - generic [ref=e251] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e252]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e253]:
+      - generic [ref=e254]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e255]: Made to matter. Made By Nana.
+      - generic [ref=e256]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e257]
+```

@@ -6,7 +6,7 @@ import { faFilePdf, faPrint, faPaperPlane, faSearch, faFolderOpen } from "/src/i
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./admin.css";
+import "../styles/admin.css";
 
 const formatCurrency = (amount) => {
   try {

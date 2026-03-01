@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import "./public.css";
+import "../styles/public.css";
+import "/src/styles/RentalItem.css";
 import { AppIcon } from "/src/components/Icon";
 import {
   faArrowLeftLong,
@@ -11,7 +12,9 @@ import {
   faTruckFast,
 } from "/src/icons/iconSet";
 import { useCart } from "/src/components/CartContext";
+import SiteLoader from "/src/components/SiteLoader";
 import { applySeo } from "/src/utils/seo";
+import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
 // Bouncy castle variants are fetched from the database
 
 const slugify = (value = "") =>
@@ -23,9 +26,46 @@ const slugify = (value = "") =>
     .replace(/(^-|-$)+/g, "");
 
 const rentalPath = (item) => {
-  const pageSlug = item?.page?.split("/").filter(Boolean).pop();
+  const idSlug = String(item?.id || item?.productId || "").trim();
   const nameSlug = slugify(item?.name);
-  return `/Rentals/${pageSlug || nameSlug || item?.id || ""}`;
+  const pageSlug = slugify(item?.page?.split("/").filter(Boolean).pop() || "");
+  return `/Rentals/${idSlug || nameSlug || pageSlug || ""}`;
+};
+
+const CATEGORY_BG_MAP = {
+  "bouncy castles": "/imgs/rentalbg/img_1.png",
+  "kids rentals": "/imgs/rentalbg/img_2.png",
+  "indoor games": "/imgs/rentalbg/img_3.png",
+  setup: "/imgs/rentalbg/img_4.png",
+};
+
+const getRentalCategoryKey = (item = {}) => {
+  const category = `${item.specificCategory || item.specificcategory || item.category || ""}`.toLowerCase();
+  const name = `${item.name || ""}`.toLowerCase();
+  if (category.includes("bouncy")) return "bouncy castles";
+  if (category.includes("indoor") || category.includes("board game") || category.includes("jenga")) return "indoor games";
+  if (category.includes("machine") || category.includes("setup")) return "setup";
+  if (category.includes("kids") || category.includes("kid") || category.includes("rental")) return "kids rentals";
+  if (name.includes("popcorn") || name.includes("snow cone") || name.includes("snowcone") || name.includes("cotton candy")) {
+    return "kids rentals";
+  }
+  return "";
+};
+
+const getRentalCategoryBackground = (item = {}) => {
+  const categoryKey = getRentalCategoryKey(item);
+  return CATEGORY_BG_MAP[categoryKey] || item.image || item.imageUrl || "/imgs/placeholder.png";
+};
+
+const getRentalIdentity = (item = {}) =>
+  String(item.id || item.productId || slugify(item.name || ""));
+
+const sortRecommendationItems = (a, b) => {
+  const aQuantity = Number(a.quantity ?? a.stock ?? 0);
+  const bQuantity = Number(b.quantity ?? b.stock ?? 0);
+  const quantityDiff = (Number.isFinite(bQuantity) ? bQuantity : 0) - (Number.isFinite(aQuantity) ? aQuantity : 0);
+  if (quantityDiff !== 0) return quantityDiff;
+  return `${a.name || ""}`.localeCompare(`${b.name || ""}`);
 };
 
 const formatRentalPrice = (item, convertPrice, formatCurrency) => {
@@ -63,12 +103,6 @@ const formatStatus = (status, isActive) => {
 const formatAge = (age) => {
   if (!age) return "All ages";
   return age;
-};
-
-const formatRate = (rate) => {
-  if (!rate) return "Per booking";
-  const lower = rate.toString().toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
 };
 
 const formatAttendantsNeeded = (value) => {
@@ -123,7 +157,7 @@ const BouncyVariantCard = ({ type, selected, onSelect }) => {
           <p className="kicker">Style</p>
           <h3>{type.name}</h3>
         </div>
-        <span className="bouncy-price">{type.priceRange}</span>
+        <span className="bouncy-price">Price: GHS{type.priceRange}</span>
       </div>
       <dl className="bouncy-specs">
         <div>
@@ -135,8 +169,6 @@ const BouncyVariantCard = ({ type, selected, onSelect }) => {
           <dd>{type.recommendedAge}</dd>
         </div>
       </dl>
-      <p className="bouncy-best">{type.bestFor}</p>
-      <p className="bouncy-features">{type.features}</p>
       <button
         type="button"
         className={`hero-btn hero-btn-link bouncy-select ${selected ? "selected" : ""}`}
@@ -152,29 +184,38 @@ const BouncyVariantCard = ({ type, selected, onSelect }) => {
 function RentalItem() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { convertPrice, formatCurrency, currency, setCurrency } = useCart();
+  const { convertPrice, formatCurrency } = useCart();
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBouncyType, setSelectedBouncyType] = useState(null);
   const [bouncyTypes, setBouncyTypes] = useState([]);
 
   useEffect(() => {
-    fetch("/.netlify/functions/inventory")
-      .then((res) => res.json())
-      .then((data) => {
-        const rentalsOnly = (Array.isArray(data) ? data : []).filter((item) => {
+    let active = true;
+    const controller = new AbortController();
+
+    fetchInventoryWithCache({ signal: controller.signal })
+      .then(({ items }) => {
+        const rentalsOnly = (Array.isArray(items) ? items : []).filter((item) => {
           const source = (item.sourceCategoryCode || item.sourcecategorycode || "").toLowerCase();
           const isRental = source ? source === "rental" : (item.sku || "").toString().toUpperCase().startsWith("REN");
-          const active = (item.status ?? item.isActive) !== false;
-          return isRental && active;
+          const isActive = (item.status ?? item.isActive) !== false;
+          return isRental && isActive;
         });
+        if (!active) return;
         setRentals(rentalsOnly);
         setLoading(false);
       })
       .catch((err) => {
+        if (err?.name === "AbortError") return;
         console.error("❌ Error fetching rental:", err);
-        setLoading(false);
+        if (active) setLoading(false);
       });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -198,7 +239,7 @@ const rental = useMemo(() => {
   const normalized = slug.toLowerCase();
   const directMatch =
     rentals.find((item) => {
-      const pageSlug = item.page?.split("/").filter(Boolean).pop()?.toLowerCase();
+      const pageSlug = slugify(item.page?.split("/").filter(Boolean).pop() || "");
       const nameSlug = slugify(item.name);
       const idSlug = String(item.id || "").toLowerCase();
       return pageSlug === normalized || nameSlug === normalized || idSlug === normalized;
@@ -220,27 +261,64 @@ useEffect(() => {
   }
 }, [slug, bouncyTypes]);
 
-const displayRental = rental && selectedBouncyType
-  ? {
+  const displayRental = useMemo(() => {
+    if (!rental || !selectedBouncyType) return rental;
+
+    return {
       ...rental,
       name: selectedBouncyType.name,
       image: selectedBouncyType.image || rental.image,
       imageUrl: selectedBouncyType.image || rental.imageUrl,
       price: selectedBouncyType.priceRange ?? rental.price,
       age: selectedBouncyType.recommendedAge ?? rental.age,
-    }
-  : rental;
+    };
+  }, [rental, selectedBouncyType]);
+
+  const rentalBackgroundImage = useMemo(
+    () => (displayRental ? getRentalCategoryBackground(displayRental) : ""),
+    [displayRental]
+  );
 
   const similar = useMemo(() => {
     if (!rental) return [];
-    const category = rental.specificCategory || rental.specificcategory || rental.category || "";
-    if (!category) return [];
-    return rentals
-      .filter((item) => {
-        const itemCategory = item.specificCategory || item.specificcategory || item.category || "";
-        return itemCategory === category && item.id !== rental.id;
-      })
-      .slice(0, 3);
+    const currentId = getRentalIdentity(rental);
+    const currentCategory = getRentalCategoryKey(rental) || "other";
+    const maxItems = 3;
+    const sameCategoryLimit = currentCategory === "bouncy castles" ? 1 : 2;
+
+    const candidates = rentals.filter((item) => getRentalIdentity(item) !== currentId);
+    const sameCategory = [];
+    const otherCategories = [];
+
+    candidates.forEach((item) => {
+      const itemCategory = getRentalCategoryKey(item) || "other";
+      if (itemCategory === currentCategory) {
+        sameCategory.push(item);
+      } else {
+        otherCategories.push(item);
+      }
+    });
+
+    sameCategory.sort(sortRecommendationItems);
+    otherCategories.sort(sortRecommendationItems);
+
+    const picks = [];
+    const pushUnique = (item) => {
+      const key = getRentalIdentity(item);
+      if (!picks.some((entry) => getRentalIdentity(entry) === key)) {
+        picks.push(item);
+      }
+    };
+
+    sameCategory.slice(0, sameCategoryLimit).forEach(pushUnique);
+    otherCategories.forEach((item) => {
+      if (picks.length < maxItems) pushUnique(item);
+    });
+    sameCategory.slice(sameCategoryLimit).forEach((item) => {
+      if (picks.length < maxItems) pushUnique(item);
+    });
+
+    return picks.slice(0, maxItems);
   }, [rental, rentals]);
 
   const statusValue =
@@ -265,11 +343,50 @@ const displayRental = rental && selectedBouncyType
   useEffect(() => {
     const normalizedPath = `/rentals/${slug || ""}`;
     if (displayRental?.name) {
+      const canonicalUrl = `https://www.reebspartythemes.com${normalizedPath}`;
+      const numericPrice = Number(
+        displayRental.price ?? (typeof displayRental.priceCents === "number" ? displayRental.priceCents / 100 : NaN)
+      );
+      const offer = {
+        "@type": "Offer",
+        priceCurrency: "GHS",
+        availability: isAvailable
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
+        url: canonicalUrl,
+      };
+      if (Number.isFinite(numericPrice) && numericPrice > 0) {
+        offer.price = numericPrice;
+      }
+
+      const productSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "@id": `${canonicalUrl}#product`,
+        name: displayRental.name,
+        image:
+          displayRental.image ||
+          displayRental.imageUrl ||
+          "https://www.reebspartythemes.com/imgs/placeholder.png",
+        description: `Book ${displayRental.name} from REEBS Party Themes with setup and delivery options in Ghana.`,
+        brand: {
+          "@type": "Brand",
+          name: "REEBS Party Themes",
+        },
+        category:
+          displayRental.specificCategory ||
+          displayRental.specificcategory ||
+          displayRental.category ||
+          "Party rental",
+        offers: offer,
+      };
+
       applySeo({
         pathname: normalizedPath,
         title: `${displayRental.name} Rental | REEBS Party Themes`,
         description: `View details, pricing, and booking options for ${displayRental.name} at REEBS Party Themes.`,
         type: "product",
+        schema: [productSchema],
       });
       return;
     }
@@ -280,7 +397,26 @@ const displayRental = rental && selectedBouncyType
         description: "This rental item may have moved or become unavailable. Explore current REEBS rental options.",
       });
     }
-  }, [displayRental?.name, loading, rental, slug]);
+  }, [displayRental, isAvailable, loading, rental, slug]);
+
+  useEffect(() => {
+    const scrollHost = document.querySelector(".main");
+    if (!scrollHost) return undefined;
+
+    if (!rentalBackgroundImage) {
+      scrollHost.classList.remove("rental-detail-main-bg");
+      scrollHost.style.removeProperty("--rental-detail-main-bg");
+      return undefined;
+    }
+
+    scrollHost.classList.add("rental-detail-main-bg");
+    scrollHost.style.setProperty("--rental-detail-main-bg", `url("${rentalBackgroundImage}")`);
+
+    return () => {
+      scrollHost.classList.remove("rental-detail-main-bg");
+      scrollHost.style.removeProperty("--rental-detail-main-bg");
+    };
+  }, [rentalBackgroundImage]);
 
   const handleBookingClick = (event) => {
     if (!showBouncyTable || selectedBouncyType) return;
@@ -293,18 +429,19 @@ const displayRental = rental && selectedBouncyType
 
   if (loading) {
     return (
-      <div className="loader">
-        <img src="/imgs/reebs.gif" alt="Loading rental" className="loader-gif" />
-      </div>
+      <SiteLoader
+        label="Loading rental details"
+        sublabel="Getting item photos, pricing, and booking info."
+      />
     );
   }
 
   if (!rental) {
     return (
       <>
-        <main className="rental-detail-shell">
-          <div className="rental-detail rentals-page">
-            <div className="rental-detail-card glass-card">
+        <div className="rental-detail rentals-page rental-item-page">
+          <main className="rental-detail-shell rental-item-shell page-shell">
+            <section className="rental-detail-card glass-card rental-not-found-card">
               <p className="kicker">Rental not found</p>
               <h1>We couldn’t find that rental.</h1>
               <p>It may have moved or is no longer available. Let’s get you back.</p>
@@ -320,9 +457,9 @@ const displayRental = rental && selectedBouncyType
                   Talk to our team
                 </Link>
               </div>
-            </div>
-          </div>
-        </main>
+            </section>
+          </main>
+        </div>
       </>
     );
   }
@@ -339,9 +476,13 @@ const displayRental = rental && selectedBouncyType
       <a href="#main" className="skip-link">
         Skip to main content
       </a>
-      <div className="rental-detail rentals-page" id="main">
-        <main className="rental-detail-shell">
-          <nav className="rental-breadcrumb">
+      <div
+        className="rental-detail rentals-page rental-item-page"
+        id="main"
+        style={{ "--rental-detail-bg": `url("${rentalBackgroundImage}")` }}
+      >
+        <main className="rental-detail-shell rental-item-shell page-shell">
+          <nav className="rental-breadcrumb rental-item-breadcrumb">
             <button
               type="button"
               className="breadcrumb-back"
@@ -354,14 +495,16 @@ const displayRental = rental && selectedBouncyType
             <span>{displayRental.name}</span>
           </nav>
 
-          <section className="rental-hero-card glass-card">
-            <div className="rental-hero-media">
+          <section className="rental-hero-card glass-card rental-item-hero page-hero">
+            <div
+              className="rental-hero-media category-image-bg"
+              style={{ "--item-category-bg": `url("${rentalBackgroundImage}")` }}
+            >
               <img src={displayRental.image || displayRental.imageUrl || "/imgs/placeholder.png"} alt={displayRental.name} />
               <span className="rent-tag">{displayRental.specificCategory || displayRental.specificcategory || displayRental.category}</span>
             </div>
-            <div className="rental-hero-copy">
-              <p className="kicker">Rental highlight</p>
-              <h1>{displayRental.name}</h1>
+            <div className="rental-hero-copy page-hero-copy">
+              <h1 className="page-hero-title">{displayRental.name}</h1>
               <p className="rental-sub">
                 Styled the REEBS way — delivered, set up, and ready for fun.
               </p>
@@ -373,34 +516,10 @@ const displayRental = rental && selectedBouncyType
                     {displayRental.quantity ? `${displayRental.quantity} available` : "Availability upon request"}
                   </p>
                 </div>
-                <div className="rental-currency">
-                  <label htmlFor="rentalCurrency" className="sr-only">
-                    Select currency
-                  </label>
-                  <select
-                    id="rentalCurrency"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="currency-selector"
-                  >
-                    {["GHS", "USD", "CAD", "GBP", "EUR", "NGN"].map((cur) => (
-                      <option key={cur} value={cur}>
-                        {cur}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               <div className="rental-meta-grid">
-                <div>
-                  <strong>{displayRental.specificCategory || displayRental.specificcategory || displayRental.category}</strong>
-                </div>
-                <div>
-                  <span className="rent-meta">Rate</span>
-                  <strong>{formatRate(displayRental.rate)}</strong>
-                </div>
-                <div className={isAvailable ? "status-available" : ""}>
+                <div className={isAvailable ? "status-available dark-card" : ""}>
                   <span className="rent-meta">Status</span>
                   <strong>{formatStatus(rental.status, rental.isActive)}</strong>
                 </div>
@@ -431,7 +550,7 @@ const displayRental = rental && selectedBouncyType
           </section>
 
           {showBouncyTable && (
-            <section className="rental-detail-card glass-card bouncy-card-section" aria-labelledby="bouncy-table-heading">
+            <section className="rental-detail-card bouncy-card-section rental-item-bouncy" aria-labelledby="bouncy-table-heading">
               <div className="section-header rent-section-header">
                 <p className="kicker">Bouncy castles</p>
                 <h2 id="bouncy-table-heading">Choose the right size for your party</h2>
@@ -452,8 +571,8 @@ const displayRental = rental && selectedBouncyType
             </section>
           )}
 
-          <section className="rental-detail-grid">
-            <div className="rental-detail-card glass-card">
+          <section className="rental-detail-grid rental-item-detail-grid">
+            <div className="rental-detail-card glass-card rental-item-info-card">
               <div className="section-header rent-section-header">
                 <p className="kicker">What to expect</p>
                 <h2>Included with your booking</h2>
@@ -490,7 +609,7 @@ const displayRental = rental && selectedBouncyType
               </div>
             </div>
 
-            <div className="rental-detail-card glass-card">
+            <div className="rental-detail-card glass-card rental-item-similar-shell">
               <div className="section-header rent-section-header">
                 <p className="kicker">Need more?</p>
                 <h2>Pair it with these</h2>
@@ -505,7 +624,12 @@ const displayRental = rental && selectedBouncyType
                     to={rentalPath(item)}
                     className="rental-similar-card glass-card"
                   >
-                    <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name} />
+                    <div
+                      className="rental-similar-media category-image-bg"
+                      style={{ "--item-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                    >
+                      <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name} />
+                    </div>
                     <div>
                       <span className="rent-meta">{item.specificCategory || item.specificcategory || item.category}</span>
                       <h3>{item.name}</h3>

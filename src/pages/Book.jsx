@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import "./public.css";
+import "../styles/public.css";
+import "../styles/Book.css";
 import { AppIcon } from "/src/components/Icon";
 import {
-  faCalendarCheck,
-  faClipboardList,
-  faClock,
   faMagnifyingGlass,
   faShieldHeart,
   faTruckFast,
   faWandMagicSparkles,
 } from "/src/icons/iconSet";
 import { useCart } from "../components/CartContext";
+import SiteLoader from "/src/components/SiteLoader";
+import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
+import {
+  getCatalogItemBackgroundStyle,
+  getCatalogItemImage,
+} from "/src/utils/itemMediaBackgrounds";
 // Bouncy castles are loaded from the database
 
 const slugify = (value = "") =>
@@ -215,14 +219,17 @@ function Book() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+
     const load = async () => {
       try {
-        const [inventoryRes, bouncyRes] = await Promise.all([
-          fetch("/.netlify/functions/inventory"),
-          fetch("/.netlify/functions/bouncy_castles"),
+        const [inventoryResult, bouncyRes] = await Promise.all([
+          fetchInventoryWithCache({ signal: controller.signal }),
+          fetch("/.netlify/functions/bouncy_castles", { signal: controller.signal }),
         ]);
 
-        const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+        const inventoryData = inventoryResult.items;
         const bouncyData = bouncyRes.ok ? await bouncyRes.json() : [];
 
         const rentalsOnly = (Array.isArray(inventoryData) ? inventoryData : []).filter((item) => {
@@ -232,16 +239,22 @@ function Book() {
           return isRental && isActive && !shouldExcludeFromBooking(item);
         });
 
+        if (!active) return;
         setRentals(rentalsOnly);
         setBouncyTypes(Array.isArray(bouncyData) ? bouncyData : []);
       } catch (err) {
+        if (err?.name === "AbortError") return;
         console.error("❌ Error fetching rental:", err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     load();
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
@@ -623,9 +636,10 @@ function Book() {
 
   if (loading) {
     return (
-      <div className="loader">
-        <img src="/imgs/reebs.gif" alt="Loading rental booking" className="loader-gif" />
-      </div>
+      <SiteLoader
+        label="Loading booking options"
+        sublabel="Preparing your rental list and pricing."
+      />
     );
   }
 
@@ -635,11 +649,10 @@ function Book() {
         Skip to main content
       </a>
       <div className="booking-page rentals-theme" id="main">
-        <main className="booking-shell">
-          <section className="booking-hero glass-card" aria-labelledby="booking-hero-heading">
-            <div className="booking-hero-copy">
-              <p className="kicker">Rental booking</p>
-              <h1 id="booking-hero-heading">Reserve your rentals</h1>
+        <main className="booking-shell page-shell">
+          <section className="booking-hero glass-card page-hero" aria-labelledby="booking-hero-heading">
+            <div className="booking-hero-copy page-hero-copy">
+              <h1 id="booking-hero-heading" className="page-hero-title">Reserve your rentals</h1>
               <p className="booking-hero-sub">
                 Pick the bounce house, decor, or concessions you want. We confirm availability, delivery,
                 and setup details for your date.
@@ -662,29 +675,6 @@ function Book() {
                 <Link className="hero-btn hero-btn-ghost" to="/Rentals">
                   Browse rentals
                 </Link>
-              </div>
-              <div className="booking-meta">
-                <div>
-                  <AppIcon icon={faCalendarCheck} />
-                  <div>
-                    <strong>Same-day replies</strong>
-                    <p>We hold your date while we confirm delivery & setup.</p>
-                  </div>
-                </div>
-                <div>
-                  <AppIcon icon={faClock} />
-                  <div>
-                    <strong>Flexible timing</strong>
-                    <p>Morning drop-offs and evening pickups available.</p>
-                  </div>
-                </div>
-                <div>
-                  <AppIcon icon={faClipboardList} />
-                  <div>
-                    <strong>Clear checklist</strong>
-                    <p>We’ll share a prep list once your booking is locked.</p>
-                  </div>
-                </div>
               </div>
             </div>
             <div className="booking-hero-card glass-card">
@@ -714,7 +704,6 @@ function Book() {
           <section className="booking-grid">
             <article className="booking-form-card glass-card" id="booking-form" aria-labelledby="booking-form-heading">
               <div className="section-header rent-section-header">
-                <p className="kicker">Rental booking</p>
                 <h2 id="booking-form-heading">Tell us about your event</h2>
                 <p className="rental-sub">
                   Add the rentals you want, your date, and where we’re delivering. We confirm availability quickly.
@@ -736,145 +725,183 @@ function Book() {
                 </p>
                 <input type="hidden" name="selectedRentals" value={itemsSummaryValue} />
 
-                <p className="contact-form-note">
-                  Rentals only. We hold your date and reply with confirmation and the delivery window.
-                </p>
-
-                <div className="contact-form-grid">
-                  <div className="form-group">
-                    <label htmlFor="fullName">Name</label>
-                    <input
-                      id="fullName"
-                      type="text"
-                      name="name"
-                      autoComplete="name"
-                      placeholder="Your full name"
-                      value={formValues.name}
-                      onChange={updateFormValue("name")}
-                      required
-                    />
+                <div className="form-overview booking-form-overview">
+                  <div className="form-overview-copy">
+                    <p className="form-kicker">Booking brief</p>
+                    <h4>Lock in the details clearly</h4>
+                    <p className="contact-form-note">
+                      Rentals only. We hold your date and reply with confirmation and the delivery window.
+                    </p>
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="email">Email</label>
-                    <input
-                      id="email"
-                      type="email"
-                      name="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={formValues.email}
-                      onChange={updateFormValue("email")}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="phone">Phone / WhatsApp</label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      name="phone"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      placeholder="+233 24 423 8419"
-                      pattern="^[0-9+\\-()\\s]{7,}$"
-                      value={formValues.phone}
-                      onChange={updateFormValue("phone")}
-                      required
-                    />
-                    <small className="hint">We’ll confirm on call or WhatsApp.</small>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="eventDate">Event date</label>
-                    <input
-                      id="eventDate"
-                      type="date"
-                      name="eventDate"
-                      min={today}
-                      value={formValues.eventDate}
-                      onChange={updateFormValue("eventDate")}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="eventWindow">Setup & pickup window</label>
-                    <select
-                      id="eventWindow"
-                      name="eventWindow"
-                      value={formValues.eventWindow}
-                      onChange={updateFormValue("eventWindow")}
-                    >
-                      <option value="" disabled>
-                        Choose a timing window
-                      </option>
-                      {EVENT_WINDOW_OPTIONS.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          disabled={isEventWindowDisabled(formValues.eventDate, option)}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="location">Location / venue</label>
-                    <input
-                      id="location"
-                      type="text"
-                      name="location"
-                      placeholder="Neighborhood or venue in Accra"
-                      autoComplete="address-level2"
-                      value={formValues.location}
-                      onChange={updateFormValue("location")}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="guestCount">Guest count</label>
-                    <input
-                      id="guestCount"
-                      type="number"
-                      name="guestCount"
-                      min="1"
-                      placeholder="Approx. guests"
-                      value={formValues.guestCount}
-                      onChange={updateFormValue("guestCount")}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="contactPreference">How should we confirm?</label>
-                    <select
-                      id="contactPreference"
-                      name="contactPreference"
-                      value={formValues.contactPreference}
-                      onChange={updateFormValue("contactPreference")}
-                    >
-                      <option value="" disabled>
-                        Choose a contact method
-                      </option>
-                      <option value="Phone call">Phone call</option>
-                      <option value="WhatsApp">WhatsApp</option>
-                      <option value="Email">Email</option>
-                    </select>
-                  </div>
-                  <div className="form-group full-width">
-                    <label htmlFor="rentalNotes">Rental picks & notes</label>
-                    <textarea
-                      id="rentalNotes"
-                      name="rentalNotes"
-                      rows="5"
-                      placeholder="List the rentals you want and any themes or must-haves."
-                      value={itemsNote}
-                      onChange={(e) => {
-                        setNoteTouched(true);
-                        setItemsNote(e.target.value);
-                      }}
-                      required
-                    ></textarea>
-                    <small className="hint">Selected rentals: {itemsSummaryDisplay}</small>
+                  <div className="form-overview-metrics" aria-label="Booking summary">
+                    <span>{selectedRentals.length} {selectedRentals.length === 1 ? "rental" : "rentals"} selected</span>
+                    <span>{totalDisplay} estimate</span>
+                    <span>{formValues.eventDate ? formatDateShort(formValues.eventDate) : "Choose a date"}</span>
                   </div>
                 </div>
+
+                <section className="form-section" aria-labelledby="booking-contact-heading">
+                  <div className="form-section-head">
+                    <p className="form-section-kicker">01</p>
+                    <h4 id="booking-contact-heading">Your contact details</h4>
+                    <p>Tell us who is booking so we can confirm the request and delivery timing fast.</p>
+                  </div>
+                  <div className="contact-form-grid form-section-grid">
+                    <div className="form-group">
+                      <label htmlFor="fullName">Name</label>
+                      <input
+                        id="fullName"
+                        type="text"
+                        name="name"
+                        autoComplete="name"
+                        placeholder="Your full name"
+                        value={formValues.name}
+                        onChange={updateFormValue("name")}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="email">Email</label>
+                      <input
+                        id="email"
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={formValues.email}
+                        onChange={updateFormValue("email")}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="phone">Phone / WhatsApp</label>
+                      <input
+                        id="phone"
+                        type="tel"
+                        name="phone"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="+233 24 423 8419"
+                        pattern="^[0-9+\\-()\\s]{7,}$"
+                        value={formValues.phone}
+                        onChange={updateFormValue("phone")}
+                        required
+                      />
+                      <small className="hint">We’ll confirm on call or WhatsApp.</small>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="form-section" aria-labelledby="booking-event-heading">
+                  <div className="form-section-head">
+                    <p className="form-section-kicker">02</p>
+                    <h4 id="booking-event-heading">Event logistics</h4>
+                    <p>Share the date, window, and venue so we can check stock and routing accurately.</p>
+                  </div>
+                  <div className="contact-form-grid form-section-grid">
+                    <div className="form-group">
+                      <label htmlFor="eventDate">Event date</label>
+                      <input
+                        id="eventDate"
+                        type="date"
+                        name="eventDate"
+                        min={today}
+                        value={formValues.eventDate}
+                        onChange={updateFormValue("eventDate")}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="eventWindow">Setup & pickup window</label>
+                      <select
+                        id="eventWindow"
+                        name="eventWindow"
+                        value={formValues.eventWindow}
+                        onChange={updateFormValue("eventWindow")}
+                      >
+                        <option value="" disabled>
+                          Choose a timing window
+                        </option>
+                        {EVENT_WINDOW_OPTIONS.map((option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            disabled={isEventWindowDisabled(formValues.eventDate, option)}
+                          >
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="location">Location / venue</label>
+                      <input
+                        id="location"
+                        type="text"
+                        name="location"
+                        placeholder="Neighborhood or venue in Accra"
+                        autoComplete="address-level2"
+                        value={formValues.location}
+                        onChange={updateFormValue("location")}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="guestCount">Guest count</label>
+                      <input
+                        id="guestCount"
+                        type="number"
+                        name="guestCount"
+                        min="1"
+                        placeholder="Approx. guests"
+                        value={formValues.guestCount}
+                        onChange={updateFormValue("guestCount")}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="contactPreference">How should we confirm?</label>
+                      <select
+                        id="contactPreference"
+                        name="contactPreference"
+                        value={formValues.contactPreference}
+                        onChange={updateFormValue("contactPreference")}
+                      >
+                        <option value="" disabled>
+                          Choose a contact method
+                        </option>
+                        <option value="Phone call">Phone call</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Email">Email</option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="form-section" aria-labelledby="booking-notes-heading">
+                  <div className="form-section-head">
+                    <p className="form-section-kicker">03</p>
+                    <h4 id="booking-notes-heading">Rental notes</h4>
+                    <p>Confirm your picks and list any theme notes, special requests, or delivery details.</p>
+                  </div>
+                  <div className="contact-form-grid form-section-grid">
+                    <div className="form-group full-width">
+                      <label htmlFor="rentalNotes">Rental picks & notes</label>
+                      <textarea
+                        id="rentalNotes"
+                        name="rentalNotes"
+                        rows="5"
+                        placeholder="List the rentals you want and any themes or must-haves."
+                        value={itemsNote}
+                        onChange={(e) => {
+                          setNoteTouched(true);
+                          setItemsNote(e.target.value);
+                        }}
+                        required
+                      ></textarea>
+                      <small className="hint">Selected rentals: {itemsSummaryDisplay}</small>
+                    </div>
+                  </div>
+                </section>
 
                 <div className="form-footer">
                   <small className="hint">We reply same day for bookings within Accra.</small>
@@ -903,9 +930,12 @@ function Book() {
                   <div className="booking-receipt-list">
                     {(bookingReceipt.items || []).map((item) => (
                       <div key={item.id || item.productId} className="booking-receipt-item">
-                        <div className="booking-receipt-media">
+                        <div
+                          className="booking-receipt-media category-image-bg"
+                          style={getCatalogItemBackgroundStyle(item)}
+                        >
                           <img
-                            src={item.productImage || "/imgs/placeholder.png"}
+                            src={getCatalogItemImage(item)}
                             alt={item.productName || "Rental item"}
                           />
                         </div>
@@ -1023,8 +1053,11 @@ function Book() {
                       key={item.id}
                       className={`booking-rental-card glass-card ${selected ? "is-selected" : ""}`}
                     >
-                      <div className="booking-rental-media">
-                        <img src={item.image || item.imageUrl || "/imgs/placeholder.png"} alt={item.name} />
+                      <div
+                        className="booking-rental-media category-image-bg"
+                        style={getCatalogItemBackgroundStyle(item)}
+                      >
+                        <img src={getCatalogItemImage(item)} alt={item.name} />
                         <span className="rent-tag">{item.specificCategory || item.category}</span>
                       </div>
                       <div className="booking-rental-body">

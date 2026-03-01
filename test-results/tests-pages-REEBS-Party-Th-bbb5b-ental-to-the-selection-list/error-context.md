@@ -1,0 +1,284 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - link "Skip to main content" [ref=e32] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=e34]:
+    - region "Reserve your rentals" [ref=e35]:
+      - generic [ref=e36]:
+        - paragraph [ref=e37]: Rental booking
+        - heading "Reserve your rentals" [level=1] [ref=e38]
+        - paragraph [ref=e39]: Pick the bounce house, decor, or concessions you want. We confirm availability, delivery, and setup details for your date.
+        - generic "Booking highlights" [ref=e40]:
+          - generic [ref=e41]:
+            - img [ref=e42]
+            - text: Rentals only
+          - generic [ref=e44]:
+            - img [ref=e45]
+            - text: Delivery & pickup handled
+          - generic [ref=e49]:
+            - img [ref=e50]
+            - text: Sanitized + kid-safe
+        - group "Booking actions" [ref=e53]:
+          - link "Start booking" [ref=e54] [cursor=pointer]:
+            - /url: "#booking-form"
+          - link "Browse rentals" [ref=e55] [cursor=pointer]:
+            - /url: /Rentals
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - img [ref=e58]
+            - generic [ref=e63]:
+              - strong [ref=e64]: Same-day replies
+              - paragraph [ref=e65]: We hold your date while we confirm delivery & setup.
+          - generic [ref=e66]:
+            - img [ref=e67]
+            - generic [ref=e70]:
+              - strong [ref=e71]: Flexible timing
+              - paragraph [ref=e72]: Morning drop-offs and evening pickups available.
+          - generic [ref=e73]:
+            - img [ref=e74]
+            - generic [ref=e77]:
+              - strong [ref=e78]: Clear checklist
+              - paragraph [ref=e79]: We’ll share a prep list once your booking is locked.
+      - generic [ref=e80]:
+        - paragraph [ref=e81]: Why this form
+        - heading "Built for rentals" [level=2] [ref=e82]
+        - paragraph [ref=e83]: This booking form is only for rental items (bounce castles, decor, concessions, props). For balloons or full styling, use the Contact page instead.
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - strong [ref=e86]: "3"
+            - generic [ref=e87]: Rental items live
+          - generic [ref=e88]:
+            - strong [ref=e89]: Accra
+            - generic [ref=e90]: Delivery & pickup
+          - generic [ref=e91]:
+            - strong [ref=e92]: 48 hrs
+            - generic [ref=e93]: Reschedule window
+    - generic [ref=e94]:
+      - article "Tell us about your event" [ref=e95]:
+        - generic [ref=e96]:
+          - paragraph [ref=e97]: Rental booking
+          - heading "Tell us about your event" [level=2] [ref=e98]
+          - paragraph [ref=e99]: Add the rentals you want, your date, and where we’re delivering. We confirm availability quickly.
+        - generic [ref=e100]:
+          - paragraph [ref=e101]: Rentals only. We hold your date and reply with confirmation and the delivery window.
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]: Name
+              - textbox "Name" [ref=e105]
+            - generic [ref=e106]:
+              - generic [ref=e107]: Email
+              - textbox "Email" [ref=e108]
+            - generic [ref=e109]:
+              - generic [ref=e110]: Phone / WhatsApp
+              - textbox "Phone / WhatsApp" [ref=e111]
+              - generic [ref=e112]: We’ll confirm on call or WhatsApp.
+            - generic [ref=e113]:
+              - generic [ref=e114]: Event date
+              - textbox "Event date" [ref=e115]
+            - generic [ref=e116]:
+              - generic [ref=e117]: Setup & pickup window
+              - combobox "Setup & pickup window" [ref=e118]:
+                - option "Choose a timing window" [disabled] [selected]
+                - option "Morning setup (7am – 11am)"
+                - option "Midday setup (11am – 2pm)"
+                - option "Afternoon setup (2pm – 5pm)"
+                - option "Evening pickup"
+                - option "I’ll share a specific time"
+            - generic [ref=e119]:
+              - generic [ref=e120]: Location / venue
+              - textbox "Location / venue" [ref=e121]
+            - generic [ref=e122]:
+              - generic [ref=e123]: Guest count
+              - spinbutton "Guest count" [ref=e124]
+            - generic [ref=e125]:
+              - generic [ref=e126]: How should we confirm?
+              - combobox "How should we confirm?" [ref=e127]:
+                - option "Choose a contact method" [disabled] [selected]
+                - option "Phone call"
+                - option "WhatsApp"
+                - option "Email"
+            - generic [ref=e128]:
+              - generic [ref=e129]: Rental picks & notes
+              - textbox "Rental picks & notes" [ref=e130]: Cotton Candy Machine
+              - generic [ref=e131]: "Selected rentals: Cotton Candy Machine (Party Machines)"
+          - generic [ref=e132]:
+            - generic [ref=e133]: We reply same day for bookings within Accra.
+            - button "Request booking" [ref=e134] [cursor=pointer]
+      - complementary "Add rentals to your booking" [ref=e135]:
+        - generic [ref=e136]:
+          - paragraph [ref=e137]: Add rentals
+          - heading "Choose items to include" [level=3] [ref=e138]
+          - paragraph [ref=e139]: This form is for rentals only. Search and add items to pre-fill your booking note.
+        - generic [ref=e140]:
+          - img [ref=e141]
+          - generic [ref=e143]: Search rentals
+          - searchbox "Search rentals" [ref=e144]
+        - generic [ref=e145]:
+          - paragraph [ref=e146]: Selected rentals
+          - generic [ref=e148]: Cotton Candy Machine
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - generic [ref=e151]: Subtotal
+              - strong [ref=e152]: GHS 250.00
+            - generic [ref=e153]:
+              - generic [ref=e154]: Bundle discount (10% off 3+ items)
+              - strong [ref=e155]: Add 2 more
+            - generic [ref=e156]:
+              - generic [ref=e157]: Estimated total
+              - strong [ref=e158]: GHS 250.00
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - img "Cotton Candy Machine" [ref=e162]
+              - generic [ref=e163]: Party Machines
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - heading "Cotton Candy Machine" [level=4] [ref=e166]
+                - paragraph [ref=e167]: GHS 250.00 per day
+              - paragraph [ref=e168]: Available · per day
+              - generic [ref=e169]:
+                - button "Remove" [active] [pressed] [ref=e170] [cursor=pointer]
+                - link "View details" [ref=e171] [cursor=pointer]:
+                  - /url: /Rentals/cotton-candy-machine
+          - generic [ref=e172]:
+            - generic [ref=e173]:
+              - img "Trampoline" [ref=e174]
+              - generic [ref=e175]: Kid Bouncers
+            - generic [ref=e176]:
+              - generic [ref=e177]:
+                - heading "Trampoline" [level=4] [ref=e178]
+                - paragraph [ref=e179]: GHS 600.00 per day
+              - paragraph [ref=e180]: Limited · per day
+              - generic [ref=e181]:
+                - button "Add to booking" [ref=e182] [cursor=pointer]
+                - link "View details" [ref=e183] [cursor=pointer]:
+                  - /url: /Rentals/trampoline
+  - contentinfo "Site footer" [ref=e184]:
+    - heading "Site footer" [level=2] [ref=e185]
+    - region "Plan your party with REEBS" [ref=e186]:
+      - generic [ref=e187]:
+        - paragraph [ref=e188]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e189]
+        - generic [ref=e190]:
+          - generic [ref=e191]: Email address
+          - textbox "Email address" [ref=e192]
+          - button "Book your party" [ref=e193] [cursor=pointer]:
+            - generic [ref=e194] [cursor=pointer]: Book your party
+            - img [ref=e195] [cursor=pointer]
+    - generic [ref=e197]:
+      - link "REEBS Logo" [ref=e199] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e200] [cursor=pointer]
+      - generic [ref=e201]:
+        - generic [ref=e202]:
+          - navigation "Main links" [ref=e203]:
+            - heading "Menu" [level=3] [ref=e204]
+            - link "Home" [ref=e205] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e206] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e207] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e208] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e209] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e210] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e211] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e212]:
+            - heading "Accounts" [level=3] [ref=e213]
+            - link "Staff login" [ref=e214] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e215] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e216] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e217] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e218]:
+            - heading "Company" [level=3] [ref=e219]
+            - link "FAQ" [ref=e220] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e221] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e222] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e223] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e224] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e225]:
+            - heading "Social" [level=3] [ref=e226]
+            - link "Facebook" [ref=e227] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e228] [cursor=pointer]
+              - generic [ref=e230] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e231] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e232] [cursor=pointer]
+              - generic [ref=e235] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e236] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e237] [cursor=pointer]
+              - generic [ref=e239] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e240] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e241] [cursor=pointer]
+              - generic [ref=e243] [cursor=pointer]: WhatsApp
+        - generic [ref=e244]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e245] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e246] [cursor=pointer]
+            - generic [ref=e249] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e250] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e251] [cursor=pointer]
+            - generic [ref=e253] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e254] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e255] [cursor=pointer]
+            - generic [ref=e258] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e259]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e260]:
+      - generic [ref=e261]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e262]: Made to matter. Made By Nana.
+      - generic [ref=e263]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e264]
+  - button "Back to top" [ref=e265]: ↑
+```

@@ -2,12 +2,16 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { FALLBACK_RATES } from "./CurrencyContext";
 
 const CartContext = createContext();
+const normalizeCartKey = (value) => String(value ?? "").trim();
+const getCartItemKey = (item = {}) =>
+  normalizeCartKey(item.id ?? item.productId ?? item.slug ?? item.name);
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(() => {
     const storedCart = localStorage.getItem("cart");
     return storedCart ? JSON.parse(storedCart) : [];
   });
+  const [cartOpen, setCartOpen] = useState(false);
 
   const [currency, setCurrency] = useState(
     () => localStorage.getItem("currency") || "GHS"
@@ -86,35 +90,69 @@ export const CartProvider = ({ children }) => {
 
   // 🔹 Cart actions
   const addToCart = (item) => {
+    const itemKey = getCartItemKey(item);
+    if (!itemKey) return;
+    const normalizedItem = {
+      ...item,
+      id: item.id ?? itemKey,
+      price:
+        item.price ??
+        (typeof item.priceCents === "number" ? item.priceCents / 100 : 0),
+      quantity: Math.max(0, Number(item.quantity ?? item.stock ?? 0) || 0),
+    };
+
     setCart((prev) => {
-      const exists = prev.find((p) => p.id === item.id);
+      const exists = prev.find((p) => getCartItemKey(p) === itemKey);
+      const stockLimit = Math.max(
+        0,
+        Number(normalizedItem.quantity ?? exists?.quantity ?? exists?.stock ?? 0) || 0
+      );
       if (exists) {
         // prevent exceeding stock
-        if (exists.cartQuantity >= item.quantity) return prev;
+        if (exists.cartQuantity >= stockLimit) return prev;
         return prev.map((p) =>
-          p.id === item.id
-            ? { ...p, cartQuantity: Math.min(p.cartQuantity + 1, item.quantity) }
+          getCartItemKey(p) === itemKey
+            ? {
+                ...p,
+                ...normalizedItem,
+                id: normalizedItem.id ?? p.id ?? itemKey,
+                cartQuantity: Math.min(p.cartQuantity + 1, stockLimit),
+              }
             : p
         );
       }
       // initial add
-      return [...prev, { ...item, cartQuantity: 1 }];
+      return [
+        ...prev,
+        {
+          ...normalizedItem,
+          id: normalizedItem.id ?? itemKey,
+          cartQuantity: Math.min(1, Math.max(stockLimit, 1)),
+        },
+      ];
     });
   };
 
-  const removeFromCart = (id) =>
-    setCart((prev) => prev.filter((p) => p.id !== id));
+  const removeFromCart = (itemOrKey) => {
+    const targetKey =
+      typeof itemOrKey === "object" ? getCartItemKey(itemOrKey) : normalizeCartKey(itemOrKey);
+    setCart((prev) => prev.filter((p) => getCartItemKey(p) !== targetKey));
+  };
 
   // now updateQuantity expects a delta (+1 / -1)
-  const updateQuantity = (id, change) => {
+  const updateQuantity = (itemOrKey, change) => {
     if (Number.isNaN(change) || change === 0) return;
+    const targetKey =
+      typeof itemOrKey === "object" ? getCartItemKey(itemOrKey) : normalizeCartKey(itemOrKey);
+
     setCart((prev) =>
       prev.map((p) => {
-        if (p.id === id) {
+        if (getCartItemKey(p) === targetKey) {
           let newQty = p.cartQuantity + change;
+          const stockLimit = Math.max(0, Number(p.quantity ?? p.stock ?? 0) || 0);
 
           if (newQty < 1) newQty = 1;
-          if (newQty > p.quantity) newQty = p.quantity; // cap to stock
+          if (stockLimit > 0 && newQty > stockLimit) newQty = stockLimit; // cap to stock
 
           return { ...p, cartQuantity: newQty };
         }
@@ -124,6 +162,9 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = () => setCart([]);
+  const openCart = () => setCartOpen(true);
+  const closeCart = () => setCartOpen(false);
+  const toggleCart = () => setCartOpen((prev) => !prev);
 
   // Currency helpers
   const convertPrice = (priceInGHS) => {
@@ -150,6 +191,10 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
+        cartOpen,
+        openCart,
+        closeCart,
+        toggleCart,
         currency,
         setCurrency,
         convertPrice,

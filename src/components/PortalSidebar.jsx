@@ -13,12 +13,10 @@ import {
   faGlobe,
   faHome,
   faMoneyCheckDollar,
-  faMoon,
   faPenToSquare,
   faShieldAlt,
   faSliders,
   faStore,
-  faSun,
   faTools,
   faTruck,
   faUser,
@@ -36,7 +34,6 @@ import {
 } from "/src/icons/iconSet";
 
 import "/src/styles/components/PortalSidebar.css";
-import useThemeMode from "../hooks/useThemeMode";
 import { useAuth } from "./AuthContext";
 import { WEBSITE_URL } from "../utils/website";
 
@@ -105,6 +102,11 @@ const DEFAULT_APPS = [
     label: "Expenses",
     path: "/admin/expenses",
     icon: faMoneyCheckDollar,
+  },
+  {
+    label: "Water",
+    path: "/admin/water",
+    icon: faStore,
   },
   {
     label: "Human Resources",
@@ -213,10 +215,10 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   const [notificationsError, setNotificationsError] = useState("");
   const [notificationPayload, setNotificationPayload] = useState({ orders: [], bookings: [] });
   const [readNotifications, setReadNotifications] = useState(() => new Set());
-  const { darkMode, toggleTheme } = useThemeMode();
   const { user, logout, authReady } = useAuth();
   const isAuthenticated = Boolean(user);
   const userRole = String(user?.role || "staff").toLowerCase();
+  const isWaterUser = userRole === "water";
   const authLabel = isAuthenticated ? "Sign out" : "Sign in";
   const authIcon = isAuthenticated ? faArrowRightFromBracket : faArrowRightToBracket;
   const displayName =
@@ -264,7 +266,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!authReady || !isAuthenticated) {
+    if (!authReady || !isAuthenticated || isWaterUser) {
       setNotificationPayload({ orders: [], bookings: [] });
       setNotificationsError("");
       setNotificationsLoading(false);
@@ -309,7 +311,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     return () => {
       active = false;
     };
-  }, [authReady, isAuthenticated]);
+  }, [authReady, isAuthenticated, isWaterUser]);
 
   useEffect(() => {
     if (!authReady || !isAuthenticated) return;
@@ -339,6 +341,9 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   };
 
   const canSeeApp = (app) => {
+    if (isWaterUser) {
+      return app.path === "/admin/water";
+    }
     if (!app.roles || app.roles.length === 0) return true;
     return app.roles.some((role) => String(role).toLowerCase() === userRole);
   };
@@ -418,7 +423,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   };
 
   const notifications = useMemo(() => {
-    if (!isAuthenticated || !user?.id) return [];
+    if (!isAuthenticated || !user?.id || isWaterUser) return [];
     const userId = Number(user.id);
     if (!Number.isFinite(userId)) return [];
 
@@ -538,7 +543,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     return [...map.values()]
       .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))
       .slice(0, 8);
-  }, [isAuthenticated, notificationPayload, user?.id]);
+  }, [isAuthenticated, isWaterUser, notificationPayload, user?.id]);
 
   const unreadNotifications = useMemo(
     () => notifications.filter((note) => !readNotifications.has(note.id)),
@@ -596,84 +601,87 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     });
   };
 
-  const renderNotifications = (context = "sidebar") => (
-    <div className={`portal-sidebar__notifications portal-sidebar__notifications--${context}`}>
-      <button
-        type="button"
-        className="portal-sidebar__notifications-toggle"
-        onClick={() => setNotificationsOpen((open) => !open)}
-        aria-expanded={notificationsOpen}
-        aria-label="Toggle notifications"
-      >
-        <span className="portal-sidebar__notifications-title">
-          <AppIcon icon={faBell} />
-          <span>Notifications</span>
-        </span>
-        <span className="portal-sidebar__notifications-count">{unreadCount}</span>
-        <AppIcon
-          icon={faChevronDown}
-          className={`portal-sidebar__notifications-caret ${notificationsOpen ? "is-open" : ""}`}
-        />
-      </button>
-      {notificationsOpen && (
-        <div className="portal-sidebar__notifications-body">
-          {isAuthenticated && unreadCount > 0 && (
-            <div className="portal-sidebar__notifications-actions">
-              <button
-                type="button"
-                className="portal-sidebar__notifications-action"
-                onClick={markAllNotificationsRead}
-              >
-                Mark all read
-              </button>
-            </div>
-          )}
-          {!isAuthenticated && <p className="portal-sidebar__notifications-muted">Sign in to see updates.</p>}
-          {isAuthenticated && notificationsLoading && (
-            <p className="portal-sidebar__notifications-muted">Loading activity...</p>
-          )}
-          {isAuthenticated && !notificationsLoading && notificationsError && (
-            <p className="portal-sidebar__notifications-error">{notificationsError}</p>
-          )}
-          {isAuthenticated && !notificationsLoading && !notificationsError && notifications.length === 0 && (
-            <p className="portal-sidebar__notifications-muted">No recent activity.</p>
-          )}
-          {isAuthenticated &&
-            !notificationsLoading &&
-            !notificationsError &&
-            notifications.length > 0 &&
-            unreadNotifications.length === 0 && (
-            <p className="portal-sidebar__notifications-muted">All caught up.</p>
-          )}
-          {!notificationsLoading && !notificationsError && unreadNotifications.length > 0 && (
-            <ul className="portal-sidebar__notifications-list">
-              {unreadNotifications.map((note) => (
-                <li key={note.id} className="portal-sidebar__notification-item">
-                  <Link
-                    to={note.href}
-                    className="portal-sidebar__notification-link"
-                    onClick={() => {
-                      markNotificationRead(note.id);
-                      setNotificationsOpen(false);
-                      if (isMobile && overlayOpen) setOverlayOpen(false);
-                    }}
-                  >
-                    <div>
-                      <span className="portal-sidebar__notification-title">{note.title}</span>
-                      <span className="portal-sidebar__notification-meta">{note.meta}</span>
-                    </div>
-                    <span className="portal-sidebar__notification-time">
-                      {formatNotificationTime(note.date)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  const renderNotifications = (context = "sidebar") => {
+    if (isWaterUser) return null;
+    return (
+      <div className={`portal-sidebar__notifications portal-sidebar__notifications--${context}`}>
+        <button
+          type="button"
+          className="portal-sidebar__notifications-toggle"
+          onClick={() => setNotificationsOpen((open) => !open)}
+          aria-expanded={notificationsOpen}
+          aria-label="Toggle notifications"
+        >
+          <span className="portal-sidebar__notifications-title">
+            <AppIcon icon={faBell} />
+            <span>Notifications</span>
+          </span>
+          <span className="portal-sidebar__notifications-count">{unreadCount}</span>
+          <AppIcon
+            icon={faChevronDown}
+            className={`portal-sidebar__notifications-caret ${notificationsOpen ? "is-open" : ""}`}
+          />
+        </button>
+        {notificationsOpen && (
+          <div className="portal-sidebar__notifications-body">
+            {isAuthenticated && unreadCount > 0 && (
+              <div className="portal-sidebar__notifications-actions">
+                <button
+                  type="button"
+                  className="portal-sidebar__notifications-action"
+                  onClick={markAllNotificationsRead}
+                >
+                  Mark all read
+                </button>
+              </div>
+            )}
+            {!isAuthenticated && <p className="portal-sidebar__notifications-muted">Sign in to see updates.</p>}
+            {isAuthenticated && notificationsLoading && (
+              <p className="portal-sidebar__notifications-muted">Loading activity...</p>
+            )}
+            {isAuthenticated && !notificationsLoading && notificationsError && (
+              <p className="portal-sidebar__notifications-error">{notificationsError}</p>
+            )}
+            {isAuthenticated && !notificationsLoading && !notificationsError && notifications.length === 0 && (
+              <p className="portal-sidebar__notifications-muted">No recent activity.</p>
+            )}
+            {isAuthenticated &&
+              !notificationsLoading &&
+              !notificationsError &&
+              notifications.length > 0 &&
+              unreadNotifications.length === 0 && (
+              <p className="portal-sidebar__notifications-muted">All caught up.</p>
+            )}
+            {!notificationsLoading && !notificationsError && unreadNotifications.length > 0 && (
+              <ul className="portal-sidebar__notifications-list">
+                {unreadNotifications.map((note) => (
+                  <li key={note.id} className="portal-sidebar__notification-item">
+                    <Link
+                      to={note.href}
+                      className="portal-sidebar__notification-link"
+                      onClick={() => {
+                        markNotificationRead(note.id);
+                        setNotificationsOpen(false);
+                        if (isMobile && overlayOpen) setOverlayOpen(false);
+                      }}
+                    >
+                      <div>
+                        <span className="portal-sidebar__notification-title">{note.title}</span>
+                        <span className="portal-sidebar__notification-meta">{note.meta}</span>
+                      </div>
+                      <span className="portal-sidebar__notification-time">
+                        {formatNotificationTime(note.date)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderUserSection = (context = "sidebar") => (
     <div className={`portal-sidebar__user portal-sidebar__user--${context}`}>
@@ -696,7 +704,7 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
       </button>
       {userMenuOpen && (
         <div className="portal-sidebar__user-menu">
-          {isAuthenticated && (
+          {isAuthenticated && !isWaterUser && (
             <Link
               to="/admin/settings?tab=profile"
               className="portal-sidebar__user-link"
@@ -710,16 +718,6 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
               <span>Profile settings</span>
             </Link>
           )}
-          <button
-            type="button"
-            className="portal-sidebar__theme-toggle-btn"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${darkMode ? "light" : "dark"} mode`}
-            title={darkMode ? "Light mode" : "Dark mode"}
-          >
-            <AppIcon icon={darkMode ? faSun : faMoon} />
-            <span>{darkMode ? "Light mode" : "Dark mode"}</span>
-          </button>
           <button
             type="button"
             className="portal-sidebar__signout-btn"

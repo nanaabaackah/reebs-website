@@ -1,0 +1,324 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - link "Skip to main content" [ref=e32] [cursor=pointer]:
+    - /url: "#main"
+  - main [ref=e33]:
+    - main [ref=e34]:
+      - region "Party rentals styled the REEBS way" [ref=e35]:
+        - generic [ref=e36]:
+          - heading "Party rentals styled the REEBS way" [level=1] [ref=e37]
+          - paragraph [ref=e38]: Bounce houses, decor, concessions, and full setup help. We prep, deliver, and style so you can enjoy the celebration.
+        - list "Most popular rentals" [ref=e39]:
+          - listitem [ref=e40] [cursor=pointer]:
+            - img "Popcorn" [ref=e41] [cursor=pointer]
+            - generic [ref=e43] [cursor=pointer]:
+              - paragraph [ref=e44] [cursor=pointer]: Kids Rentals
+              - heading "Popcorn" [level=3] [ref=e45] [cursor=pointer]
+              - generic [ref=e46] [cursor=pointer]: View rental →
+          - listitem [ref=e47] [cursor=pointer]:
+            - img "Cotton candy" [ref=e48] [cursor=pointer]
+            - generic [ref=e50] [cursor=pointer]:
+              - paragraph [ref=e51] [cursor=pointer]: Kids Rentals
+              - heading "Cotton candy" [level=3] [ref=e52] [cursor=pointer]
+              - generic [ref=e53] [cursor=pointer]: View rental →
+          - listitem [ref=e54] [cursor=pointer]:
+            - img "Snow cone" [ref=e55] [cursor=pointer]
+            - generic [ref=e57] [cursor=pointer]:
+              - paragraph [ref=e58] [cursor=pointer]: Kids Rentals
+              - heading "Snow cone" [level=3] [ref=e59] [cursor=pointer]
+              - generic [ref=e60] [cursor=pointer]: View rental →
+          - listitem [ref=e61] [cursor=pointer]:
+            - img "Cotton Candy Machine" [ref=e62] [cursor=pointer]
+            - generic [ref=e64] [cursor=pointer]:
+              - paragraph [ref=e65] [cursor=pointer]: Kids Rentals
+              - heading "Cotton Candy Machine" [level=3] [ref=e66] [cursor=pointer]
+              - generic [ref=e67] [cursor=pointer]: View rental →
+      - generic [ref=e69]:
+        - navigation "Rental categories":
+          - list:
+            - listitem:
+              - link "Bouncy Castles":
+                - /url: "#bouncy-castles"
+            - listitem:
+              - link "Kids Rentals":
+                - /url: "#kids-rentals"
+            - listitem:
+              - link "Indoor Games":
+                - /url: "#indoor-games"
+            - listitem:
+              - link "Kid Bouncers":
+                - /url: "#kid-bouncers"
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - paragraph [ref=e74]: Rental catalog
+                - heading "Find your party setup fast" [level=2] [ref=e75]
+                - paragraph [ref=e76]: 17 items shown · 4 categories
+              - generic [ref=e77]:
+                - generic [ref=e78]: Select currency
+                - combobox "Select currency" [ref=e79]:
+                  - option "GHS" [selected]
+                  - option "USD"
+                  - option "CAD"
+                  - option "GBP"
+                  - option "EUR"
+                  - option "NGN"
+            - generic [ref=e81]:
+              - img [ref=e82]
+              - textbox "Search rental items" [ref=e84]
+            - list "Quick category filters" [ref=e85]:
+              - button "All" [pressed] [ref=e86] [cursor=pointer]
+              - button "Bouncy Castles" [ref=e87] [cursor=pointer]
+              - button "Kids Rentals" [ref=e88] [cursor=pointer]
+              - button "Indoor Games" [ref=e89] [cursor=pointer]
+              - button "Kid Bouncers" [ref=e90] [cursor=pointer]
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - generic [ref=e94]: 2 items
+              - heading "Bouncy Castles" [level=2] [ref=e95]
+            - generic [ref=e96]:
+              - button "View Pastel Bounce House" [ref=e97] [cursor=pointer]:
+                - generic [ref=e98] [cursor=pointer]:
+                  - img "Pastel Bounce House" [ref=e99] [cursor=pointer]
+                  - generic [ref=e100] [cursor=pointer]: Bouncy Castles
+                - generic [ref=e101] [cursor=pointer]: →
+                - heading "Pastel Bounce House" [level=3] [ref=e104] [cursor=pointer]
+              - button "View Safari Bounce House" [ref=e105] [cursor=pointer]:
+                - generic [ref=e106] [cursor=pointer]:
+                  - img "Safari Bounce House" [ref=e107] [cursor=pointer]
+                  - generic [ref=e108] [cursor=pointer]: Bouncy Castles
+                - generic [ref=e109] [cursor=pointer]: →
+                - heading "Safari Bounce House" [level=3] [ref=e112] [cursor=pointer]
+          - generic [ref=e113]:
+            - generic [ref=e114]:
+              - generic [ref=e116]: 4 items
+              - heading "Kids Rentals" [level=2] [ref=e117]
+            - generic [ref=e118]:
+              - button "View Cotton Candy Machine" [ref=e119] [cursor=pointer]:
+                - generic [ref=e120] [cursor=pointer]:
+                  - img "Cotton Candy Machine" [ref=e121] [cursor=pointer]
+                  - generic [ref=e122] [cursor=pointer]: Party Machines
+                - generic [ref=e123] [cursor=pointer]: →
+                - heading "Cotton Candy Machine" [level=3] [ref=e126] [cursor=pointer]
+              - button "View Cotton candy" [ref=e127] [cursor=pointer]:
+                - generic [ref=e128] [cursor=pointer]:
+                  - img "Cotton candy" [ref=e129] [cursor=pointer]
+                  - generic [ref=e130] [cursor=pointer]: Setup
+                - generic [ref=e131] [cursor=pointer]: →
+                - heading "Cotton candy" [level=3] [ref=e134] [cursor=pointer]
+              - button "View Popcorn" [ref=e135] [cursor=pointer]:
+                - generic [ref=e136] [cursor=pointer]:
+                  - img "Popcorn" [ref=e137] [cursor=pointer]
+                  - generic [ref=e138] [cursor=pointer]: Setup
+                - generic [ref=e139] [cursor=pointer]: →
+                - heading "Popcorn" [level=3] [ref=e142] [cursor=pointer]
+              - button "View Snow cone" [ref=e143] [cursor=pointer]:
+                - generic [ref=e144] [cursor=pointer]:
+                  - img "Snow cone" [ref=e145] [cursor=pointer]
+                  - generic [ref=e146] [cursor=pointer]: Setup
+                - generic [ref=e147] [cursor=pointer]: →
+                - heading "Snow cone" [level=3] [ref=e150] [cursor=pointer]
+          - generic [ref=e151]:
+            - generic [ref=e152]:
+              - generic [ref=e154]: 10 items
+              - heading "Indoor Games" [level=2] [ref=e155]
+            - generic [ref=e156]:
+              - button "View Giant jenga" [ref=e157] [cursor=pointer]:
+                - generic [ref=e158] [cursor=pointer]:
+                  - img "Giant jenga" [ref=e159] [cursor=pointer]
+                  - generic [ref=e160] [cursor=pointer]: Indoor Games
+                - generic [ref=e161] [cursor=pointer]: →
+                - heading "Giant jenga" [level=3] [ref=e164] [cursor=pointer]
+              - button "View Board game bundle" [ref=e165] [cursor=pointer]:
+                - generic [ref=e166] [cursor=pointer]:
+                  - img "Board game bundle" [ref=e167] [cursor=pointer]
+                  - generic [ref=e168] [cursor=pointer]: Indoor Games
+                - generic [ref=e169] [cursor=pointer]: →
+                - heading "Board game bundle" [level=3] [ref=e172] [cursor=pointer]
+              - button "View Ludo" [ref=e173] [cursor=pointer]:
+                - generic [ref=e174] [cursor=pointer]:
+                  - img "Ludo" [ref=e175] [cursor=pointer]
+                  - generic [ref=e176] [cursor=pointer]: Indoor Games
+                - generic [ref=e177] [cursor=pointer]: →
+                - heading "Ludo" [level=3] [ref=e180] [cursor=pointer]
+              - button "View Oware" [ref=e181] [cursor=pointer]:
+                - generic [ref=e182] [cursor=pointer]:
+                  - img "Oware" [ref=e183] [cursor=pointer]
+                  - generic [ref=e184] [cursor=pointer]: Indoor Games
+                - generic [ref=e185] [cursor=pointer]: →
+                - heading "Oware" [level=3] [ref=e188] [cursor=pointer]
+              - button "View Uno" [ref=e189] [cursor=pointer]:
+                - generic [ref=e190] [cursor=pointer]:
+                  - img "Uno" [ref=e191] [cursor=pointer]
+                  - generic [ref=e192] [cursor=pointer]: Indoor Games
+                - generic [ref=e193] [cursor=pointer]: →
+                - heading "Uno" [level=3] [ref=e196] [cursor=pointer]
+              - button "View Scrabble" [ref=e197] [cursor=pointer]:
+                - generic [ref=e198] [cursor=pointer]:
+                  - img "Scrabble" [ref=e199] [cursor=pointer]
+                  - generic [ref=e200] [cursor=pointer]: Indoor Games
+                - generic [ref=e201] [cursor=pointer]: →
+                - heading "Scrabble" [level=3] [ref=e204] [cursor=pointer]
+              - button "View Checkers" [ref=e205] [cursor=pointer]:
+                - generic [ref=e206] [cursor=pointer]:
+                  - img "Checkers" [ref=e207] [cursor=pointer]
+                  - generic [ref=e208] [cursor=pointer]: Indoor Games
+                - generic [ref=e209] [cursor=pointer]: →
+                - heading "Checkers" [level=3] [ref=e212] [cursor=pointer]
+              - button "View Chess" [ref=e213] [cursor=pointer]:
+                - generic [ref=e214] [cursor=pointer]:
+                  - img "Chess" [ref=e215] [cursor=pointer]
+                  - generic [ref=e216] [cursor=pointer]: Indoor Games
+                - generic [ref=e217] [cursor=pointer]: →
+                - heading "Chess" [level=3] [ref=e220] [cursor=pointer]
+              - button "View Dominoes" [ref=e221] [cursor=pointer]:
+                - generic [ref=e222] [cursor=pointer]:
+                  - img "Dominoes" [ref=e223] [cursor=pointer]
+                  - generic [ref=e224] [cursor=pointer]: Indoor Games
+                - generic [ref=e225] [cursor=pointer]: →
+                - heading "Dominoes" [level=3] [ref=e228] [cursor=pointer]
+              - button "View Connect four" [ref=e229] [cursor=pointer]:
+                - generic [ref=e230] [cursor=pointer]:
+                  - img "Connect four" [ref=e231] [cursor=pointer]
+                  - generic [ref=e232] [cursor=pointer]: Indoor Games
+                - generic [ref=e233] [cursor=pointer]: →
+                - heading "Connect four" [level=3] [ref=e236] [cursor=pointer]
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - generic [ref=e240]: 1 items
+              - heading "Kid Bouncers" [level=2] [ref=e241]
+            - button "View Mini Bouncy Castle" [ref=e243] [cursor=pointer]:
+              - generic [ref=e244] [cursor=pointer]:
+                - img "Mini Bouncy Castle" [ref=e245] [cursor=pointer]
+                - generic [ref=e246] [cursor=pointer]: Kid Bouncers
+              - generic [ref=e247] [cursor=pointer]: →
+              - heading "Mini Bouncy Castle" [level=3] [ref=e250] [cursor=pointer]
+  - contentinfo "Site footer" [ref=e251]:
+    - heading "Site footer" [level=2] [ref=e252]
+    - region "Plan your party with REEBS" [ref=e253]:
+      - generic [ref=e254]:
+        - paragraph [ref=e255]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e256]
+        - generic [ref=e257]:
+          - generic [ref=e258]: Email address
+          - textbox "Email address" [ref=e259]
+          - button "Book your party" [ref=e260] [cursor=pointer]:
+            - generic [ref=e261] [cursor=pointer]: Book your party
+            - img [ref=e262] [cursor=pointer]
+    - generic [ref=e264]:
+      - link "REEBS Logo" [ref=e266] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e267] [cursor=pointer]
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - navigation "Main links" [ref=e270]:
+            - heading "Menu" [level=3] [ref=e271]
+            - link "Home" [ref=e272] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e273] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e274] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e275] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e276] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e277] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e278] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e279]:
+            - heading "Accounts" [level=3] [ref=e280]
+            - link "Staff login" [ref=e281] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e282] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e283] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e284] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e285]:
+            - heading "Company" [level=3] [ref=e286]
+            - link "FAQ" [ref=e287] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e288] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e289] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e290] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e291] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e292]:
+            - heading "Social" [level=3] [ref=e293]
+            - link "Facebook" [ref=e294] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e295] [cursor=pointer]
+              - generic [ref=e297] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e298] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e299] [cursor=pointer]
+              - generic [ref=e302] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e303] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e304] [cursor=pointer]
+              - generic [ref=e306] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e307] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e308] [cursor=pointer]
+              - generic [ref=e310] [cursor=pointer]: WhatsApp
+        - generic [ref=e311]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e312] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e313] [cursor=pointer]
+            - generic [ref=e316] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e317] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e318] [cursor=pointer]
+            - generic [ref=e320] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e321] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e322] [cursor=pointer]
+            - generic [ref=e325] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e326]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e327]:
+      - generic [ref=e328]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e329]: Made to matter. Made By Nana.
+      - generic [ref=e330]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e331]
+```

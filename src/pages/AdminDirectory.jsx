@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./admin.css";
+import "../styles/admin.css";
 import { AppIcon } from "/src/components/Icon";
 import { faPlus, faRotateRight, faXmark, faPen, faEye } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
@@ -680,6 +680,7 @@ function AdminDirectory() {
                     >
                       <option value="Admin">Admin</option>
                       <option value="Staff">Staff</option>
+                      <option value="Water">Water</option>
                       <option value="Viewer">Viewer</option>
                     </select>
                   </label>

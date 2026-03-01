@@ -1,174 +1,92 @@
-import React from 'react';
-import './public.css';
+import React from "react";
+import LegalDocumentPage from "../components/LegalDocumentPage";
+import "../styles/public.css";
+import "../styles/PrivacyPolicy.css";
 
-const policySections = [
+const LAST_UPDATED = "February 28, 2026";
+
+const sections = [
   {
-    id: 'information',
-    kicker: '1. What we collect',
-    title: 'Information We Collect',
-    description: 'We only ask for what helps us plan and deliver your celebration.',
+    id: "collection",
+    label: "1.",
+    title: "Personal data we collect",
+    summary:
+      "We collect only the information needed to respond to enquiries, fulfil bookings, process orders, and support customers.",
     items: [
-      'Personal details (name, email, phone, event notes) when you fill out a form or contact us.',
-      'Usage data like pages visited, time on site, and browser type via Google Analytics.',
-      'Device and approximate location when you view our store on Google Maps (only if you allow it).',
-      'Social content you interact with from TikTok, Facebook, and Instagram embeds.'
-    ]
+      "Contact details such as your name, phone number, email address, delivery address, and venue notes.",
+      "Order and booking details such as event dates, quantities, styling preferences, rental selections, and communication history.",
+      "Technical data such as your browser, device type, IP address, pages viewed, and basic analytics events.",
+      "Payment references or proof of payment, but we do not store full bank card numbers, PINs, or mobile money credentials.",
+    ],
   },
   {
-    id: 'usage',
-    kicker: '2. How we use it',
-    title: 'How We Use Your Information',
-    description: 'Your data powers smooth bookings and a better site experience.',
+    id: "use",
+    label: "2.",
+    title: "How we use your data",
+    summary:
+      "We use data for operational, support, and compliance purposes.",
     items: [
-      'Replying to inquiries and delivering rentals, decor, or supplies.',
-      'Improving site performance and spotting what visitors enjoy most.',
-      'Showing location-based info like maps and nearby services.',
-      'Curating social media highlights for inspiration.',
-      'Sending updates or offers if you opt in via WhatsApp or our forms.'
-    ]
+      "To quote, confirm, deliver, set up, collect, or support your order or booking.",
+      "To send service updates, invoices, delivery notices, and customer support replies.",
+      "To reduce fraud, verify transactions, keep accounting records, and manage disputes.",
+      "To improve the site, product selection, and customer experience through analytics and service reviews.",
+      "To send marketing only where you have opted in or where we otherwise have a lawful basis to do so.",
+    ],
   },
   {
-    id: 'rights',
-    kicker: '3. Your control',
-    title: 'Your Rights',
-    description: 'Under Ghana’s Data Protection Act and global standards, you can:',
+    id: "ghana-standards",
+    label: "3.",
+    title: "Ghana data protection standards",
+    summary:
+      "REEBS handles personal data in line with Ghana's Data Protection Act, 2012 (Act 843).",
     items: [
-      'Request access to the data we hold about you.',
-      'Ask us to correct or delete your data.',
-      'Withdraw consent for marketing messages at any time.'
-    ]
+      "We collect personal data for clear business purposes and only where it is relevant to the service we are providing.",
+      "We aim to keep data accurate, secure, and limited to staff or service providers who need it for a valid task.",
+      "You can opt out of marketing messages at any time by contacting us or using the unsubscribe method provided.",
+      "If data is processed through service providers outside Ghana, we use reasonable contractual and security safeguards.",
+    ],
   },
   {
-    id: 'care',
-    kicker: '4. Data care',
-    title: 'Retention & Security',
-    description: 'We minimize what we store and secure what we keep.',
+    id: "sharing",
+    label: "4.",
+    title: "Who we share data with",
+    summary:
+      "We share data only where it is needed to run the business or comply with the law.",
     items: [
-      'Contact details are typically retained for up to 12 months for service history.',
-      'We secure data with HTTPS, form validation, and limited third-party access.',
-      'We update this policy as tools change and note the new effective date.'
-    ]
-  }
+      "Website hosting, form, analytics, and workflow providers that help us operate the site.",
+      "Payment, banking, and mobile money partners that confirm transactions.",
+      "Drivers, couriers, setup crew, and logistics partners involved in fulfilment.",
+      "Professional advisers, insurers, regulators, or law-enforcement authorities where disclosure is required.",
+      "We do not sell your personal data.",
+    ],
+  },
+  {
+    id: "retention-rights",
+    label: "5.",
+    title: "Retention and your rights",
+    summary:
+      "We keep data only for as long as it is reasonably needed for service delivery, legal compliance, accounting, and dispute handling.",
+    items: [
+      "You may ask for access to the personal data we hold about you.",
+      "You may ask us to correct inaccurate details or update incomplete records.",
+      "You may ask us to stop direct marketing or withdraw consent where consent is the basis for processing.",
+      "You may raise a complaint with REEBS first and, if needed, with the Data Protection Commission of Ghana.",
+    ],
+  },
 ];
 
-const thirdParties = [
-  { name: 'Netlify', detail: 'Hosts our site and may log basic metadata (e.g., IP, request time).' },
-  { name: 'Zapier', detail: 'Automates bringing TikTok, Facebook, and Instagram posts into our feed.' },
-  { name: 'Google Analytics', detail: 'Tracks anonymous usage to improve the experience.' },
-  { name: 'Google Maps', detail: 'Shows store/event location if you permit location access.' },
-  { name: 'WhatsApp', detail: 'Lets you message us directly for quotes or updates.' }
-];
-
-const PrivacyPolicy = () => {
+function PrivacyPolicy() {
   return (
-    <main className="policy" role="main" id="policy-main">
-      <section className="policy-hero" aria-labelledby="policy-heading">
-        <div className="policy-hero-copy">
-          <p className="policy-pill">Updated: July 2025</p>
-          <h1 id="policy-heading">Privacy Policy</h1>
-          <p className="policy-sub">
-            At REEBS Party Themes, your details stay protected while we bring the fun. Here’s exactly
-            how we collect, use, and care for your information.
-          </p>
-          <div className="policy-meta" aria-label="Policy highlights">
-            <span className="policy-chip">GDPR-aligned</span>
-            <span className="policy-chip">Ghana DPA ready</span>
-            <span className="policy-chip">HTTPS everywhere</span>
-          </div>
-        </div>
-        <div className="policy-hero-card glass-card">
-          <p className="policy-hero-lede">Fast answers, no surprises.</p>
-          <ul>
-            <li>We only use data to run your event smoothly.</li>
-            <li>No selling of data. Ever.</li>
-            <li>Opt out anytime—one message is enough.</li>
-          </ul>
-          <div className="policy-ribbon">
-            <span>Less hustle. More trust.</span>
-          </div>
-        </div>
-        <span className="policy-bubble bubble-a" aria-hidden="true" />
-        <span className="policy-bubble bubble-b" aria-hidden="true" />
-        <span className="policy-bubble bubble-c" aria-hidden="true" />
-      </section>
-
-      <section className="policy-highlights" aria-labelledby="policy-quick-look">
-        <div className="section-header">
-          <p className="kicker">Quick look</p>
-          <h2 id="policy-quick-look">How your data moves</h2>
-        </div>
-        <div className="policy-grid">
-          <article className="policy-card">
-            <p className="policy-card-kicker">Collect</p>
-            <h3>When you reach out</h3>
-            <p>Forms, WhatsApp, and bookings capture just enough info to plan your party.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">Protect</p>
-            <h3>Secured in transit</h3>
-            <p>HTTPS on every page plus minimal third-party access keeps your details safe.</p>
-          </article>
-          <article className="policy-card">
-            <p className="policy-card-kicker">Control</p>
-            <h3>Your say, always</h3>
-            <p>Ask for your data, correct it, delete it, or opt out of marketing anytime.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="policy-sections" aria-label="Policy details">
-        {policySections.map((section) => (
-          <article key={section.id} className="policy-detail" id={section.id}>
-            <p className="policy-card-kicker">{section.kicker}</p>
-            <div className="policy-detail-header">
-              <h2>{section.title}</h2>
-              <p>{section.description}</p>
-            </div>
-            <ul>
-              {section.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
-      </section>
-
-      <section className="policy-third" aria-labelledby="third-parties-heading">
-        <div className="section-header">
-          <p className="kicker">Trusted tools</p>
-          <h2 id="third-parties-heading">Third-party partners</h2>
-          <p className="policy-sub">
-            We pick reputable platforms to deliver features like analytics, maps, and messaging.
-            Each service only accesses the data it needs.
-          </p>
-        </div>
-        <ul className="policy-third-grid">
-          {thirdParties.map((service) => (
-            <li key={service.name} className="policy-third-card">
-              <p className="policy-card-kicker">{service.name}</p>
-              <p>{service.detail}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="policy-cta" aria-labelledby="policy-cta-heading">
-        <div>
-          <p className="kicker">Need clarity?</p>
-          <h2 id="policy-cta-heading">Talk to the REEBS team</h2>
-          <p className="policy-sub">
-            Ask for your data, request deletion, or change how we contact you. We respond quickly.
-          </p>
-        </div>
-        <div className="policy-contact">
-          <a href="mailto:info@reebspartythemes.com" className="policy-chip solid">info@reebspartythemes.com</a>
-          <a href="https://wa.me/233244238419" className="policy-chip" target="_blank" rel="noopener noreferrer">
-            WhatsApp: +233 244 238 419
-          </a>
-        </div>
-      </section>
-    </main>
+    <LegalDocumentPage
+      title="Privacy Policy"
+      lastUpdated={LAST_UPDATED}
+      intro="This policy explains what personal data REEBS Party Themes collects, why we collect it, how we use it, and what choices you have."
+      marketNote="This version is written for customers in Ghana and aligns with the Data Protection Act, 2012 (Act 843)."
+      sections={sections}
+      contactHeading="Need a privacy or data request?"
+      contactBody="Contact REEBS if you want access to your data, need a correction, or want us to stop marketing messages."
+    />
   );
-};
+}
 
 export default PrivacyPolicy;

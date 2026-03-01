@@ -12,7 +12,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
-import "./admin.css";
+import "../styles/admin.css";
 
 const COMPANY = {
   name: "REEBS Party Themes",

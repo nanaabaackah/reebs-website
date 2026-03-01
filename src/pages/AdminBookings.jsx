@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./admin.css";
+import "../styles/admin.css";
 import { AppIcon } from "/src/components/Icon";
 import {
   faPlus,

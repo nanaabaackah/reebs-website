@@ -1,0 +1,378 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary "Portal navigation" [ref=e4]:
+    - generic [ref=e6]: Reebs ERP
+    - button "Open user menu" [ref=e8] [cursor=pointer]:
+      - generic [ref=e9] [cursor=pointer]: AU
+      - generic [ref=e10] [cursor=pointer]:
+        - generic [ref=e11] [cursor=pointer]: Admin User
+        - generic [ref=e12] [cursor=pointer]: admin@reebs.test
+      - img [ref=e13] [cursor=pointer]
+    - button "Toggle navigation" [ref=e16] [cursor=pointer]:
+      - img [ref=e17] [cursor=pointer]
+      - generic [ref=e19] [cursor=pointer]: Collapse
+    - generic [ref=e20]:
+      - button "Toggle notifications" [expanded] [ref=e21] [cursor=pointer]:
+        - generic [ref=e22] [cursor=pointer]:
+          - img [ref=e23] [cursor=pointer]
+          - generic [ref=e27] [cursor=pointer]: Notifications
+        - generic [ref=e28] [cursor=pointer]: "0"
+        - img [ref=e29] [cursor=pointer]
+      - paragraph [ref=e32]: No recent activity.
+    - navigation "Portal apps" [ref=e33]:
+      - list [ref=e34]:
+        - listitem [ref=e35]:
+          - link "Dashboard" [ref=e36] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e37] [cursor=pointer]
+            - generic [ref=e39] [cursor=pointer]: Dashboard
+        - listitem [ref=e40]:
+          - 'link "Website: Open the public website" [ref=e41] [cursor=pointer]':
+            - /url: https://reebspartythemes.com
+            - img [ref=e42] [cursor=pointer]
+            - generic [ref=e46] [cursor=pointer]: Website
+        - listitem [ref=e47]:
+          - link "Inventory" [ref=e48] [cursor=pointer]:
+            - /url: /admin/inventory
+            - img [ref=e49] [cursor=pointer]
+            - generic [ref=e53] [cursor=pointer]: Inventory
+        - listitem [ref=e54]:
+          - link "CRM" [ref=e55] [cursor=pointer]:
+            - /url: /admin/crm
+            - img [ref=e56] [cursor=pointer]
+            - generic [ref=e58] [cursor=pointer]: CRM
+        - listitem [ref=e59]:
+          - link "Orders" [ref=e60] [cursor=pointer]:
+            - /url: /admin/orders
+            - img [ref=e61] [cursor=pointer]
+            - generic [ref=e64] [cursor=pointer]: Orders
+        - listitem [ref=e65]:
+          - link "Bookings" [ref=e66] [cursor=pointer]:
+            - /url: /admin/bookings
+            - img [ref=e67] [cursor=pointer]
+            - generic [ref=e70] [cursor=pointer]: Bookings
+        - listitem [ref=e71]:
+          - link "Scheduling" [ref=e72] [cursor=pointer]:
+            - /url: /admin/schedule
+            - img [ref=e73] [cursor=pointer]
+            - generic [ref=e78] [cursor=pointer]: Scheduling
+        - listitem [ref=e79]:
+          - link "Accounting" [ref=e80] [cursor=pointer]:
+            - /url: /admin/accounting
+            - img [ref=e81] [cursor=pointer]
+            - generic [ref=e83] [cursor=pointer]: Accounting
+        - listitem [ref=e84]:
+          - link "Invoicing" [ref=e85] [cursor=pointer]:
+            - /url: /admin/invoicing
+            - img [ref=e86] [cursor=pointer]
+            - generic [ref=e90] [cursor=pointer]: Invoicing
+        - listitem [ref=e91]:
+          - link "Directory" [ref=e92] [cursor=pointer]:
+            - /url: /admin/directory
+            - img [ref=e93] [cursor=pointer]
+            - generic [ref=e95] [cursor=pointer]: Directory
+        - listitem [ref=e96]:
+          - link "Expenses" [ref=e97] [cursor=pointer]:
+            - /url: /admin/expenses
+            - img [ref=e98] [cursor=pointer]
+            - generic [ref=e102] [cursor=pointer]: Expenses
+        - listitem [ref=e103]:
+          - link "Human Resources" [ref=e104] [cursor=pointer]:
+            - /url: /admin/hr
+            - img [ref=e105] [cursor=pointer]
+            - generic [ref=e107] [cursor=pointer]: Human Resources
+        - listitem [ref=e108]:
+          - link "Vendors" [ref=e109] [cursor=pointer]:
+            - /url: /admin/vendors
+            - img [ref=e110] [cursor=pointer]
+            - generic [ref=e114] [cursor=pointer]: Vendors
+        - listitem [ref=e115]:
+          - link "Maintenance" [ref=e116] [cursor=pointer]:
+            - /url: /admin/maintenance
+            - img [ref=e117] [cursor=pointer]
+            - generic [ref=e120] [cursor=pointer]: Maintenance
+        - listitem [ref=e121]:
+          - link "Delivery" [ref=e122] [cursor=pointer]:
+            - /url: /admin/delivery
+            - img [ref=e123] [cursor=pointer]
+            - generic [ref=e127] [cursor=pointer]: Delivery
+        - listitem [ref=e128]:
+          - link "Documents" [ref=e129] [cursor=pointer]:
+            - /url: /admin/documents
+            - img [ref=e130] [cursor=pointer]
+            - generic [ref=e133] [cursor=pointer]: Documents
+        - listitem [ref=e134]:
+          - link "Timesheets" [ref=e135] [cursor=pointer]:
+            - /url: /admin/timesheets
+            - img [ref=e136] [cursor=pointer]
+            - generic [ref=e139] [cursor=pointer]: Timesheets
+        - listitem [ref=e140]:
+          - link "Users" [ref=e141] [cursor=pointer]:
+            - /url: /admin/roles
+            - img [ref=e142] [cursor=pointer]
+            - generic [ref=e144] [cursor=pointer]: Users
+        - listitem [ref=e145]:
+          - link "Marketing" [ref=e146] [cursor=pointer]:
+            - /url: /admin/marketing
+            - img [ref=e147] [cursor=pointer]
+            - generic [ref=e151] [cursor=pointer]: Marketing
+        - listitem [ref=e152]:
+          - link "Settings" [ref=e153] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e154] [cursor=pointer]
+            - generic [ref=e156] [cursor=pointer]: Settings
+        - listitem [ref=e157]:
+          - link "Advanced" [ref=e158] [cursor=pointer]:
+            - /url: /admin/advanced
+            - img [ref=e159] [cursor=pointer]
+            - generic [ref=e163] [cursor=pointer]: Advanced
+  - generic [ref=e165]:
+    - banner [ref=e166]:
+      - generic [ref=e167]:
+        - paragraph [ref=e168]: REEBS ERP
+        - heading "Control Hub" [level=1] [ref=e169]
+        - paragraph [ref=e170]: Simple daily flow for store staff.
+      - generic [ref=e171]:
+        - generic [ref=e172]: Online
+        - button "Sync" [ref=e173] [cursor=pointer]:
+          - img [ref=e174] [cursor=pointer]
+          - text: Sync
+        - button "Sign out" [ref=e176] [cursor=pointer]:
+          - img [ref=e177] [cursor=pointer]
+          - text: Sign out
+    - generic [ref=e179]:
+      - generic [ref=e180]:
+        - strong [ref=e181]: Admin User
+        - paragraph [ref=e182]: System admin
+      - generic [ref=e183]:
+        - generic [ref=e184]: 0 pending
+        - button "Refresh stock" [ref=e185] [cursor=pointer]
+    - generic [ref=e186]:
+      - generic [ref=e187]:
+        - article [ref=e188]:
+          - paragraph [ref=e189]: Items
+          - strong [ref=e190]: "6"
+          - generic [ref=e191]: Tracked products
+        - article [ref=e192]:
+          - paragraph [ref=e193]: Low stock
+          - strong [ref=e194]: "5"
+          - generic [ref=e195]: Needs action
+        - article [ref=e196]:
+          - paragraph [ref=e197]: Queue
+          - strong [ref=e198]: "0"
+          - generic [ref=e199]: 0 failed
+        - article [ref=e200]:
+          - paragraph [ref=e201]: Status
+          - strong [ref=e202]: Online
+          - generic [ref=e203]: Ready
+      - generic [ref=e204]:
+        - generic [ref=e205]:
+          - heading "Business KPI Dashboard" [level=2] [ref=e206]
+          - button "Refresh KPI" [ref=e207] [cursor=pointer]:
+            - img [ref=e208] [cursor=pointer]
+            - text: Refresh KPI
+        - generic [ref=e210]:
+          - article [ref=e211]:
+            - paragraph [ref=e212]: Revenue
+            - strong [ref=e213]: GH₵0.00
+            - generic [ref=e214]: Retail 0% • Rental 0%
+          - article [ref=e215]:
+            - paragraph [ref=e216]: Net after expenses
+            - strong [ref=e217]: GH₵0.00
+            - generic [ref=e218]: 0% margin
+          - article [ref=e220]:
+            - paragraph [ref=e221]: Inventory value
+            - strong [ref=e222]: GH₵0.00
+            - generic [ref=e223]: 0% low-stock risk
+          - article [ref=e226]:
+            - paragraph [ref=e227]: Locked-in next quarter
+            - strong [ref=e228]: GH₵0.00
+            - generic [ref=e229]: Next quarter
+        - generic [ref=e231]:
+          - article [ref=e232]:
+            - generic [ref=e233]:
+              - heading "Revenue mix" [level=3] [ref=e234]
+              - generic [ref=e235]: Retail, rental, expenses
+            - generic [ref=e236]:
+              - generic [ref=e237]:
+                - img "Revenue composition" [ref=e238]
+                - generic [ref=e243]:
+                  - strong [ref=e244]: GH₵0.00
+                  - generic [ref=e245]: Total revenue
+              - list [ref=e246]:
+                - listitem [ref=e247]:
+                  - generic [ref=e249]: Retail
+                  - emphasis [ref=e250]: 0%
+                - listitem [ref=e251]:
+                  - generic [ref=e253]: Rental
+                  - emphasis [ref=e254]: 0%
+                - listitem [ref=e255]:
+                  - generic [ref=e257]: Expenses
+                  - emphasis [ref=e258]: 0%
+          - article [ref=e259]:
+            - generic [ref=e260]:
+              - heading "Operational load" [level=3] [ref=e261]
+              - generic [ref=e262]: Key work queues right now
+            - list [ref=e263]:
+              - listitem [ref=e264]:
+                - generic [ref=e265]:
+                  - generic [ref=e266]: Orders
+                  - strong [ref=e267]: "0"
+              - listitem [ref=e269]:
+                - generic [ref=e270]:
+                  - generic [ref=e271]: Bookings
+                  - strong [ref=e272]: "0"
+              - listitem [ref=e274]:
+                - generic [ref=e275]:
+                  - generic [ref=e276]: Low stock
+                  - strong [ref=e277]: "0"
+              - listitem [ref=e279]:
+                - generic [ref=e280]:
+                  - generic [ref=e281]: Approvals
+                  - strong [ref=e282]: "0"
+              - listitem [ref=e284]:
+                - generic [ref=e285]:
+                  - generic [ref=e286]: Queue pending
+                  - strong [ref=e287]: "0"
+        - generic [ref=e289]:
+          - article [ref=e290]:
+            - paragraph [ref=e291]: Sales
+            - strong [ref=e292]: "0"
+            - generic [ref=e293]: Orders placed
+          - article [ref=e294]:
+            - paragraph [ref=e295]: Units sold
+            - strong [ref=e296]: "0"
+            - generic [ref=e297]: Items shipped
+          - article [ref=e298]:
+            - paragraph [ref=e299]: Bookings
+            - strong [ref=e300]: "0"
+            - generic [ref=e301]: GH₵0.00
+          - article [ref=e302]:
+            - paragraph [ref=e303]: Operating expenses
+            - strong [ref=e304]: GH₵0.00
+            - generic [ref=e305]: Last 30 days
+          - article [ref=e306]:
+            - paragraph [ref=e307]: Maintenance requests
+            - strong [ref=e308]: "0"
+            - generic [ref=e309]: GH₵0.00
+          - article [ref=e310]:
+            - paragraph [ref=e311]: Customers
+            - strong [ref=e312]: "0"
+            - generic [ref=e313]: CRM records
+          - article [ref=e314]:
+            - paragraph [ref=e315]: Vendors
+            - strong [ref=e316]: "0"
+            - generic [ref=e317]: Suppliers listed
+          - article [ref=e318]:
+            - paragraph [ref=e319]: Avg lead time
+            - strong [ref=e320]: —
+            - generic [ref=e321]: 0 vendors tracked
+          - article [ref=e323]:
+            - paragraph [ref=e324]: Low stock items
+            - strong [ref=e325]: "0"
+            - generic [ref=e326]: All above reorder level
+          - article [ref=e327]:
+            - paragraph [ref=e328]: Cash flow projection
+            - strong [ref=e329]: GH₵0.00
+            - generic [ref=e330]: Confirmed bookings for Next quarter
+          - article [ref=e331]:
+            - paragraph [ref=e332]: Inventory conflicts
+            - strong [ref=e333]: "0"
+            - generic [ref=e334]: No conflicts
+          - article [ref=e335]:
+            - paragraph [ref=e336]: Retail revenue split
+            - strong [ref=e337]: 0%
+            - generic [ref=e338]: GH₵0.00
+          - article [ref=e339]:
+            - paragraph [ref=e340]: Rental revenue split
+            - strong [ref=e341]: 0%
+            - generic [ref=e342]: GH₵0.00
+      - generic [ref=e343]:
+        - heading "KPI Detail" [level=2] [ref=e345]
+        - generic [ref=e346]:
+          - article [ref=e347]:
+            - paragraph [ref=e348]: Popular products
+            - paragraph [ref=e349]: No product data yet.
+          - article [ref=e350]:
+            - paragraph [ref=e351]: Top booked rental
+            - paragraph [ref=e352]: No recent rental bookings.
+          - article [ref=e353]:
+            - paragraph [ref=e354]: Stock velocity
+            - paragraph [ref=e355]: No stock movement data.
+          - article [ref=e356]:
+            - paragraph [ref=e357]: Conflict summary
+            - paragraph [ref=e358]: No inventory conflicts detected.
+      - generic [ref=e359]:
+        - generic [ref=e360]:
+          - heading "Approvals queue" [level=2] [ref=e361]
+          - generic [ref=e362]: 0 waiting
+        - paragraph [ref=e363]: No approvals waiting.
+      - generic [ref=e364]:
+        - generic [ref=e365]:
+          - heading "Quick Stock" [level=2] [ref=e366]
+          - button "Open stock" [ref=e367] [cursor=pointer]
+        - generic [ref=e368]:
+          - article [ref=e369]:
+            - generic [ref=e370]:
+              - heading "Rainbow Balloon Set" [level=3] [ref=e371]
+              - paragraph [ref=e372]: Qty 4
+            - generic [ref=e373]:
+              - button "Reduce stock for Rainbow Balloon Set" [ref=e374] [cursor=pointer]:
+                - img [ref=e375] [cursor=pointer]
+              - button "Increase stock for Rainbow Balloon Set" [ref=e376] [cursor=pointer]:
+                - img [ref=e377] [cursor=pointer]
+          - article [ref=e379]:
+            - generic [ref=e380]:
+              - heading "Kids Headphones" [level=3] [ref=e381]
+              - paragraph [ref=e382]: Qty 3
+            - generic [ref=e383]:
+              - button "Reduce stock for Kids Headphones" [ref=e384] [cursor=pointer]:
+                - img [ref=e385] [cursor=pointer]
+              - button "Increase stock for Kids Headphones" [ref=e386] [cursor=pointer]:
+                - img [ref=e387] [cursor=pointer]
+          - article [ref=e389]:
+            - generic [ref=e390]:
+              - heading "Mini Bouncy Castle" [level=3] [ref=e391]
+              - paragraph [ref=e392]: Qty 2
+            - generic [ref=e393]:
+              - button "Reduce stock for Mini Bouncy Castle" [ref=e394] [cursor=pointer]:
+                - img [ref=e395] [cursor=pointer]
+              - button "Increase stock for Mini Bouncy Castle" [ref=e396] [cursor=pointer]:
+                - img [ref=e397] [cursor=pointer]
+          - article [ref=e399]:
+            - generic [ref=e400]:
+              - heading "Cotton Candy Machine" [level=3] [ref=e401]
+              - paragraph [ref=e402]: Qty 3
+            - generic [ref=e403]:
+              - button "Reduce stock for Cotton Candy Machine" [ref=e404] [cursor=pointer]:
+                - img [ref=e405] [cursor=pointer]
+              - button "Increase stock for Cotton Candy Machine" [ref=e406] [cursor=pointer]:
+                - img [ref=e407] [cursor=pointer]
+          - article [ref=e409]:
+            - generic [ref=e410]:
+              - heading "Trampoline" [level=3] [ref=e411]
+              - paragraph [ref=e412]: Qty 1
+            - generic [ref=e413]:
+              - button "Reduce stock for Trampoline" [ref=e414] [cursor=pointer]:
+                - img [ref=e415] [cursor=pointer]
+              - button "Increase stock for Trampoline" [ref=e416] [cursor=pointer]:
+                - img [ref=e417] [cursor=pointer]
+    - navigation [ref=e419]:
+      - button "Home" [ref=e420] [cursor=pointer]:
+        - img [ref=e421] [cursor=pointer]
+        - generic [ref=e423] [cursor=pointer]: Home
+      - button "Stock" [ref=e424] [cursor=pointer]:
+        - img [ref=e425] [cursor=pointer]
+        - generic [ref=e429] [cursor=pointer]: Stock
+      - button "Buy" [ref=e430] [cursor=pointer]:
+        - img [ref=e431] [cursor=pointer]
+        - generic [ref=e434] [cursor=pointer]: Buy
+      - button "Sync" [ref=e435] [cursor=pointer]:
+        - img [ref=e436] [cursor=pointer]
+        - generic [ref=e440] [cursor=pointer]: Sync
+      - button "Admin" [ref=e441] [cursor=pointer]:
+        - img [ref=e442] [cursor=pointer]
+        - generic [ref=e445] [cursor=pointer]: Admin
+```

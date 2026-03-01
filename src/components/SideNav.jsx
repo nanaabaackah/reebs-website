@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-function SideNav({ items, activeId, label = "Page sections", className = "" }) {
+function SideNav({ items, activeId, label = "Page sections", className = "", onItemClick }) {
   if (!items || !items.length) return null;
 
   return (
@@ -15,6 +15,11 @@ function SideNav({ items, activeId, label = "Page sections", className = "" }) {
               href={`#${item.id}`}
               aria-current={isActive ? "true" : undefined}
               className={isActive ? "is-active" : undefined}
+              onClick={(event) => {
+                if (!onItemClick) return;
+                event.preventDefault();
+                onItemClick(item.id);
+              }}
             >
               {item.label}
             </a>
@@ -36,6 +41,7 @@ SideNav.propTypes = {
   activeId: PropTypes.string,
   label: PropTypes.string,
   className: PropTypes.string,
+  onItemClick: PropTypes.func,
 };
 
 export default SideNav;

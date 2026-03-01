@@ -1,0 +1,266 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - banner:
+    - navigation "Main navigation" [ref=e5]:
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Home" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Shop" [ref=e11] [cursor=pointer]:
+            - /url: /Shop
+        - listitem [ref=e12]:
+          - link "Rentals" [ref=e13] [cursor=pointer]:
+            - /url: /Rentals
+        - listitem [ref=e14]:
+          - link "Contact" [ref=e15] [cursor=pointer]:
+            - /url: /Contact
+      - link "REEBS home" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img "REEBS" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - link "Cart" [ref=e20] [cursor=pointer]:
+          - /url: /cart
+          - img [ref=e21] [cursor=pointer]
+          - generic [ref=e23] [cursor=pointer]: Cart
+        - link "Sign in" [ref=e24] [cursor=pointer]:
+          - /url: /login
+          - img [ref=e25] [cursor=pointer]
+          - generic [ref=e28] [cursor=pointer]: Sign in
+        - link "Book your party" [ref=e29] [cursor=pointer]:
+          - /url: /book
+          - generic [ref=e30] [cursor=pointer]: Book your party
+          - generic [ref=e31] [cursor=pointer]: →
+  - generic [ref=e32]:
+    - link "Skip to main content" [ref=e33] [cursor=pointer]:
+      - /url: "#main"
+    - main [ref=e34]:
+      - region "Contact REEBS" [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - paragraph [ref=e38]: Let's plan your party
+            - heading "Contact REEBS" [level=1] [ref=e39]
+            - paragraph [ref=e40]: We’ll help with rentals, decor, or a full setup plan. Reach out and we’ll get you a clear game plan fast.
+            - generic "Quick highlights" [ref=e41]:
+              - generic [ref=e42]: Same-day delivery options
+              - generic [ref=e43]: Custom themes
+              - generic [ref=e44]: Friendly, fast replies
+            - group "Ways to reach us" [ref=e45]:
+              - link "Call us" [ref=e46] [cursor=pointer]:
+                - /url: tel:+233244238419
+                - img [ref=e47] [cursor=pointer]
+                - text: Call us
+              - link "WhatsApp" [ref=e49] [cursor=pointer]:
+                - /url: https://wa.me/233244238419
+                - img [ref=e50] [cursor=pointer]
+                - text: WhatsApp
+              - link "Plan my setup" [ref=e53] [cursor=pointer]:
+                - /url: /rentals
+            - generic [ref=e54]:
+              - generic [ref=e55]:
+                - img [ref=e56]
+                - text: 8:30am – 7pm (Mon–Sat)
+              - generic [ref=e59]:
+                - img [ref=e60]
+                - text: Sakumono Broadway, Tema
+          - generic "Studio details" [ref=e63]:
+            - generic [ref=e64]:
+              - img [ref=e65]
+              - generic [ref=e68]:
+                - paragraph [ref=e69]: Visit or pickup
+                - heading "Swing by our store" [level=2] [ref=e70]
+            - paragraph [ref=e71]: Stop by in person, grab balloons, or chat through ideas with our team.
+            - generic [ref=e72]:
+              - link "Open in Maps" [ref=e73] [cursor=pointer]:
+                - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+              - link "info@reebspartythemes.com" [ref=e74] [cursor=pointer]:
+                - /url: mailto:info@reebspartythemes.com
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e77]: Weekdays
+                - strong [ref=e78]: 8:30am – 7pm
+              - generic [ref=e79]:
+                - generic [ref=e80]: Saturday
+                - strong [ref=e81]: 8:30am – 7pm
+              - paragraph [ref=e82]: We alternate some Mondays—call ahead to confirm. Holiday hours may vary.
+      - region "Stay connected" [ref=e83]:
+        - article [ref=e84]:
+          - generic [ref=e85]:
+            - img [ref=e86]
+            - heading "Talk to a human" [level=3] [ref=e88]
+          - paragraph [ref=e89]: Need quick answers on availability or pricing? Call or text and we’ll confirm details right away.
+          - generic [ref=e90]:
+            - link "+233 24 423 8419" [ref=e91] [cursor=pointer]:
+              - /url: tel:+233244238419
+            - link "Message on WhatsApp" [ref=e92] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+        - article [ref=e93]:
+          - generic [ref=e94]:
+            - img [ref=e95]
+            - heading "Send a brief" [level=3] [ref=e98]
+          - paragraph [ref=e99]: Share your theme, date, guest count, and budget. We’ll reply within one business day with options.
+          - generic [ref=e100]:
+            - link "info@reebspartythemes.com" [ref=e101] [cursor=pointer]:
+              - /url: mailto:info@reebspartythemes.com
+            - link "View FAQs" [ref=e102] [cursor=pointer]:
+              - /url: /faq
+        - article [ref=e103]:
+          - generic [ref=e104]:
+            - img [ref=e105]
+            - heading "Follow along" [level=3] [ref=e108]
+          - paragraph [ref=e109]: See new setups, balloons, and party inspo from events across Ghana.
+          - generic [ref=e110]:
+            - link "Facebook" [ref=e111] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e112] [cursor=pointer]
+            - link "Instagram" [ref=e115] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e116] [cursor=pointer]
+            - link "TikTok" [ref=e119] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e120] [cursor=pointer]
+      - region "Send a message or find us" [ref=e123]:
+        - article [ref=e124]:
+          - generic [ref=e125]:
+            - paragraph [ref=e126]: Tell us about your event
+            - heading "Send a message" [level=3] [ref=e127]
+          - paragraph [ref=e128]: We’ll confirm availability, pricing, and next steps within one business day.
+          - generic [ref=e129]:
+            - paragraph [ref=e130]: We reply within one business day with availability and options.
+            - generic [ref=e131]:
+              - generic [ref=e132]:
+                - generic [ref=e133]: Name
+                - textbox "Name" [ref=e134]
+              - generic [ref=e135]:
+                - generic [ref=e136]: Email
+                - textbox "Email" [ref=e137]
+              - generic [ref=e138]:
+                - generic [ref=e139]: Phone number
+                - textbox "Phone number" [ref=e140]
+                - generic [ref=e141]: WhatsApp or mobile preferred.
+              - generic [ref=e142]:
+                - generic [ref=e143]: What do you need?
+                - combobox "What do you need?" [ref=e144]:
+                  - option "Select a service" [disabled] [selected]
+                  - option "Party rentals"
+                  - option "Full setup / styling"
+                  - option "Balloons & backdrops"
+                  - option "Party supplies box"
+                  - option "Other"
+              - generic [ref=e145]:
+                - generic [ref=e146]: Event date
+                - textbox "Event date" [ref=e147]
+              - generic [ref=e148]:
+                - generic [ref=e149]: Location / venue
+                - textbox "Location / venue" [ref=e150]
+              - generic [ref=e151]:
+                - generic [ref=e152]: Tell us more
+                - textbox "Tell us more" [ref=e153]
+            - generic [ref=e154]:
+              - generic [ref=e155]: Need it fast? Call or WhatsApp for same-day options.
+              - button "Send message" [ref=e156] [cursor=pointer]
+        - article [ref=e157]:
+          - generic [ref=e158]:
+            - paragraph [ref=e159]: Find us
+            - heading "Map & directions" [level=3] [ref=e160]
+          - generic [ref=e164]:
+            - button "Focus shop" [ref=e165] [cursor=pointer]
+            - button "Use my location" [ref=e166] [cursor=pointer]
+          - paragraph [ref=e168]: Use “Get Directions” on the map for a quick route from your location.
+  - contentinfo "Site footer" [ref=e169]:
+    - heading "Site footer" [level=2] [ref=e170]
+    - region "Plan your party with REEBS" [ref=e171]:
+      - generic [ref=e172]:
+        - paragraph [ref=e173]: Plan your next celebration
+        - heading "Bring your party vision to life with REEBS." [level=3] [ref=e174]
+        - generic [ref=e175]:
+          - generic [ref=e176]: Email address
+          - textbox "Email address" [ref=e177]
+          - button "Book your party" [ref=e178] [cursor=pointer]:
+            - generic [ref=e179] [cursor=pointer]: Book your party
+            - img [ref=e180] [cursor=pointer]
+    - generic [ref=e182]:
+      - link "REEBS Logo" [ref=e184] [cursor=pointer]:
+        - /url: /
+        - img "REEBS Logo" [ref=e185] [cursor=pointer]
+      - generic [ref=e186]:
+        - generic [ref=e187]:
+          - navigation "Main links" [ref=e188]:
+            - heading "Menu" [level=3] [ref=e189]
+            - link "Home" [ref=e190] [cursor=pointer]:
+              - /url: /
+            - link "About" [ref=e191] [cursor=pointer]:
+              - /url: /about
+            - link "Rentals" [ref=e192] [cursor=pointer]:
+              - /url: /rentals
+            - link "Shop" [ref=e193] [cursor=pointer]:
+              - /url: /shop
+            - link "Gallery" [ref=e194] [cursor=pointer]:
+              - /url: /gallery
+            - link "Book a party" [ref=e195] [cursor=pointer]:
+              - /url: /book
+            - link "Contact" [ref=e196] [cursor=pointer]:
+              - /url: /contact
+          - navigation "Account links" [ref=e197]:
+            - heading "Accounts" [level=3] [ref=e198]
+            - link "Staff login" [ref=e199] [cursor=pointer]:
+              - /url: /login
+            - link "Customer login" [ref=e200] [cursor=pointer]:
+              - /url: /customer-login
+            - link "Booking portal" [ref=e201] [cursor=pointer]:
+              - /url: /book
+            - link "Checkout" [ref=e202] [cursor=pointer]:
+              - /url: /checkout
+          - navigation "Company links" [ref=e203]:
+            - heading "Company" [level=3] [ref=e204]
+            - link "FAQ" [ref=e205] [cursor=pointer]:
+              - /url: /faq
+            - link "Refund policy" [ref=e206] [cursor=pointer]:
+              - /url: /refund-policy
+            - link "Delivery policy" [ref=e207] [cursor=pointer]:
+              - /url: /delivery-policy
+            - link "Privacy policy" [ref=e208] [cursor=pointer]:
+              - /url: /privacy-policy
+            - link "Terms of service" [ref=e209] [cursor=pointer]:
+              - /url: /terms-of-service
+          - generic "Social links" [ref=e210]:
+            - heading "Social" [level=3] [ref=e211]
+            - link "Facebook" [ref=e212] [cursor=pointer]:
+              - /url: https://www.facebook.com/reebspartythemes
+              - img [ref=e213] [cursor=pointer]
+              - generic [ref=e215] [cursor=pointer]: Facebook
+            - link "Instagram" [ref=e216] [cursor=pointer]:
+              - /url: https://www.instagram.com/reebspartythemes_/
+              - img [ref=e217] [cursor=pointer]
+              - generic [ref=e220] [cursor=pointer]: Instagram
+            - link "TikTok" [ref=e221] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@reebspartythemes_
+              - img [ref=e222] [cursor=pointer]
+              - generic [ref=e224] [cursor=pointer]: TikTok
+            - link "WhatsApp" [ref=e225] [cursor=pointer]:
+              - /url: https://wa.me/233244238419
+              - img [ref=e226] [cursor=pointer]
+              - generic [ref=e228] [cursor=pointer]: WhatsApp
+        - generic [ref=e229]:
+          - link "Sakumono Broadway, Tema, Ghana" [ref=e230] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/ykfi2iVEBfEneTx16
+            - img [ref=e231] [cursor=pointer]
+            - generic [ref=e234] [cursor=pointer]: Sakumono Broadway, Tema, Ghana
+          - link "+233 24 423 8419" [ref=e235] [cursor=pointer]:
+            - /url: tel:+233244238419
+            - img [ref=e236] [cursor=pointer]
+            - generic [ref=e238] [cursor=pointer]: +233 24 423 8419
+          - link "info@reebspartythemes.com" [ref=e239] [cursor=pointer]:
+            - /url: mailto:info@reebspartythemes.com
+            - img [ref=e240] [cursor=pointer]
+            - generic [ref=e243] [cursor=pointer]: info@reebspartythemes.com
+          - paragraph [ref=e244]: Open Monday to Saturday | 8:30am - 7:00pm
+    - generic [ref=e245]:
+      - generic [ref=e246]: © 2026 REEBS Party Themes. All rights reserved.
+      - generic [ref=e247]: Made to matter. Made By Nana.
+      - generic [ref=e248]:
+        - text: Powered By Faako
+        - img "Faako Logo" [ref=e249]
+```

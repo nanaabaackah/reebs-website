@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import "./admin.css";
+import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import roleColors from "../utils/roleColors";
 
@@ -314,6 +314,7 @@ function AdminHR() {
                     <option value="Admin">Admin</option>
                     <option value="Manager">Manager</option>
                     <option value="Staff">Staff</option>
+                    <option value="Water">Water</option>
                     <option value="Warehouse">Warehouse</option>
                     <option value="Driver">Driver</option>
                     <option value="Sales">Sales</option>

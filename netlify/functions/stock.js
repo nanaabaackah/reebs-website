@@ -94,6 +94,13 @@ export async function handler(event) {
         body: JSON.stringify({ error: "Unauthorized" }),
       };
     }
+    const role = String(authUser.role || "").trim().toLowerCase();
+    if (role !== "admin" && role !== "manager") {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: "Only admins and managers can adjust stock directly." }),
+      };
+    }
     const organizationId = authUser.organizationId;
     const actor = {
       userId: authUser.id,
