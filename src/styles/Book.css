@@ -70,12 +70,15 @@
   color: var(--white);
 }
 
+.booking-shell .booking-rentals{
+  border: 1px solid rgba(var(--ink-rgb), 1);
+}
+
 .booking-shell .booking-hero-card,
 .booking-shell .booking-pills span,
 .booking-shell .booking-meta > div,
 .booking-shell .booking-hero-stats > div,
 .booking-shell .booking-form-card,
-.booking-shell .booking-rentals,
 .booking-shell .booking-selected,
 .booking-shell .booking-bundle-option,
 .booking-shell .booking-rental-card,
@@ -166,5 +169,53 @@
 
   .booking-shell .booking-meta {
     justify-items: center;
+  }
+
+  .booking-shell .booking-rentals {
+    max-height: none;
+  }
+
+  .booking-shell .booking-rental-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .booking-shell .booking-rental-card {
+    gap: 0.4rem;
+    padding: 0.5rem;
+    border-radius: 14px;
+  }
+
+  .booking-shell .booking-rental-media {
+    border-radius: 12px;
+  }
+
+  .booking-shell .booking-rental-media img {
+    padding: 0.32rem;
+  }
+
+  .booking-shell .booking-rental-head {
+    gap: 0.28rem;
+  }
+
+  .booking-shell .booking-rental-head h4 {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.15;
+  }
+
+  .booking-shell .booking-rental-card .price,
+  .booking-shell .booking-rental-card .rent-meta {
+    font-size: 0.72rem;
+  }
+
+  .booking-shell .booking-rental-actions {
+    gap: 0.3rem;
+  }
+
+  .booking-shell .booking-rental-actions .hero-btn {
+    padding: 0.34rem 0.46rem;
+    font-size: 0.72rem;
+    border-radius: 10px;
   }
 }

@@ -3,15 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { AppIcon } from "/src/components/Icon";
 import {
   faArrowRightFromBracket,
-  faBoxesStacked,
   faCircleCheck,
   faCloudArrowUp,
-  faGear,
-  faHome,
   faMagnifyingGlass,
   faMinus,
   faPlus,
-  faReceipt,
   faRotateRight,
   faTrash,
 } from "/src/icons/iconSet";
@@ -25,6 +21,7 @@ import {
   saveInventorySnapshot,
   saveOfflineQueue,
 } from "../utils/offlineQueue";
+import { ADMIN_QUICK_ACTIONS } from "../utils/adminQuickActions";
 import "../styles/AdminWorkspace.css";
 import "../styles/admin.css";
 
@@ -101,32 +98,12 @@ const SECTION_CONFIG = {
   advanced: { title: "System Admin", subtitle: "Advanced monitoring and controls." },
 };
 
-const NAV_ITEMS = [
-  { id: "home", label: "Home", path: "/admin", icon: faHome },
-  { id: "inventory", label: "Stock", path: "/admin/inventory", icon: faBoxesStacked },
-  { id: "purchases", label: "Buy", path: "/admin/purchases", icon: faReceipt },
-  { id: "offline", label: "Sync", path: "/admin/offline", icon: faCloudArrowUp },
-];
-
-const SYSTEM_ADMIN_LINKS = [
-  { label: "Directory", path: "/admin/directory" },
-  { label: "Accounting", path: "/admin/accounting" },
-  { label: "Expenses", path: "/admin/expenses" },
-  { label: "Water", path: "/admin/water" },
-  { label: "Vendors", path: "/admin/vendors" },
-  { label: "Delivery", path: "/admin/delivery" },
-  { label: "Documents", path: "/admin/documents" },
-  { label: "Timesheets", path: "/admin/timesheets" },
-  { label: "Settings", path: "/admin/settings" },
-];
-
 function AdminWorkspace({ section = "home" }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const roleKey = normalizeRole(user?.role);
   const isSystemAdmin = roleKey === "admin";
   const isManager = roleKey === "manager";
-  const canAccessAdvanced = isSystemAdmin || isManager;
   const canViewHomeKpis = roleKey === "admin" || roleKey === "manager";
 
   const [inventory, setInventory] = useState([]);
@@ -964,14 +941,6 @@ function AdminWorkspace({ section = "home" }) {
     );
   };
 
-  const navItems = useMemo(() => {
-    const base = [...NAV_ITEMS];
-    if (canAccessAdvanced) {
-      base.push({ id: "advanced", label: "Admin", path: "/admin/advanced", icon: faGear });
-    }
-    return base;
-  }, [canAccessAdvanced]);
-
   const renderHome = () => (
     <section className="aw-section-grid">
       <div className="aw-home-summary-grid">
@@ -1712,7 +1681,7 @@ function AdminWorkspace({ section = "home" }) {
           <h2>Legacy Modules</h2>
         </div>
         <div className="aw-link-grid">
-          {SYSTEM_ADMIN_LINKS.map((item) => (
+          {ADMIN_QUICK_ACTIONS.map((item) => (
             <button
               key={item.path}
               type="button"
@@ -1815,25 +1784,6 @@ function AdminWorkspace({ section = "home" }) {
       {activeSection === "offline" && renderOffline()}
       {activeSection === "advanced" && renderAdvanced()}
 
-      <nav
-        className="aw-nav"
-        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
-      >
-        {navItems.map((item) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={`aw-nav-btn ${isActive ? "is-active" : ""}`}
-              onClick={() => navigate(item.path)}
-            >
-              <AppIcon icon={item.icon} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
     </div>
   );
 }

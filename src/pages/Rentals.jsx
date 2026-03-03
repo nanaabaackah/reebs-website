@@ -4,11 +4,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import '../styles/public.css';
 import '/src/styles/Rentals.css';
 import SideNav from '/src/components/SideNav';
+import AddToCartButton from "/src/components/AddToCartButton";
 import { useCart } from "/src/components/CartContext";
 import { AppIcon } from '/src/components/Icon';
 import { faMagnifyingGlass } from '/src/icons/iconSet';
 import SiteLoader from '/src/components/SiteLoader';
 import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
+import { getRentalCartItem } from '/src/utils/cartItems';
 
 const slugify = (value = "") =>
     value
@@ -203,7 +205,7 @@ const uniqueByKey = (items = []) => {
 
 function Rentals() {
     const [rentals, setRentals] = useState([]);
-    const { convertPrice, formatCurrency } = useCart();
+    const { convertPrice, formatCurrency, openCart } = useCart();
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("All");
     const [loading, setLoading] = useState(true);
@@ -558,6 +560,18 @@ function Rentals() {
                             <p className="hero-sub rentals-sub">
                                 Bounce houses, decor, concessions, and full setup help. We prep, deliver, and style so you can enjoy the celebration.
                             </p>
+                            <div className="rentals-hero-actions">
+                                <button
+                                    type="button"
+                                    className="hero-btn hero-btn-primary"
+                                    onClick={() => openCart()}
+                                >
+                                    View cart
+                                </button>
+                                <Link className="hero-btn hero-btn-ghost" to="/shop">
+                                    Browse shop
+                                </Link>
+                            </div>
                         </div>
                         {popularHeroRentals.length > 0 && (
                             <div className="rentals-popular-panels" role="list" aria-label="Most popular rentals">
@@ -664,9 +678,12 @@ function Rentals() {
                                             <h2>{category}</h2>
                                         </div>
                                         <div className='rent-grid'>
-                                            {items.map((item) => (
+                                            {items.map((item) => {
+                                                const cartItem = getRentalCartItem(item);
+
+                                                return (
                                                 <div
-                                                    key={item.id}
+                                                    key={item.productId || item.id || rentalPath(item)}
                                                     className={`rent-card ${getCategory(item) === "Indoor Games" ? "rent-card-indoor" : ""}`}
                                                     role="button"
                                                     tabIndex={0}
@@ -706,10 +723,20 @@ function Rentals() {
                                                                 <span>Age Range</span>
                                                                 <strong>{getRentalAgeRange(item)}</strong>
                                                             </p>
+                                                            {cartItem ? (
+                                                                <div
+                                                                    className="rent-card-actions"
+                                                                    onClick={(event) => event.stopPropagation()}
+                                                                    onKeyDown={(event) => event.stopPropagation()}
+                                                                >
+                                                                    <AddToCartButton item={cartItem} />
+                                                                </div>
+                                                            ) : null}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 ))}

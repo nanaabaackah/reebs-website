@@ -238,6 +238,7 @@ model Vendor {
   bankName     String?
   bankAccount  String?
   leadTimeDays Int?
+  suppliedItems String[] @default([])
   notes        String?
   products     Product[]
   createdAt    DateTime @default(now())
@@ -370,6 +371,12 @@ model WaterSale {
   quantity        Int
   saleChannel     String
   paymentMethod   String       @default("cash")
+  paymentStatus   String       @default("paid")
+  paymentReference String?
+  providerReference String?
+  discountType    String       @default("none")
+  discountValue   Int          @default(0)
+  discountAmount  Int          @default(0)
   unitPrice       Int
   totalAmount     Int
   customerId      Int?
@@ -377,6 +384,7 @@ model WaterSale {
   customerName    String?
   notes           String?
   date            DateTime
+  paidAt          DateTime?
   createdByUserId Int?
   createdByName   String?
   createdAt       DateTime     @default(now())

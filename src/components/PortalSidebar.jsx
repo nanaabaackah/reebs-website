@@ -263,7 +263,32 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
   useEffect(() => {
     setUserMenuOpen(false);
     setNotificationsOpen(true);
+    setOverlayOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (isMobile) return;
+    setOverlayOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobile || !overlayOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOverlayOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobile, overlayOpen]);
 
   useEffect(() => {
     if (!authReady || !isAuthenticated || isWaterUser) {

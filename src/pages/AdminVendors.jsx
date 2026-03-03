@@ -22,6 +22,7 @@ const emptyForm = {
   bankName: "",
   bankAccount: "",
   leadTimeDays: "",
+  suppliedItemsText: "",
   notes: "",
 };
 
@@ -43,6 +44,16 @@ const formatDate = (value) => {
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+const parseSuppliedItemsText = (value) =>
+  Array.from(
+    new Set(
+      String(value || "")
+        .split(/\r?\n|,/)
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    )
+  );
+
 const MOBILE_VIEW_QUERY = "(max-width: 720px)";
 
 const getIsMobileView = () =>
@@ -60,6 +71,7 @@ function AdminVendors() {
   const [form, setForm] = useState(emptyForm);
   const [selectedVendorId, setSelectedVendorId] = useState(null);
   const [isMobileView, setIsMobileView] = useState(getIsMobileView);
+  const [autoLinking, setAutoLinking] = useState(false);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -154,6 +166,11 @@ function AdminVendors() {
     return names.filter(Boolean);
   }, [selectedVendor]);
 
+  const vendorSuppliedItems = useMemo(() => {
+    const items = Array.isArray(selectedVendor?.suppliedItems) ? selectedVendor.suppliedItems : [];
+    return items.filter(Boolean);
+  }, [selectedVendor]);
+
   const openCreateForm = () => {
     if (isMobileView) return;
     setStatus("");
@@ -176,6 +193,7 @@ function AdminVendors() {
       bankName: vendor.bankName || "",
       bankAccount: vendor.bankAccount || "",
       leadTimeDays: vendor.leadTimeDays ?? "",
+      suppliedItemsText: Array.isArray(vendor.suppliedItems) ? vendor.suppliedItems.join("\n") : "",
       notes: vendor.notes || "",
     });
     setFormOpen(true);
@@ -195,6 +213,7 @@ function AdminVendors() {
 
     const payload = {
       ...form,
+      suppliedItems: parseSuppliedItemsText(form.suppliedItemsText),
       leadTimeDays:
         form.leadTimeDays === "" || form.leadTimeDays === null
           ? null
@@ -224,6 +243,42 @@ function AdminVendors() {
     }
   };
 
+  const handleAutoLink = async (vendorId = null) => {
+    setAutoLinking(true);
+    setError("");
+    setStatus("");
+    try {
+      const res = await fetch("/.netlify/functions/vendors", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "autolink-products",
+          vendorId: vendorId || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to auto-link products.");
+      }
+      const linkedCount = toNumber(data?.linkedCount);
+      const ambiguousCount = toNumber(data?.ambiguousCount);
+      const scopeLabel =
+        vendorId && selectedVendor?.name
+          ? ` for ${selectedVendor.name}`
+          : "";
+      const message = linkedCount
+        ? `Linked ${linkedCount} product${linkedCount === 1 ? "" : "s"}${scopeLabel}.${ambiguousCount ? ` ${ambiguousCount} item${ambiguousCount === 1 ? "" : "s"} still need manual review.` : ""}`
+        : data?.message || `No matching in-stock products were linked${scopeLabel}.`;
+      setStatus(message);
+      await fetchVendors();
+    } catch (err) {
+      console.error("Vendor auto-link failed", err);
+      setError(err.message || "Unable to auto-link products.");
+    } finally {
+      setAutoLinking(false);
+    }
+  };
+
   return (
     <div className="vendors-page">
       <div className="vendors-shell">
@@ -241,6 +296,14 @@ function AdminVendors() {
             <div className="vendors-actions">
               <button type="button" className="vendors-secondary" onClick={fetchVendors}>
                 <AppIcon icon={faRotateRight} /> Refresh
+              </button>
+              <button
+                type="button"
+                className="vendors-secondary"
+                onClick={() => handleAutoLink()}
+                disabled={autoLinking}
+              >
+                {autoLinking ? "Linking..." : "Auto-link stock"}
               </button>
               <button type="button" className="vendors-primary" onClick={openCreateForm}>
                 <AppIcon icon={faPlus} /> Add Vendor
@@ -291,9 +354,19 @@ function AdminVendors() {
                   <p className="vendors-muted">{filteredVendors.length} suppliers</p>
                 </div>
                 {!isMobileView && (
-                  <button type="button" className="vendors-secondary" onClick={openCreateForm}>
-                    <AppIcon icon={faPlus} /> New
-                  </button>
+                  <div className="vendors-actions">
+                    <button
+                      type="button"
+                      className="vendors-secondary"
+                      onClick={() => handleAutoLink()}
+                      disabled={autoLinking}
+                    >
+                      {autoLinking ? "Linking..." : "Auto-link"}
+                    </button>
+                    <button type="button" className="vendors-secondary" onClick={openCreateForm}>
+                      <AppIcon icon={faPlus} /> New
+                    </button>
+                  </div>
                 )}
               </div>
               <div className="vendors-list-items">
@@ -341,6 +414,16 @@ function AdminVendors() {
                   </div>
 
                   <div className="vendors-profile-actions">
+                    {!isMobileView && (
+                      <button
+                        type="button"
+                        className="vendors-secondary"
+                        onClick={() => handleAutoLink(selectedVendor.id)}
+                        disabled={autoLinking || !vendorSuppliedItems.length}
+                      >
+                        {autoLinking ? "Linking..." : "Link stock"}
+                      </button>
+                    )}
                     {selectedVendor.email && (
                       <a className="vendors-action" href={`mailto:${selectedVendor.email}`}>
                         <AppIcon icon={faEnvelope} /> Email
@@ -391,7 +474,22 @@ function AdminVendors() {
                   </div>
 
                   <div className="vendors-profile-items">
-                    <p className="vendors-label">Items supplied</p>
+                    <p className="vendors-label">Supplied item keywords</p>
+                    {vendorSuppliedItems.length ? (
+                      <div className="vendors-items-list">
+                        {vendorSuppliedItems.map((item) => (
+                          <span key={item} className="vendors-item-chip">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="vendors-muted">No supplied item keywords saved yet.</p>
+                    )}
+                  </div>
+
+                  <div className="vendors-profile-items">
+                    <p className="vendors-label">Linked stock items</p>
                     {vendorItems.length ? (
                       <div className="vendors-items-list">
                         {vendorItems.map((item) => {
@@ -516,6 +614,17 @@ function AdminVendors() {
                   min="0"
                   value={form.leadTimeDays}
                   onChange={(event) => setForm((prev) => ({ ...prev, leadTimeDays: event.target.value }))}
+                />
+              </label>
+              <label>
+                Supplied items
+                <textarea
+                  rows="4"
+                  value={form.suppliedItemsText}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, suppliedItemsText: event.target.value }))
+                  }
+                  placeholder="Gift bag&#10;Balloon pack&#10;Ribbon"
                 />
               </label>
               <label>

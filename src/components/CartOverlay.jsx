@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { AppIcon } from "/src/components/Icon";
 import { faMinus, faPlus, faShoppingCart, faTimes, faTrash } from "/src/icons/iconSet";
 import { useCart } from "./CartContext";
+import "../styles/components/CartOverlay.css";
 import {
   getCatalogItemBackgroundStyle,
   getCatalogItemImage,
@@ -12,6 +13,8 @@ const getCartItemKey = (item = {}) =>
   String(item.id ?? item.productId ?? item.slug ?? item.name ?? "").trim();
 
 function CartOverlay({ open, onClose }) {
+  const location = useLocation();
+  const previousPathRef = useRef(location.pathname);
   const {
     cart,
     cartOpen,
@@ -55,6 +58,13 @@ function CartOverlay({ open, onClose }) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [handleClose, isOpen]);
+
+  useEffect(() => {
+    if (location.pathname !== previousPathRef.current && isOpen) {
+      handleClose();
+    }
+    previousPathRef.current = location.pathname;
+  }, [handleClose, isOpen, location.pathname]);
 
   return (
     <div className={`cart-drawer ${isOpen ? "open" : ""}`} aria-hidden={!isOpen}>
@@ -193,7 +203,7 @@ function CartOverlay({ open, onClose }) {
                   <strong>{subtotalLabel}</strong>
                 </div>
               </div>
-              <p className="cart-note">Taxes and pickup timing confirmed at checkout.</p>
+              <p className="cart-note">Taxes, pickup, and delivery timing are confirmed at checkout.</p>
               <Link to="/cart" className="checkout-btn cart-primary-action" onClick={handleClose}>
                 Go to cart
               </Link>

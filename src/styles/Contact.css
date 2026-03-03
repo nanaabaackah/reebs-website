@@ -265,20 +265,59 @@
 }
 
 @media (max-width: 1040px) {
+  .contact-hero {
+    min-height: auto;
+  }
+
+  .contact-hero-grid {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .contact-hero-card {
+    padding-top: 0;
+    align-self: auto;
+  }
+
   .contact-panels {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
+  .contact-hero {
+    padding-top: clamp(6.2rem, 12vh, 7.8rem);
+  }
+
+  .contact-shell > section:not(.page-hero) {
+  padding: 2rem ;
+  }
+
   .contact-hero-copy {
     justify-items: center;
     text-align: center;
   }
 
+  .contact-hero-grid {
+    gap: 1rem;
+  }
+
   .contact-hero .contact-actions,
   .contact-hero .contact-meta {
     justify-content: center;
+  }
+
+  .contact-hero-card,
+  .contact-shell .contact-card {
+    width: 100%;
+  }
+
+  .contact-card-actions {
+    width: 100%;
+  }
+
+  .contact-card-actions .hero-btn {
+    width: 100%;
   }
 
   .contact-info-grid,
@@ -290,6 +329,5 @@
     grid-template-columns: 1fr;
   }
 }
-
 
 

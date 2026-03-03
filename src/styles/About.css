@@ -46,3 +46,55 @@
     color: var(--white);
 
 }
+
+@media (max-width: 1040px) {
+  .about-highlights,
+  .about-mto,
+  .about-mission,
+  .about-values,
+  .about-cta {
+    padding: clamp(1rem, 3vw, 1.5rem);
+  }
+}
+
+@media (max-width: 760px) {
+  .about-hero {
+    min-height: auto;
+    padding-top: clamp(6.2rem, 12vh, 7.8rem);
+  }
+
+  .about-hero-copy .about-lede {
+    max-width: 100%;
+  }
+
+  .about-hero-copy .about-tags {
+    justify-content: center;
+  }
+
+  .about-highlights,
+  .about-mto,
+  .about-mission,
+  .about-values,
+  .about-cta {
+    padding: 1rem;
+  }
+
+  .about-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .about-metrics h2 {
+    margin: 0 0 0.2rem;
+    text-align: center;
+  }
+
+  .about-mto {
+    gap: 0.85rem;
+  }
+
+  .r2-back-image img,
+  .about-photo img {
+    border-radius: 18px;
+  }
+}

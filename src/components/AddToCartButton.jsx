@@ -2,6 +2,7 @@ import React from "react";
 import { AppIcon } from "/src/components/Icon";
 import { faMinus, faPlus, faShoppingCart, faTrash } from "/src/icons/iconSet";
 import { useCart } from "/src/components/CartContext";
+import "/src/styles/components/AddToCartButton.css";
 
 const getCartItemKey = (entry = {}) =>
   String(entry.id ?? entry.productId ?? entry.slug ?? entry.name ?? "").trim();

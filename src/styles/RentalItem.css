@@ -105,6 +105,20 @@
   padding-inline: 1rem;
 }
 
+.rental-item-page .rental-cart-slot {
+  flex: 1 1 220px;
+}
+
+.rental-item-page .rental-cart-slot .shop-add-to-cart,
+.rental-item-page .rental-cart-slot .shop-cart-controls {
+  width: 100%;
+  min-height: 2.85rem;
+}
+
+.rental-item-page .rental-cart-slot .shop-cart-controls {
+  justify-content: space-between;
+}
+
 .rental-item-page .rental-item-bouncy,
 .rental-item-page .rental-detail-card {
   border: 1px solid rgba(var(--white-rgb), 0.5);

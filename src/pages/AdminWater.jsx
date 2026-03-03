@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import {
   faBoxesStacked,
@@ -18,6 +18,7 @@ const DEFAULT_RETAIL_PRICE = 2700;
 const DEFAULT_BULK_PRICE = 2600;
 const DEFAULT_COMPANY_PRICE = 2500;
 const DEFAULT_BULK_THRESHOLD = 10;
+const RESTOCK_QUICK_QUANTITIES = [5, 10, 20, 50];
 const SALE_QUICK_QUANTITIES = [1, 5, 10, 20];
 const ADJUSTMENT_QUICK_QUANTITIES = [1, 3, 5, 10];
 const EXPENSE_QUICK_AMOUNTS = [5, 10, 20, 50];
@@ -27,6 +28,11 @@ const SALE_PAYMENT_OPTIONS = [
   { value: "cash", label: "Cash" },
   { value: "momo", label: "MoMo" },
   { value: "credit", label: "Pay later" },
+];
+const SALE_DISCOUNT_OPTIONS = [
+  { value: "none", label: "No discount" },
+  { value: "amount", label: "Amount" },
+  { value: "percent", label: "%" },
 ];
 const EXPENSE_CATEGORY_OPTIONS = ["Transport", "Labour", "Promo", "Supplies"];
 const ADJUSTMENT_REASON_OPTIONS = {
@@ -59,6 +65,7 @@ const buildDefaultDashboard = () => ({
     netProfit: 0,
     cashCollected: 0,
     outstandingCredit: 0,
+    pendingMomo: 0,
     cashPosition: 0,
     inventoryValue: 0,
   },
@@ -124,6 +131,30 @@ const getSalePaymentLabel = (value) => {
   return "Cash";
 };
 
+const normalizeSaleDiscountType = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "amount") return "amount";
+  if (normalized === "percent" || normalized === "percentage") return "percent";
+  return "none";
+};
+
+const normalizeSalePaymentStatus = (value, paymentMethod = "cash") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "paid") return "paid";
+  if (normalized === "pending") return "pending";
+  if (normalized === "unpaid") return "unpaid";
+  const method = normalizeSalePaymentMethod(paymentMethod);
+  if (method === "credit") return "unpaid";
+  return "paid";
+};
+
+const getSalePaymentStatusLabel = (value, paymentMethod = "cash") => {
+  const normalized = normalizeSalePaymentStatus(value, paymentMethod);
+  if (normalized === "paid") return "Paid";
+  if (normalized === "unpaid") return "Unpaid";
+  return "Pending";
+};
+
 function AdminWater() {
   const [dashboard, setDashboard] = useState(buildDefaultDashboard);
   const [vendors, setVendors] = useState([]);
@@ -134,6 +165,7 @@ function AdminWater() {
   const [status, setStatus] = useState("");
   const [vendorError, setVendorError] = useState("");
   const [customerError, setCustomerError] = useState("");
+  const [customerPickerQuery, setCustomerPickerQuery] = useState("");
 
   const [restockForm, setRestockForm] = useState({
     quantity: "",
@@ -146,8 +178,11 @@ function AdminWater() {
     quantity: "",
     saleChannel: "retail",
     paymentMethod: "cash",
+    discountType: "none",
+    discountValue: "",
     customerId: "",
     customerName: "",
+    customerPhone: "",
     date: todayValue(),
     notes: "",
   });
@@ -267,12 +302,31 @@ function AdminWater() {
   const salePreview = useMemo(() => {
     const quantity = Math.max(0, Math.round(toNumber(saleForm.quantity, 0)));
     const unitPrice = getPreviewUnitPrice(quantity, pricing, saleForm.saleChannel);
+    const subtotal = quantity * unitPrice;
+    const discountType = normalizeSaleDiscountType(saleForm.discountType);
+    const parsedDiscountInput = Number(String(saleForm.discountValue || "").replace(/,/g, "").trim());
+    let discountAmount = 0;
+
+    if (subtotal > 0 && discountType !== "none" && Number.isFinite(parsedDiscountInput) && parsedDiscountInput > 0) {
+      if (discountType === "amount") {
+        discountAmount = Math.round(parsedDiscountInput * 100);
+      } else {
+        const percent = Math.min(parsedDiscountInput, 99.99);
+        discountAmount = Math.round((subtotal * percent) / 100);
+      }
+      if (discountAmount >= subtotal) {
+        discountAmount = Math.max(subtotal - 1, 0);
+      }
+    }
+
     return {
       quantity,
       unitPrice,
-      total: quantity * unitPrice,
+      subtotal,
+      discountAmount,
+      total: Math.max(0, subtotal - discountAmount),
     };
-  }, [pricing, saleForm.quantity, saleForm.saleChannel]);
+  }, [pricing, saleForm.discountType, saleForm.discountValue, saleForm.quantity, saleForm.saleChannel]);
 
   const stockTimeline = useMemo(() => {
     const restockRows = restocks.map((item) => ({
@@ -314,6 +368,7 @@ function AdminWater() {
     if (!Number.isFinite(customerId) || customerId <= 0) return null;
     return customers.find((customer) => customer.id === customerId) || null;
   }, [customers, saleForm.customerId]);
+  const deferredCustomerPickerQuery = useDeferredValue(customerPickerQuery);
   const typedSaleCustomerName = saleForm.customerName.trim();
   const matchedTypedSaleCustomer = useMemo(() => {
     if (selectedSaleCustomer || !typedSaleCustomerName) return null;
@@ -323,9 +378,19 @@ function AdminWater() {
       customers.find((customer) => normalizeCustomerName(customer.name) === normalizedName) || null
     );
   }, [customers, selectedSaleCustomer, typedSaleCustomerName]);
+  const filteredCustomerOptions = useMemo(() => {
+    if (!customers.length) return [];
+    const normalizedQuery = normalizeCustomerName(deferredCustomerPickerQuery);
+    const source = normalizedQuery
+      ? customers.filter((customer) => normalizeCustomerName(customer.name).includes(normalizedQuery))
+      : customers;
+    return source.slice(0, normalizedQuery ? 20 : 8);
+  }, [customers, deferredCustomerPickerQuery]);
 
   const selectedVendorName = selectedVendor?.name || "";
-  const restockCost = Math.max(0, Math.round(toNumber(restockForm.quantity, 0))) * DEFAULT_PURCHASE_COST;
+  const restockQuantity = Math.max(0, Math.round(toNumber(restockForm.quantity, 0)));
+  const restockCost = restockQuantity * DEFAULT_PURCHASE_COST;
+  const restockVendorLabel = selectedVendorName || restockForm.vendorName.trim() || "No vendor linked";
   const saleCustomerLabel = saleForm.saleChannel === "company" ? "Company name" : "Customer name";
   const salePricingLabel =
     saleForm.saleChannel === "company"
@@ -334,7 +399,7 @@ function AdminWater() {
         ? `Bulk retail (${pricing.bulkThreshold}+)`
         : `Retail under ${pricing.bulkThreshold}`;
   const salePaymentLabel = getSalePaymentLabel(saleForm.paymentMethod);
-  const saleResolvedCustomerLabel = selectedSaleCustomer ? "Linked REEBS customer" : saleCustomerLabel;
+  const saleDiscountType = normalizeSaleDiscountType(saleForm.discountType);
   const resolvedExpenseCategory =
     expenseForm.category === CUSTOM_EXPENSE_CATEGORY
       ? expenseForm.customCategory.trim()
@@ -359,10 +424,42 @@ function AdminWater() {
     }));
   };
 
+  const setRestockQuantityValue = (nextValue) => {
+    if (nextValue === "" || nextValue === null || nextValue === undefined) {
+      setRestockForm((prev) => ({ ...prev, quantity: "" }));
+      return;
+    }
+    const parsed = Math.round(toNumber(nextValue, 0));
+    setRestockForm((prev) => ({
+      ...prev,
+      quantity: parsed <= 0 ? "" : String(parsed),
+    }));
+  };
+
+  const adjustRestockQuantity = (delta) => {
+    const current = Math.max(0, Math.round(toNumber(restockForm.quantity, 0)));
+    const next = current + delta;
+    setRestockQuantityValue(next <= 0 ? 1 : next);
+  };
+
   const adjustSaleQuantity = (delta) => {
     const current = Math.max(0, Math.round(toNumber(saleForm.quantity, 0)));
     const next = current + delta;
     setSaleQuantityValue(next <= 0 ? 1 : next);
+  };
+
+  const setSaleDiscountValue = (nextValue) => {
+    if (nextValue === "" || nextValue === null || nextValue === undefined) {
+      setSaleForm((prev) => ({ ...prev, discountValue: "" }));
+      return;
+    }
+    const parsed = Number(nextValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setSaleForm((prev) => ({ ...prev, discountValue: "" }));
+      return;
+    }
+    const normalized = Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(2);
+    setSaleForm((prev) => ({ ...prev, discountValue: normalized }));
   };
 
   const setExpenseAmountValue = (nextValue) => {
@@ -438,30 +535,39 @@ function AdminWater() {
 
   const handleSaleSubmit = async (event) => {
     event.preventDefault();
-    const shouldRefreshCustomers = !saleForm.customerId && Boolean(saleForm.customerName.trim());
+    const shouldRefreshCustomers = true;
+    const successMessage =
+      saleForm.paymentMethod === "credit" ? "Water sale recorded on credit." : "Water sale recorded.";
     const saved = await handleAction(
       "sale",
       {
         quantity: saleForm.quantity,
         saleChannel: saleForm.saleChannel,
         paymentMethod: saleForm.paymentMethod,
+        discountType: saleForm.discountType,
+        discountValue: saleForm.discountValue,
         customerId: saleForm.customerId ? Number(saleForm.customerId) : null,
         customerName: saleForm.customerName,
+        customerPhone: saleForm.customerPhone,
         date: saleForm.date,
         notes: saleForm.notes,
       },
-      "Water sale recorded."
+      successMessage
     );
     if (saved) {
       setSaleForm((prev) => ({
         ...prev,
         paymentMethod: "cash",
+        discountType: "none",
+        discountValue: "",
         customerId: "",
         quantity: "",
         customerName: "",
+        customerPhone: "",
         date: todayValue(),
         notes: "",
       }));
+      setCustomerPickerQuery("");
       if (shouldRefreshCustomers) {
         await loadCustomers();
       }
@@ -608,7 +714,7 @@ function AdminWater() {
               <AppIcon icon={faMoneyCheckDollar} />
               <strong>{formatCurrency(summary.cashPosition)}</strong>
             </div>
-            <span>{formatCurrency(summary.outstandingCredit)} still on credit</span>
+            <span>{formatCurrency(summary.outstandingCredit)} on credit</span>
           </article>
           <article className="water-module-kpi">
             <p className="water-module-kpi-label">Extra expenses</p>
@@ -627,79 +733,137 @@ function AdminWater() {
                 <p className="water-module-card-eyebrow">Stock In</p>
                 <h3>Restock Water</h3>
               </div>
-              <span className="water-module-card-tag">Cost {formatCurrency(restockCost)}</span>
+              <span className="water-module-card-tag">
+                {restockQuantity > 0 ? formatCurrency(restockCost) : "Enter quantity"}
+              </span>
             </div>
             <form className="water-module-form" onSubmit={handleRestockSubmit}>
-              <label>
-                Quantity
-                <input
-                  type="number"
-                  min="1"
-                  value={restockForm.quantity}
-                  onChange={(event) =>
-                    setRestockForm((prev) => ({ ...prev, quantity: event.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label>
-                Vendor from REEBS list
-                <select
-                  value={restockForm.vendorId}
-                  onChange={(event) =>
-                    setRestockForm((prev) => ({
-                      ...prev,
-                      vendorId: event.target.value,
-                      vendorName: event.target.value ? "" : prev.vendorName,
-                    }))
-                  }
-                >
-                  <option value="">No linked vendor</option>
-                  {vendors.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </option>
+              <div className="water-module-sale-block">
+                <div className="water-module-inline-head">
+                  <span className="water-module-field-label">Quantity</span>
+                  <span className="water-module-inline-note">Tap a preset or adjust manually.</span>
+                </div>
+                <div className="water-module-quick-actions">
+                  {RESTOCK_QUICK_QUANTITIES.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`water-module-quick-btn ${restockQuantity === value ? "is-active" : ""}`}
+                      onClick={() => setRestockQuantityValue(value)}
+                    >
+                      {value}
+                    </button>
                   ))}
-                </select>
-              </label>
-              {!restockForm.vendorId && (
-                <label>
-                  Custom vendor name
+                </div>
+                <div className="water-module-stepper" aria-label="Restock quantity control">
+                  <button
+                    type="button"
+                    className="water-module-stepper-btn"
+                    onClick={() => adjustRestockQuantity(-1)}
+                    aria-label="Reduce restock quantity"
+                  >
+                    <AppIcon icon={faMinus} />
+                  </button>
                   <input
-                    type="text"
-                    value={restockForm.vendorName}
-                    onChange={(event) =>
-                      setRestockForm((prev) => ({ ...prev, vendorName: event.target.value }))
-                    }
-                    placeholder="Optional"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={restockForm.quantity}
+                    onChange={(event) => setRestockQuantityValue(event.target.value)}
+                    required
                   />
-                </label>
-              )}
-              <label>
-                Date
-                <input
-                  type="date"
-                  value={restockForm.date}
-                  onChange={(event) =>
-                    setRestockForm((prev) => ({ ...prev, date: event.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label>
-                Notes
-                <textarea
-                  rows="3"
-                  value={restockForm.notes}
-                  onChange={(event) =>
-                    setRestockForm((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="Delivery batch, payment note, etc."
-                />
-              </label>
+                  <button
+                    type="button"
+                    className="water-module-stepper-btn"
+                    onClick={() => adjustRestockQuantity(1)}
+                    aria-label="Increase restock quantity"
+                  >
+                    <AppIcon icon={faPlus} />
+                  </button>
+                </div>
+              </div>
+              <div className="water-module-inline-summary">
+                <span>{restockVendorLabel}</span>
+                <strong>Cost: {formatCurrency(restockCost)}</strong>
+              </div>
+              <details className="water-module-optional">
+                <summary>Supplier details</summary>
+                <div className="water-module-optional-body">
+                  <label>
+                    Vendor from REEBS list
+                    <select
+                      value={restockForm.vendorId}
+                      onChange={(event) =>
+                        setRestockForm((prev) => ({
+                          ...prev,
+                          vendorId: event.target.value,
+                          vendorName: event.target.value ? "" : prev.vendorName,
+                        }))
+                      }
+                    >
+                      <option value="">No linked vendor</option>
+                      {vendors.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {selectedVendor ? (
+                    <p className="water-module-inline-note">
+                      Linked to REEBS vendor #{selectedVendor.id}.
+                    </p>
+                  ) : null}
+                  {!restockForm.vendorId ? (
+                    <label>
+                      Custom vendor name
+                      <input
+                        type="text"
+                        value={restockForm.vendorName}
+                        onChange={(event) =>
+                          setRestockForm((prev) => ({ ...prev, vendorName: event.target.value }))
+                        }
+                        placeholder="Optional"
+                      />
+                    </label>
+                  ) : null}
+                  <label>
+                    Date
+                    <input
+                      type="date"
+                      value={restockForm.date}
+                      onChange={(event) =>
+                        setRestockForm((prev) => ({ ...prev, date: event.target.value }))
+                      }
+                      required
+                    />
+                  </label>
+                  <label>
+                    Notes
+                    <textarea
+                      rows="3"
+                      value={restockForm.notes}
+                      onChange={(event) =>
+                        setRestockForm((prev) => ({ ...prev, notes: event.target.value }))
+                      }
+                      placeholder="Delivery batch, payment note, etc."
+                    />
+                  </label>
+                </div>
+              </details>
               {vendorError && <p className="water-module-inline-note">{vendorError}</p>}
-              <button type="submit" className="admin-primary" disabled={saving}>
-                <AppIcon icon={faPlus} /> {saving ? "Saving..." : "Add stock"}
+              <button
+                type="submit"
+                className="admin-primary water-module-sale-submit"
+                disabled={saving || loading}
+              >
+                <AppIcon icon={faPlus} />{" "}
+                {saving
+                  ? "Saving..."
+                  : restockQuantity > 0
+                    ? `Add ${restockQuantity} pack${restockQuantity === 1 ? "" : "s"}`
+                    : "Add stock"}
               </button>
             </form>
           </article>
@@ -808,65 +972,183 @@ function AdminWater() {
                   ))}
                 </div>
               </div>
+              <div className="water-module-sale-block">
+                <div className="water-module-inline-head">
+                  <span className="water-module-field-label">Discount</span>
+                  <span className="water-module-inline-note">
+                    Optional. Use a flat amount in GHS or a percentage.
+                  </span>
+                </div>
+                <div className="water-module-quick-actions" role="radiogroup" aria-label="Discount type">
+                  {SALE_DISCOUNT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`water-module-quick-btn ${
+                        saleDiscountType === option.value ? "is-active" : ""
+                      }`}
+                      onClick={() =>
+                        setSaleForm((prev) => ({
+                          ...prev,
+                          discountType: option.value,
+                          discountValue: option.value === "none" ? "" : prev.discountValue,
+                        }))
+                      }
+                      aria-pressed={saleDiscountType === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {saleDiscountType !== "none" ? (
+                  <label>
+                    {saleDiscountType === "amount" ? "Discount amount (GHS)" : "Discount percent"}
+                    <input
+                      type="number"
+                      min="0.01"
+                      max={saleDiscountType === "percent" ? "99.99" : undefined}
+                      step="0.01"
+                      inputMode="decimal"
+                      value={saleForm.discountValue}
+                      onChange={(event) => setSaleDiscountValue(event.target.value)}
+                      placeholder={saleDiscountType === "amount" ? "0.00" : "5"}
+                      required
+                    />
+                  </label>
+                ) : null}
+              </div>
               <div className="water-module-inline-summary">
                 <span>
                   {salePricingLabel}: {formatCurrency(salePreview.unitPrice)} via {salePaymentLabel}
+                  {salePreview.discountAmount > 0
+                    ? `, discount ${formatCurrency(salePreview.discountAmount)}`
+                    : ""}
                 </span>
                 <strong>Total: {formatCurrency(salePreview.total)}</strong>
+              </div>
+              {salePreview.discountAmount > 0 ? (
+                <p className="water-module-inline-note">
+                  Subtotal {formatCurrency(salePreview.subtotal)} before discount.
+                </p>
+              ) : null}
+              <div className="water-module-sale-block">
+                <div className="water-module-inline-head">
+                  <span className="water-module-field-label">{saleCustomerLabel}</span>
+                  <span className="water-module-inline-note">
+                    Every sale must be linked to a customer. New names are added to the REEBS customer list automatically.
+                  </span>
+                </div>
+                <label>
+                  {saleCustomerLabel}
+                  <input
+                    type="text"
+                    value={saleForm.customerName}
+                    onChange={(event) =>
+                      setSaleForm((prev) => ({ ...prev, customerName: event.target.value }))
+                    }
+                    placeholder={`Enter ${saleCustomerLabel.toLowerCase()}`}
+                    disabled={Boolean(selectedSaleCustomer)}
+                    required={!selectedSaleCustomer}
+                  />
+                </label>
+                <label>
+                  Phone number (optional)
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={saleForm.customerPhone}
+                    onChange={(event) =>
+                      setSaleForm((prev) => ({ ...prev, customerPhone: event.target.value }))
+                    }
+                    placeholder="024 000 0000"
+                  />
+                </label>
+                {selectedSaleCustomer ? (
+                  <p className="water-module-inline-note">
+                    Linked to REEBS customer #{selectedSaleCustomer.id}.
+                  </p>
+                ) : null}
+                {!selectedSaleCustomer && typedSaleCustomerName ? (
+                  <p className="water-module-inline-note">
+                    {matchedTypedSaleCustomer
+                      ? `This matches REEBS customer #${matchedTypedSaleCustomer.id} and will link automatically when you save.`
+                      : "A new REEBS customer will be created automatically when you save this sale."}
+                  </p>
+                ) : null}
               </div>
               <details className="water-module-optional">
                 <summary>Optional details</summary>
                 <div className="water-module-optional-body">
-                  <label>
-                    Link REEBS customer
-                    <select
-                      value={saleForm.customerId}
-                      onChange={(event) => {
-                        const nextId = event.target.value;
-                        const nextCustomer =
-                          customers.find((customer) => String(customer.id) === nextId) || null;
-                        setSaleForm((prev) => ({
-                          ...prev,
-                          customerId: nextId,
-                          customerName: nextCustomer?.name || prev.customerName,
-                        }));
-                      }}
-                    >
-                      <option value="">No link</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {selectedSaleCustomer && (
-                    <p className="water-module-inline-note">
-                      Linked to REEBS customer #{selectedSaleCustomer.id}.
-                    </p>
-                  )}
+                  <div className="water-module-customer-picker">
+                    <div className="water-module-inline-head">
+                      <span className="water-module-field-label">Link REEBS customer</span>
+                      {selectedSaleCustomer ? (
+                        <button
+                          type="button"
+                          className="water-module-picker-clear"
+                          onClick={() => {
+                            setSaleForm((prev) => ({ ...prev, customerId: "" }));
+                            setCustomerPickerQuery("");
+                          }}
+                        >
+                          Clear link
+                        </button>
+                      ) : null}
+                    </div>
+                    {customers.length ? (
+                      <>
+                        <input
+                          type="search"
+                          value={customerPickerQuery}
+                          onChange={(event) => setCustomerPickerQuery(event.target.value)}
+                          placeholder="Search REEBS customers"
+                        />
+                        <div className="water-module-customer-options" role="listbox" aria-label="REEBS customers">
+                          <button
+                            type="button"
+                            className={`water-module-customer-option ${!saleForm.customerId ? "is-active" : ""}`}
+                            onClick={() => {
+                              setSaleForm((prev) => ({ ...prev, customerId: "" }));
+                              setCustomerPickerQuery("");
+                            }}
+                          >
+                            No link
+                          </button>
+                          {filteredCustomerOptions.map((customer) => {
+                            const isActive = String(customer.id) === String(saleForm.customerId);
+                            return (
+                              <button
+                                key={customer.id}
+                                type="button"
+                                className={`water-module-customer-option ${isActive ? "is-active" : ""}`}
+                                onClick={() => {
+                                  setSaleForm((prev) => ({
+                                    ...prev,
+                                    customerId: String(customer.id),
+                                    customerName: customer.name || prev.customerName,
+                                    customerPhone: customer.phone || prev.customerPhone,
+                                  }));
+                                  setCustomerPickerQuery(customer.name || "");
+                                }}
+                              >
+                                <span>{customer.name}</span>
+                                <small>#{customer.id}</small>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {deferredCustomerPickerQuery.trim() && filteredCustomerOptions.length === 0 ? (
+                          <p className="water-module-inline-note">No REEBS customer matched that search.</p>
+                        ) : null}
+                        {!deferredCustomerPickerQuery.trim() && customers.length > filteredCustomerOptions.length ? (
+                          <p className="water-module-inline-note">Type to search the full customer list.</p>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
                   {customerError && !customers.length && (
                     <p className="water-module-inline-note">{customerError}</p>
                   )}
-                  <label>
-                    {saleResolvedCustomerLabel}
-                    <input
-                      type="text"
-                      value={saleForm.customerName}
-                      onChange={(event) =>
-                        setSaleForm((prev) => ({ ...prev, customerName: event.target.value }))
-                      }
-                      placeholder={selectedSaleCustomer ? "Auto-filled from REEBS customer" : "Optional"}
-                      disabled={Boolean(selectedSaleCustomer)}
-                    />
-                  </label>
-                  {!selectedSaleCustomer && typedSaleCustomerName ? (
-                    <p className="water-module-inline-note">
-                      {matchedTypedSaleCustomer
-                        ? `This matches REEBS customer #${matchedTypedSaleCustomer.id} and will link automatically when you save.`
-                        : "This typed name will be added to the REEBS customer list when you save."}
-                    </p>
-                  ) : null}
                   <label>
                     Date
                     <input
@@ -1260,6 +1542,7 @@ function AdminWater() {
                       <th>Customer</th>
                       <th>Type</th>
                       <th>Payment</th>
+                      <th>Status</th>
                       <th>Qty</th>
                       <th>Unit</th>
                       <th>Total</th>
@@ -1276,9 +1559,17 @@ function AdminWater() {
                         </td>
                         <td>{sale.saleChannel === "company" ? "Company" : "Retail"}</td>
                         <td>{getSalePaymentLabel(sale.paymentMethod)}</td>
+                        <td>{getSalePaymentStatusLabel(sale.paymentStatus, sale.paymentMethod)}</td>
                         <td>{toNumber(sale.quantity)}</td>
                         <td>{formatCurrency(sale.unitPrice)}</td>
-                        <td>{formatCurrency(sale.totalAmount)}</td>
+                        <td>
+                          {formatCurrency(sale.totalAmount)}
+                          {toNumber(sale.discountAmount) > 0 ? (
+                            <div className="water-module-inline-note">
+                              Discount {formatCurrency(sale.discountAmount)}
+                            </div>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1302,8 +1593,8 @@ function AdminWater() {
             {loading ? (
               <p className="water-module-empty">Loading stock history...</p>
             ) : stockTimeline.length ? (
-              <div className="water-module-table-wrap">
-                <table className="water-module-table">
+              <div className="water-module-table-wrap water-module-table-wrap--stock">
+                <table className="water-module-table water-module-table--stock">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -1316,13 +1607,18 @@ function AdminWater() {
                   <tbody>
                     {stockTimeline.map((entry) => (
                       <tr key={entry.id}>
-                        <td>{formatDate(entry.date)}</td>
-                        <td>{entry.label}</td>
-                        <td>{entry.detail}</td>
-                        <td className={entry.quantity < 0 ? "is-negative" : "is-positive"}>
+                        <td data-label="Date">{formatDate(entry.date)}</td>
+                        <td data-label="Type">{entry.label}</td>
+                        <td data-label="Details">{entry.detail}</td>
+                        <td
+                          data-label="Qty"
+                          className={entry.quantity < 0 ? "is-negative" : "is-positive"}
+                        >
                           {entry.quantity > 0 ? `+${entry.quantity}` : entry.quantity}
                         </td>
-                        <td>{entry.amount === null ? "—" : formatCurrency(entry.amount)}</td>
+                        <td data-label="Value">
+                          {entry.amount === null ? "—" : formatCurrency(entry.amount)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

@@ -123,6 +123,7 @@ function Admin() {
   const [archivedSelected, setArchivedSelected] = useState(new Set());
   const [archivedBulkLoading, setArchivedBulkLoading] = useState(false);
   const [actionItemId, setActionItemId] = useState(null);
+  const [vendors, setVendors] = useState([]);
   const newItemTemplate = {
     name: "",
     barcode: "",
@@ -239,6 +240,24 @@ function Admin() {
   useEffect(() => {
     refreshInventory();
   }, [refreshInventory]);
+
+  const loadVendors = useCallback(async () => {
+    try {
+      const response = await fetch("/.netlify/functions/vendors");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Unable to fetch vendors.");
+      }
+      setVendors(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch vendors", err);
+      setVendors([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVendors();
+  }, [loadVendors]);
 
   const loadEditRequests = useCallback(async () => {
     if (!canApproveInventoryEdits) {
@@ -1043,6 +1062,7 @@ function Admin() {
         .toString()
         .toUpperCase(),
       specificCategory: item.specificCategory || item.specificcategory || "",
+      vendorId: item.vendorId ? String(item.vendorId) : "",
       price: Number.isFinite(Number(item.price)) ? Number(item.price) : "",
       stock: String(getQuantity(item)),
       currency: item.currency || "GHS",
@@ -1141,6 +1161,7 @@ function Admin() {
           stock: stockValue,
           sourceCategoryCode: detailForm.sourceCategoryCode,
           specificCategory: detailForm.specificCategory || undefined,
+          vendorId: detailForm.vendorId ? Number(detailForm.vendorId) : null,
           description: detailForm.description || undefined,
           currency: detailForm.currency || "GHS",
           purchasePriceGbpCents:
@@ -2621,6 +2642,21 @@ function Admin() {
                     onChange={(event) => updateDetailForm("specificCategory", event.target.value)}
                     disabled={!isDetailFieldEditable("specificCategory")}
                   />
+                </label>
+                <label>
+                  Vendor
+                  <select
+                    value={detailForm.vendorId}
+                    onChange={(event) => updateDetailForm("vendorId", event.target.value)}
+                    disabled={!isDetailFieldEditable("vendorId")}
+                  >
+                    <option value="">No linked vendor</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Barcode

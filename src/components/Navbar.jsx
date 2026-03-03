@@ -320,6 +320,32 @@ const Navbar = ({ scrollContainerRef }) => {
   }, [location.pathname]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const media = window.matchMedia('(max-width: 980px)');
+    const handleChange = () => {
+      if (!media.matches) {
+        setMobileOpen(false);
+      }
+    };
+
+    handleChange();
+    if (media.addEventListener) {
+      media.addEventListener('change', handleChange);
+    } else {
+      media.addListener(handleChange);
+    }
+
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener('change', handleChange);
+      } else {
+        media.removeListener(handleChange);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!searchOpen) return undefined;
 
     const rafId = window.requestAnimationFrame(() => {
@@ -340,6 +366,25 @@ const Navbar = ({ scrollContainerRef }) => {
       document.body.style.overflow = previousOverflow;
     };
   }, [searchOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!searchOpen || searchIndexReady) return undefined;
@@ -491,6 +536,14 @@ const Navbar = ({ scrollContainerRef }) => {
   return (
     <header className="site-header" onWheel={handleHeaderWheel}>
       <div className="navbar-top-rail" aria-hidden="true" />
+      {mobileOpen ? (
+        <button
+          type="button"
+          className="navbar-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={() => setMobileOpen(false)}
+        />
+      ) : null}
       <nav className={`navbar navbar-desktop ${scrolled ? 'is-scrolled' : ''}`} aria-label="Main navigation">
         <div className="navbar-corner navbar-corner-left" aria-hidden="true">
           <svg viewBox="0 0 44 44" focusable="false" role="presentation">

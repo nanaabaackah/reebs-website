@@ -10,6 +10,18 @@ import {
   getCatalogItemImage,
 } from "/src/utils/itemMediaBackgrounds";
 
+const normalizeSource = (item) =>
+  (item?.sourceCategoryCode || item?.sourcecategorycode || "")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+const isRentalItem = (item) => {
+  const source = normalizeSource(item);
+  if (source) return source === "rental";
+  return (item?.sku || "").toString().toUpperCase().startsWith("REN");
+};
+
 const Cart = () => {
   const {
     cart,
@@ -27,6 +39,10 @@ const Cart = () => {
   const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
   const getItemCategory = (item) =>
     item.specificCategory || item.specificcategory || item.type || null;
+  const hasRentalItems = cart.some((item) => isRentalItem(item));
+  const fulfillmentNote = hasRentalItems
+    ? "Pickup or delivery confirmed at checkout"
+    : "In-store pickup only";
 
   const handleQtyChange = (item, value) => {
     const parsed = Number(value);
@@ -58,7 +74,7 @@ const Cart = () => {
             </div>
           </div>
           <div className="hero-card-perks">
-            <span><AppIcon icon={faTruck} /> In-store pickup only</span>
+            <span><AppIcon icon={faTruck} /> {fulfillmentNote}</span>
             <span><AppIcon icon={faLock} /> Secure checkout</span>
             <span><AppIcon icon={faGift} /> We pack with care</span>
           </div>
@@ -188,7 +204,7 @@ const Cart = () => {
               <div className="summary-head">
                 <p className="kicker">Summary</p>
                 <h3>Ready to book?</h3>
-                <p className="muted">Taxes and pickup timing confirmed at checkout.</p>
+                <p className="muted">Taxes, pickup, and delivery timing are confirmed at checkout.</p>
               </div>
               <div className="summary-rows">
                 <div className="summary-row">
@@ -202,7 +218,7 @@ const Cart = () => {
               </div>
               <div className="summary-perks">
                 <span><AppIcon icon={faLock} /> Safe checkout</span>
-                <span><AppIcon icon={faTruck} /> In-store pickup only</span>
+                <span><AppIcon icon={faTruck} /> {fulfillmentNote}</span>
                 <span><AppIcon icon={faGift} /> Styled for fun</span>
               </div>
               <Link className="checkout-btn" to="/Checkout">Proceed to Checkout</Link>

@@ -16,6 +16,7 @@ import { applySeo } from "./utils/seo";
 import Home from "./pages/Home";
 const Footer = lazy(() => import("./components/Footer"));
 const PortalSidebar = lazy(() => import("./components/PortalSidebar"));
+const AdminBottomNav = lazy(() => import("./components/AdminBottomNav"));
 
 const Login = lazy(() => import("./pages/Login"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -499,6 +500,9 @@ function App() {
             <PortalSidebar />
           </Suspense>
           <div className="portal-app-content">{routes}</div>
+          <Suspense fallback={null}>
+            <AdminBottomNav />
+          </Suspense>
         </div>
       );
     }

@@ -37,6 +37,7 @@ const barcodeColumnStatements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "product_barcode_org_unique"
     ON "product" ("organizationId", "barcode")`,
 ];
+const vendorColumnStatements = [`ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "vendorId" INTEGER`];
 const inventoryEditRequestStatements = [
   `CREATE TABLE IF NOT EXISTS "inventoryEditRequest" (
     "id" SERIAL PRIMARY KEY,
@@ -141,6 +142,16 @@ const ensureProductBarcodeColumn = async (client) => {
   }
 };
 
+const ensureProductVendorColumn = async (client) => {
+  for (const statement of vendorColumnStatements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Product vendor column check failed:", err?.message || err);
+    }
+  }
+};
+
 const ensureInventoryEditRequestTable = async (client) => {
   for (const statement of inventoryEditRequestStatements) {
     try {
@@ -232,6 +243,7 @@ export async function handler(event = {}) {
     await ensureAuditColumns(client);
     await ensureProductStatusColumns(client);
     await ensureProductBarcodeColumn(client);
+    await ensureProductVendorColumn(client);
     await ensureInventoryEditRequestTable(client);
     await ensureSourceCategoryValue(client, "WATER");
     const admin = await findDefaultAdmin(client, organizationId);
@@ -298,6 +310,7 @@ export async function handler(event = {}) {
           p."barcode" AS "barcode",
           p.name, 
           p.description, 
+          p."vendorId" AS "vendorId",
           p."sourceCategoryCode" AS "sourceCategoryCode",
           p."specificCategory"   AS "specificCategory",
           p.rate,
@@ -695,6 +708,18 @@ export async function handler(event = {}) {
     const parsedId = Number(payload.id);
     const reorderLevelRaw = Number(payload.reorderLevel ?? payload.reorder_level);
     const reorderQuantityRaw = Number(payload.reorderQuantity ?? payload.reorder_quantity);
+    const hasVendorIdInput = Object.prototype.hasOwnProperty.call(payload, "vendorId");
+    const rawVendorId = hasVendorIdInput ? payload.vendorId : undefined;
+    const parsedVendorId =
+      rawVendorId === "" || rawVendorId === null || typeof rawVendorId === "undefined"
+        ? null
+        : Number(rawVendorId);
+    const requestedVendorId =
+      parsedVendorId === null
+        ? null
+        : Number.isFinite(parsedVendorId) && parsedVendorId > 0
+          ? Math.round(parsedVendorId)
+          : Number.NaN;
     const isUpdate = Number.isFinite(parsedId) && parsedId > 0;
     const reorderLevel = Number.isFinite(reorderLevelRaw)
       ? Math.max(0, Math.round(reorderLevelRaw))
@@ -730,8 +755,17 @@ export async function handler(event = {}) {
     let nextSaleValue = saleValue;
     let nextAttendantsNeeded = attendantsNeeded;
     let nextImageUrl = imageUrl || null;
+    let nextVendorId = hasVendorIdInput ? requestedVendorId : null;
     let nextReorderLevel = reorderLevel;
     let nextReorderQuantity = reorderQuantity;
+
+    if (hasVendorIdInput && Number.isNaN(requestedVendorId)) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Vendor must be empty or a valid vendor id." }),
+      };
+    }
 
     if (isUpdate) {
       if (!authUser) {
@@ -749,6 +783,7 @@ export async function handler(event = {}) {
            barcode,
            name,
            description,
+           "vendorId",
            "sourceCategoryCode",
            "specificCategory",
            rate,
@@ -779,6 +814,12 @@ export async function handler(event = {}) {
 
       const currentProduct = existing.rows[0];
       sku = currentProduct.sku;
+      nextVendorId =
+        hasVendorIdInput
+          ? requestedVendorId
+          : Number.isFinite(Number(currentProduct.vendorId))
+            ? Number(currentProduct.vendorId)
+            : null;
 
       if (!canEditInventoryDirectly(actorRole) && !canRequestInventoryEdit(actorRole)) {
         return {
@@ -883,6 +924,9 @@ export async function handler(event = {}) {
         nextSaleValue = currentProduct.saleValue;
         nextAttendantsNeeded = currentProduct.attendantsNeeded;
         nextImageUrl = currentProduct.imageUrl || null;
+        nextVendorId = Number.isFinite(Number(currentProduct.vendorId))
+          ? Number(currentProduct.vendorId)
+          : null;
         nextReorderLevel = currentProduct.reorderLevel;
         nextReorderQuantity = currentProduct.reorderQuantity;
       }
@@ -899,6 +943,7 @@ export async function handler(event = {}) {
         "barcode",
         "name",
         "description",
+        "vendorId",
         "sourceCategoryCode",
         "specificCategory",
         "rate",
@@ -920,11 +965,12 @@ export async function handler(event = {}) {
         "lastUpdatedAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,true,$22,NOW(),NOW(),NOW())
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,true,$23,NOW(),NOW(),NOW())
       ON CONFLICT ("organizationId", "sku") DO UPDATE
       SET "barcode" = EXCLUDED."barcode",
           "name" = EXCLUDED."name",
           "description" = EXCLUDED."description",
+          "vendorId" = EXCLUDED."vendorId",
           "sourceCategoryCode" = EXCLUDED."sourceCategoryCode",
           "specificCategory" = EXCLUDED."specificCategory",
           "rate" = EXCLUDED."rate",
@@ -951,6 +997,7 @@ export async function handler(event = {}) {
         barcode,
         name,
         description,
+        "vendorId" AS "vendorId",
         "sourceCategoryCode",
         "specificCategory",
         rate,
@@ -984,6 +1031,7 @@ export async function handler(event = {}) {
       nextBarcode,
       name,
       nextDescription,
+      nextVendorId,
       nextSourceCategoryCode,
       nextSpecificCategory,
       nextRate,

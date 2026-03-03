@@ -12423,11 +12423,17 @@ body.admin-theme button.inventory-card-quick:focus-visible {
 .water-module-page {
   min-height: 100%;
   padding: clamp(1rem, 2vw, 1.6rem);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .water-module-shell {
   display: grid;
   gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .water-module-header,
@@ -12436,11 +12442,10 @@ body.admin-theme button.inventory-card-quick:focus-visible {
 .water-module-card,
 .water-module-table-card {
   border: 1px solid var(--admin-border);
-  background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08)),
-    var(--admin-card);
+  background: var(--card);
   border-radius: 1.35rem;
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  min-width: 0;
 }
 
 .water-module-header {
@@ -12504,6 +12509,7 @@ body.admin-theme button.inventory-card-quick:focus-visible {
 .water-module-hero-copy {
   display: grid;
   gap: 0.45rem;
+  min-width: 0;
 }
 
 .water-module-pill,
@@ -12525,6 +12531,7 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .water-module-price-card {
@@ -12534,6 +12541,7 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   border-radius: 1rem;
   border: 1px solid rgba(14, 116, 144, 0.16);
   background: rgba(14, 116, 144, 0.08);
+  min-width: 0;
 }
 
 .water-module-price-card span {
@@ -12549,12 +12557,14 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.9rem;
+  min-width: 0;
 }
 
 .water-module-kpi {
   padding: 1rem;
   display: grid;
   gap: 0.65rem;
+  min-width: 0;
 }
 
 .water-module-kpi-value {
@@ -12578,6 +12588,7 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .water-module-card,
@@ -12592,11 +12603,13 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+  min-width: 0;
 }
 
 .water-module-form {
   display: grid;
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .water-module-form label {
@@ -12605,10 +12618,116 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   font-size: 0.9rem;
 }
 
+.water-module-form input,
+.water-module-form select,
+.water-module-form textarea {
+  width: 100%;
+  min-width: 0;
+  border-radius: 0.95rem;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  padding: 0.8rem 0.95rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.water-module-form input::placeholder,
+.water-module-form textarea::placeholder {
+  color: var(--admin-muted);
+}
+
+.water-module-form textarea {
+  min-height: 6.25rem;
+  resize: vertical;
+}
+
+.water-module-form input:focus,
+.water-module-form select:focus,
+.water-module-form textarea:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+  background: var(--card);
+}
+
+.water-module-form input:disabled,
+.water-module-form select:disabled,
+.water-module-form textarea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
 .water-module-sale-block,
 .water-module-adjustment-block {
   display: grid;
   gap: 0.6rem;
+}
+
+.water-module-customer-picker {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.water-module-picker-clear {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.water-module-customer-options {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--admin-border);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.water-module-customer-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-text);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+}
+
+.water-module-customer-option span,
+.water-module-customer-option small {
+  min-width: 0;
+}
+
+.water-module-customer-option small {
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.water-module-customer-option.is-active {
+  border-color: rgba(12, 106, 96, 0.24);
+  background: rgba(12, 106, 96, 0.14);
+  color: #0c6a60;
 }
 
 .water-module-field-label {
@@ -12625,6 +12744,7 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .water-module-toggle-row {
@@ -12739,19 +12859,34 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   border-radius: 0.95rem;
   border: 1px dashed var(--admin-border);
   background: rgba(255, 255, 255, 0.12);
+  min-width: 0;
 }
 
 .water-module-inline-summary span {
   color: var(--admin-muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.water-module-inline-summary strong,
+.water-module-card-tag,
+.water-module-pill {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .water-module-ledgers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .water-module-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border-radius: 1rem;
   border: 1px solid var(--admin-border);
@@ -12838,7 +12973,61 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   }
 
   .water-module-table {
-    min-width: 440px;
+    min-width: 360px;
+  }
+
+  .water-module-table-wrap--stock {
+    overflow-x: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .water-module-table--stock {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .water-module-table--stock thead {
+    display: none;
+  }
+
+  .water-module-table--stock tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .water-module-table--stock tbody tr {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.8rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .water-module-table--stock tbody td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0;
+    border-bottom: 0;
+    font-size: 0.86rem;
+  }
+
+  .water-module-table--stock tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+  }
+
+  .water-module-table--stock tbody td:last-child {
+    align-items: center;
   }
 }
 
@@ -12865,8 +13054,21 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+[data-admin-theme="dark"] .water-module-customer-options {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-admin-theme="dark"] .water-module-table--stock tbody tr {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-admin-theme="dark"] .water-module-picker-clear {
+  color: #99f6e4;
+}
+
 [data-admin-theme="dark"] .water-module-toggle-btn.is-active,
-[data-admin-theme="dark"] .water-module-quick-btn.is-active {
+[data-admin-theme="dark"] .water-module-quick-btn.is-active,
+[data-admin-theme="dark"] .water-module-customer-option.is-active {
   background: rgba(94, 234, 212, 0.14);
   border-color: rgba(94, 234, 212, 0.2);
   color: #99f6e4;
@@ -12882,4 +13084,29 @@ body.admin-theme button.inventory-card-quick:focus-visible {
   background: rgba(16, 185, 129, 0.16);
   border-color: rgba(52, 211, 153, 0.22);
   color: #a7f3d0;
+}
+
+@media (max-width: 720px) {
+  .admin-page {
+    padding: 18px 12px 40px;
+  }
+
+  .admin-shell {
+    margin: 1rem auto;
+    gap: 20px;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .admin-card {
+    padding: 16px;
+  }
 }

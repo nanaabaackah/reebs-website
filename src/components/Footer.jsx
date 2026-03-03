@@ -194,7 +194,6 @@ function Footer() {
         <div className="footer-rates-head">
           <div>
             <h3 id="footer-rates-heading">Currency Conversion</h3>
-            <p>Supported currencies converted back to cedis.</p>
           </div>
           <span className="footer-rates-active">Active: {currency}</span>
         </div>

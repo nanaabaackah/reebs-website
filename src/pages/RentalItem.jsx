@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import "../styles/public.css";
 import "/src/styles/RentalItem.css";
+import AddToCartButton from "/src/components/AddToCartButton";
 import { AppIcon } from "/src/components/Icon";
 import {
   faArrowLeftLong,
@@ -15,6 +16,7 @@ import { useCart } from "/src/components/CartContext";
 import SiteLoader from "/src/components/SiteLoader";
 import { applySeo } from "/src/utils/seo";
 import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
+import { getRentalCartItem } from "/src/utils/cartItems";
 // Bouncy castle variants are fetched from the database
 
 const slugify = (value = "") =>
@@ -277,6 +279,11 @@ useEffect(() => {
   const rentalBackgroundImage = useMemo(
     () => (displayRental ? getRentalCategoryBackground(displayRental) : ""),
     [displayRental]
+  );
+  const requiresBouncySelection = isBouncyCastleRental(rental) && !selectedBouncyType;
+  const cartReadyRental = useMemo(
+    () => (displayRental && !requiresBouncySelection ? getRentalCartItem(displayRental) : null),
+    [displayRental, requiresBouncySelection]
   );
 
   const similar = useMemo(() => {
@@ -542,6 +549,11 @@ useEffect(() => {
                 >
                   Book this rental
                 </Link>
+                {cartReadyRental ? (
+                  <div className="rental-cart-slot">
+                    <AddToCartButton item={cartReadyRental} />
+                  </div>
+                ) : null}
                 <Link className="hero-btn hero-btn-ghost" to="/Rentals">
                   Browse all rentals
                 </Link>
@@ -620,7 +632,7 @@ useEffect(() => {
               <div className="rental-similar-grid">
                 {similar.map((item) => (
                   <Link
-                    key={item.id}
+                    key={getRentalIdentity(item)}
                     to={rentalPath(item)}
                     className="rental-similar-card glass-card"
                   >
