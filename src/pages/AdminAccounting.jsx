@@ -1,5 +1,4 @@
-/* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import { faRotateRight, faWandMagicSparkles } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
@@ -47,15 +46,6 @@ const loadLocalState = (key, fallback) => {
     return { ...fallback, ...(parsed && typeof parsed === "object" ? parsed : {}) };
   } catch {
     return fallback;
-  }
-};
-
-const saveLocalState = (key, value) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // ignore local storage write failures
   }
 };
 
@@ -184,6 +174,9 @@ function AdminAccounting() {
   const [taxInputs, setTaxInputs] = useState(() =>
     loadLocalState("reebs_ghana_tax_inputs_v1", taxInputDefaults)
   );
+  const [accountingConfigLoaded, setAccountingConfigLoaded] = useState(false);
+  const [accountingConfigSaving, setAccountingConfigSaving] = useState("");
+  const [accountingConfigError, setAccountingConfigError] = useState("");
   const [historicalSalesByYear, setHistoricalSalesByYear] = useState(() =>
     createEmptyHistoricalSalesRecordMap()
   );
@@ -197,6 +190,9 @@ function AdminAccounting() {
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
   );
+  const balanceInputsEditedRef = useRef(false);
+  const taxInputsEditedRef = useRef(false);
+  const ghanaTaxConfigEditedRef = useRef(false);
 
   useEffect(() => {
     document.body.classList.add("admin-theme");
@@ -228,18 +224,6 @@ function AdminAccounting() {
     return raw > 1 ? raw / 100 : raw;
   };
 
-  useEffect(() => {
-    saveLocalState("reebs_accounting_balances_v1", balanceInputs);
-  }, [balanceInputs]);
-
-  useEffect(() => {
-    saveLocalState("reebs_ghana_tax_v1", ghanaTaxConfig);
-  }, [ghanaTaxConfig]);
-
-  useEffect(() => {
-    saveLocalState("reebs_ghana_tax_inputs_v1", taxInputs);
-  }, [taxInputs]);
-
   const fetchJson = async (url, init) => {
     const res = await fetch(url, init);
     const text = await res.text();
@@ -253,6 +237,38 @@ function AdminAccounting() {
     if (!res.ok) throw new Error(json?.error || "Failed to load data.");
     return json;
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setAccountingConfigError("");
+      try {
+        const result = await fetchJson("/.netlify/functions/accounting-config");
+        if (cancelled) return;
+        if (result?.balanceInputs && !balanceInputsEditedRef.current) {
+          setBalanceInputs((prev) => ({ ...prev, ...result.balanceInputs }));
+        }
+        if (result?.taxInputs && !taxInputsEditedRef.current) {
+          setTaxInputs((prev) => ({ ...prev, ...result.taxInputs }));
+        }
+        if (result?.ghanaTaxConfig && !ghanaTaxConfigEditedRef.current) {
+          setGhanaTaxConfig((prev) => ({ ...prev, ...result.ghanaTaxConfig }));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setAccountingConfigError(err.message || "Unable to load saved accounting settings.");
+      } finally {
+        if (!cancelled) {
+          setAccountingConfigLoaded(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -457,7 +473,7 @@ function AdminAccounting() {
     const rows = Array.isArray(data?.expenseBreakdown) ? data.expenseBreakdown : [];
     const totals = new Map();
     rows.forEach((row) => {
-      const category = normalizeExpenseCategory(row?.category) || "Miscellaneous";
+      const category = normalizeExpenseCategory(row?.category) || "Operational";
       const amount = toNumber(row?.amount);
       totals.set(category, (totals.get(category) || 0) + amount);
     });
@@ -546,11 +562,13 @@ function AdminAccounting() {
 
   const updateBalance = (field) => (event) => {
     const value = event.target.value;
+    balanceInputsEditedRef.current = true;
     setBalanceInputs((prev) => ({ ...prev, [field]: value }));
   };
 
   const updateTaxInput = (field) => (event) => {
     const value = event.target.value;
+    taxInputsEditedRef.current = true;
     setTaxInputs((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -568,6 +586,7 @@ function AdminAccounting() {
 
   const updateGhanaTax = (field) => (event) => {
     const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+    ghanaTaxConfigEditedRef.current = true;
     setGhanaTaxConfig((prev) => {
       const next = { ...prev, [field]: value };
       if (field === "corporateRate") {
@@ -580,6 +599,7 @@ function AdminAccounting() {
   const updateCorporateCategory = (event) => {
     const value = event.target.value;
     const mapped = CORPORATE_RATE_MAP[value];
+    ghanaTaxConfigEditedRef.current = true;
     setGhanaTaxConfig((prev) => ({
       ...prev,
       corporateCategory: value,
@@ -712,6 +732,7 @@ function AdminAccounting() {
     const ownerEquityAuto = equityBaseTarget * 0.65;
     const retainedEarningsAuto = equityBaseTarget - ownerEquityAuto;
 
+    balanceInputsEditedRef.current = true;
     setBalanceInputs({
       cashOnHand: toMoneyString(nextCurrentAssets.cashOnHand),
       bankBalance: toMoneyString(nextCurrentAssets.bankBalance),
@@ -729,7 +750,7 @@ function AdminAccounting() {
       ownerEquity: toMoneyString(ownerEquityAuto),
       retainedEarnings: toMoneyString(retainedEarningsAuto),
     });
-    setNotice("Balance inputs auto-filled from recorded revenue, costs, expense, and tax estimates.");
+    setNotice("Balance inputs auto-filled from recorded revenue, costs, expense, and tax estimates. Click Save to store them.");
   };
 
   const autoFillTaxInputs = () => {
@@ -737,6 +758,7 @@ function AdminAccounting() {
     const operatingExpenses = toNumber(financeSummary?.operatingExpenses || 0);
     const defaultExemptSales = salesBase * 0.05;
     const estimatedInputVat = operatingExpenses * vatCoreRate;
+    taxInputsEditedRef.current = true;
     setTaxInputs({
       exemptSales: toMoneyString(defaultExemptSales),
       inputVatCredits: toMoneyString(estimatedInputVat),
@@ -744,12 +766,67 @@ function AdminAccounting() {
       withholdingCredits: toMoneyString(0),
       grossProduction: toMoneyString(salesBase),
     });
-    setNotice("Tax inputs auto-filled from the selected window. Review before filing.");
+    setNotice("Tax inputs auto-filled from the selected window. Review them, then click Save.");
   };
 
   const resetGhanaTaxRates = () => {
+    ghanaTaxConfigEditedRef.current = true;
     setGhanaTaxConfig(ghTaxDefaults);
-    setNotice("Ghana tax rates reset to default template values.");
+    setNotice("Ghana tax rates reset to default template values. Click Save to keep them.");
+  };
+
+  const saveAccountingConfigSection = async (section) => {
+    if (accountingConfigSaving) return;
+
+    const sectionPayload = {};
+    let successMessage = "Accounting settings saved.";
+
+    if (section === "balances") {
+      sectionPayload.balanceInputs = balanceInputs;
+      successMessage = "Balance sheet inputs saved.";
+    } else if (section === "taxInputs") {
+      sectionPayload.taxInputs = taxInputs;
+      successMessage = "Tax inputs saved.";
+    } else if (section === "taxRates") {
+      sectionPayload.ghanaTaxConfig = ghanaTaxConfig;
+      successMessage = "Ghana tax rates saved.";
+    } else {
+      return;
+    }
+
+    setAccountingConfigSaving(section);
+    setAccountingConfigError("");
+
+    try {
+      const result = await fetchJson("/.netlify/functions/accounting-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(sectionPayload),
+      });
+
+      if (result?.balanceInputs) {
+        setBalanceInputs(result.balanceInputs);
+      }
+      if (result?.taxInputs) {
+        setTaxInputs(result.taxInputs);
+      }
+      if (result?.ghanaTaxConfig) {
+        setGhanaTaxConfig(result.ghanaTaxConfig);
+      }
+
+      if (section === "balances") balanceInputsEditedRef.current = false;
+      if (section === "taxInputs") taxInputsEditedRef.current = false;
+      if (section === "taxRates") ghanaTaxConfigEditedRef.current = false;
+
+      setNotice(successMessage);
+    } catch (err) {
+      setAccountingConfigError(err.message || "Unable to save accounting settings.");
+    } finally {
+      setAccountingConfigSaving("");
+      setAccountingConfigLoaded(true);
+    }
   };
 
   const changeHistoricalYear = async (yearValue) => {
@@ -944,6 +1021,9 @@ function AdminAccounting() {
         {!loading && isFetching && data && (
           <p className="accounting-status">Refreshing calculations…</p>
         )}
+        {!loading && !error && !accountingConfigLoaded && (
+          <p className="accounting-status">Loading saved accounting settings…</p>
+        )}
         {!loading && error && (
           <div className="accounting-inline">
             <p className="accounting-error">{error}</p>
@@ -951,6 +1031,9 @@ function AdminAccounting() {
               Retry
             </button>
           </div>
+        )}
+        {!loading && !error && accountingConfigError && (
+          <p className="accounting-error">{accountingConfigError}</p>
         )}
         {!loading && !error && notice && <p className="accounting-status">{notice}</p>}
 
@@ -1601,8 +1684,21 @@ function AdminAccounting() {
                     </p>
                   </div>
                   <div className="accounting-panel-actions">
-                    <button type="button" className="accounting-secondary" onClick={autoFillBalanceInputs}>
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={autoFillBalanceInputs}
+                      disabled={Boolean(accountingConfigSaving)}
+                    >
                       <AppIcon icon={faWandMagicSparkles} /> Auto-fill
+                    </button>
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={() => saveAccountingConfigSection("balances")}
+                      disabled={!accountingConfigLoaded || Boolean(accountingConfigSaving)}
+                    >
+                      {accountingConfigSaving === "balances" ? "Saving..." : "Save"}
                     </button>
                   </div>
                 </div>
@@ -2190,17 +2286,30 @@ function AdminAccounting() {
             </div>
 
             <div className="accounting-panel">
-              <div className="accounting-panel-head">
-                <div>
-                  <h3>Tax inputs</h3>
-                  <span className="accounting-panel-label">Adjustable credits & deductions</span>
+                <div className="accounting-panel-head">
+                  <div>
+                    <h3>Tax inputs</h3>
+                    <span className="accounting-panel-label">Adjustable credits & deductions</span>
+                  </div>
+                  <div className="accounting-panel-actions">
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={autoFillTaxInputs}
+                      disabled={Boolean(accountingConfigSaving)}
+                    >
+                      <AppIcon icon={faWandMagicSparkles} /> Auto-fill
+                    </button>
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={() => saveAccountingConfigSection("taxInputs")}
+                      disabled={!accountingConfigLoaded || Boolean(accountingConfigSaving)}
+                    >
+                      {accountingConfigSaving === "taxInputs" ? "Saving..." : "Save"}
+                    </button>
+                  </div>
                 </div>
-                <div className="accounting-panel-actions">
-                  <button type="button" className="accounting-secondary" onClick={autoFillTaxInputs}>
-                    <AppIcon icon={faWandMagicSparkles} /> Auto-fill
-                  </button>
-                </div>
-              </div>
               <div className="accounting-form-grid">
                 <label className="accounting-field">
                   Exempt sales
@@ -2251,17 +2360,30 @@ function AdminAccounting() {
             </div>
 
             <div className="accounting-panel">
-              <div className="accounting-panel-head">
-                <div>
-                  <h3>Ghana tax rates</h3>
-                  <span className="accounting-panel-label">Adjust to current policy</span>
+                <div className="accounting-panel-head">
+                  <div>
+                    <h3>Ghana tax rates</h3>
+                    <span className="accounting-panel-label">Adjust to current policy</span>
+                  </div>
+                  <div className="accounting-panel-actions">
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={resetGhanaTaxRates}
+                      disabled={Boolean(accountingConfigSaving)}
+                    >
+                      <AppIcon icon={faWandMagicSparkles} /> Reset defaults
+                    </button>
+                    <button
+                      type="button"
+                      className="accounting-secondary"
+                      onClick={() => saveAccountingConfigSection("taxRates")}
+                      disabled={!accountingConfigLoaded || Boolean(accountingConfigSaving)}
+                    >
+                      {accountingConfigSaving === "taxRates" ? "Saving..." : "Save"}
+                    </button>
+                  </div>
                 </div>
-                <div className="accounting-panel-actions">
-                  <button type="button" className="accounting-secondary" onClick={resetGhanaTaxRates}>
-                    <AppIcon icon={faWandMagicSparkles} /> Reset defaults
-                  </button>
-                </div>
-              </div>
               <div className="accounting-form-grid">
                 <label className="accounting-field">
                   Corporate tax category

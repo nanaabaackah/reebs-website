@@ -34,6 +34,7 @@ model Organization {
   waterSales      WaterSale[]
   waterExpenses   WaterExpense[]
   waterAdjustments WaterAdjustment[]
+  accountingConfig AccountingConfig?
   accountingManualSales AccountingManualSales[]
   userSessions    UserSession[]
 
@@ -261,6 +262,21 @@ model AccountingManualSales {
 
   @@unique([organizationId, year])
   @@map("accountingManualSales")
+}
+
+model AccountingConfig {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @unique @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  balanceInputs   Json?
+  taxInputs       Json?
+  ghanaTaxConfig  Json?
+  createdByUserId Int?
+  updatedByUserId Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("accountingConfig")
 }
 
 model Vendor {

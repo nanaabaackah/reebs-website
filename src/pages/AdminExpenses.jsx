@@ -6,13 +6,13 @@ import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import {
   EXPENSE_CATEGORY_LABELS,
+  getExpenseSpecificOptions,
   getExpenseCategoryStyle,
-  inferExpenseCategory,
   normalizeExpenseCategory,
 } from "../data/expenseCategories";
 import "../styles/admin.css";
 
-const AUTO_CATEGORY_VALUE = "auto";
+const DEFAULT_EXPENSE_CATEGORY = "Operational";
 
 const formatCurrency = (amount) => {
   try {
@@ -52,7 +52,7 @@ const toNumber = (value, fallback = 0) => {
 
 const normalizeExpense = (expense) => ({
   ...expense,
-  category: normalizeExpenseCategory(expense?.category) || "Miscellaneous",
+  category: normalizeExpenseCategory(expense?.category) || "Operational",
 });
 
 const formatExpenseLink = (expense) => {
@@ -75,7 +75,8 @@ function AdminExpenses() {
   const [allTimeView, setAllTimeView] = useState(false);
   const [monthFilter, setMonthFilter] = useState(() => new Date().toISOString().slice(0, 7));
   const [form, setForm] = useState({
-    category: AUTO_CATEGORY_VALUE,
+    category: DEFAULT_EXPENSE_CATEGORY,
+    specificType: "",
     amount: "",
     description: "",
     date: new Date().toISOString().slice(0, 10),
@@ -163,19 +164,7 @@ function AdminExpenses() {
     fetchExpenses({ month: monthFilter, allTime: allTimeView });
   }, [monthFilter, allTimeView]);
 
-  const categoryList = useMemo(() => {
-    const extras = Array.from(
-      new Set(
-        expenses
-          .map((expense) => normalizeExpenseCategory(expense.category))
-          .filter(Boolean)
-      )
-    )
-      .filter((category) => !EXPENSE_CATEGORY_LABELS.includes(category))
-      .sort((a, b) => a.localeCompare(b));
-
-    return [...EXPENSE_CATEGORY_LABELS, ...extras];
-  }, [expenses]);
+  const categoryList = EXPENSE_CATEGORY_LABELS;
 
   const totalExpenses = useMemo(
     () => expenses.reduce((sum, expense) => sum + toNumber(expense.amount) / 100, 0),
@@ -208,7 +197,7 @@ function AdminExpenses() {
   );
 
   const topCategory = useMemo(() => {
-    if (!categoryList.length) return null;
+    if (!expenses.length || !categoryList.length) return null;
     let winner = null;
     for (const category of categoryList) {
       const total = toNumber(totalsByCategory[category], 0);
@@ -216,19 +205,43 @@ function AdminExpenses() {
         winner = { category, total };
       }
     }
-    return winner;
-  }, [categoryList, totalsByCategory]);
+    return winner?.total > 0 ? winner : null;
+  }, [categoryList, expenses.length, totalsByCategory]);
 
-  const suggestedCategory = useMemo(
-    () => inferExpenseCategory({ category: form.category, description: form.description }),
-    [form.category, form.description]
+  const specificOptions = useMemo(
+    () => getExpenseSpecificOptions(form.category),
+    [form.category]
   );
+  const requiresSpecificOption = specificOptions.length > 0;
+  const specificFieldLabel = form.category
+    ? `Specific ${String(form.category).toLowerCase()} item`
+    : "Specific item";
+
+  const updateCategory = (event) => {
+    const nextCategory = event.target.value;
+    const nextOptions = getExpenseSpecificOptions(nextCategory);
+    setForm((prev) => ({
+      ...prev,
+      category: nextCategory,
+      specificType: nextOptions.includes(prev.specificType) ? prev.specificType : "",
+    }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (requiresSpecificOption && !form.specificType) {
+      setStatus("");
+      setError("Select the specific item before saving.");
+      return;
+    }
+
     setSaving(true);
     setStatus("");
     setError("");
+    const description = String(form.description || "").trim();
+    const finalDescription = requiresSpecificOption
+      ? `${form.specificType}: ${description}`
+      : description;
 
     try {
       const res = await fetch("/.netlify/functions/expenses", {
@@ -237,7 +250,7 @@ function AdminExpenses() {
         body: JSON.stringify({
           category: form.category,
           amount: form.amount,
-          description: form.description,
+          description: finalDescription,
           date: form.date,
           orderId: form.orderId || undefined,
           bookingId: form.bookingId || undefined,
@@ -255,7 +268,8 @@ function AdminExpenses() {
       }
       setForm((prev) => ({
         ...prev,
-        category: AUTO_CATEGORY_VALUE,
+        category: DEFAULT_EXPENSE_CATEGORY,
+        specificType: "",
         amount: "",
         description: "",
         orderId: "",
@@ -279,8 +293,7 @@ function AdminExpenses() {
             <p className="expenses-eyebrow">Operating Expenses</p>
             <h1>Expense Tracker</h1>
             <p className="expenses-subtitle">
-              Mostly automatic bookkeeping: category is inferred from notes, totals roll up by period,
-              and accounting statements update automatically.
+              Keep every expense inside the fixed company categories so reporting stays clean and accounting totals stay consistent.
             </p>
           </div>
           <div className="expenses-total-card">
@@ -334,7 +347,7 @@ function AdminExpenses() {
             </label>
           </div>
           <p className="expenses-filter-note">
-            Auto-categorized entries flow straight into accounting totals for this organization.
+            Only utilities, logistics, operational, staff salary, maintenance, and marketing are tracked here.
           </p>
         </div>
 
@@ -364,16 +377,15 @@ function AdminExpenses() {
               <h2>
                 <AppIcon icon={faPlus} /> Log expense
               </h2>
-              <p className="expenses-muted">Default mode auto-categorizes so non-accountants can post quickly.</p>
+              <p className="expenses-muted">Choose one of the six approved categories, then pick the specific item for cleaner reporting.</p>
             </div>
             <form className="expenses-form" onSubmit={handleSubmit}>
               <label>
                 Category
                 <select
                   value={form.category}
-                  onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
+                  onChange={updateCategory}
                 >
-                  <option value={AUTO_CATEGORY_VALUE}>Auto-detect from description</option>
                   {EXPENSE_CATEGORY_LABELS.map((category) => (
                     <option key={category} value={category}>
                       {category}
@@ -381,9 +393,23 @@ function AdminExpenses() {
                   ))}
                 </select>
               </label>
-              <p className="expenses-hint">
-                Suggested category: <strong>{suggestedCategory}</strong>
-              </p>
+              {requiresSpecificOption && (
+                <label>
+                  {specificFieldLabel}
+                  <select
+                    value={form.specificType}
+                    onChange={(event) => setForm((prev) => ({ ...prev, specificType: event.target.value }))}
+                    required
+                  >
+                    <option value="">Select item</option>
+                    {specificOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
                 Amount (GHS)
                 <input
@@ -442,7 +468,7 @@ function AdminExpenses() {
                   rows="3"
                   value={form.description}
                   onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  placeholder="Fuel for delivery to East Legon"
+                  placeholder={requiresSpecificOption ? "Enter vendor, pay period, campaign note, or any extra note" : "Fuel for delivery to East Legon"}
                   required
                 />
               </label>

@@ -150,7 +150,7 @@ const buildExpenseBreakdown = async ({ client, start, end, organizationId }) => 
   );
 
   for (const row of expenseRows.rows || []) {
-    const category = normalizeExpenseCategory(row.category) || "Miscellaneous";
+    const category = normalizeExpenseCategory(row.category) || "Operational";
     const cents = Number(row.expense_cents || 0);
     if (!Number.isFinite(cents) || cents === 0) continue;
     expenseTotals.set(category, (expenseTotals.get(category) || 0) + cents);
@@ -178,7 +178,7 @@ const buildExpenseBreakdown = async ({ client, start, end, organizationId }) => 
 
     const maintenanceCents = Number(maintenanceRes.rows[0]?.maintenance_cents || 0);
     if (Number.isFinite(maintenanceCents) && maintenanceCents > 0) {
-      const maintenanceCategory = "Repairs & Maintenance";
+      const maintenanceCategory = "Maintenance";
       expenseTotals.set(
         maintenanceCategory,
         (expenseTotals.get(maintenanceCategory) || 0) + maintenanceCents

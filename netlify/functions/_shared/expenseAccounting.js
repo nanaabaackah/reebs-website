@@ -1,73 +1,109 @@
 const EXPENSE_CATEGORY_DEFINITIONS = [
-  "Rent & Utilities",
-  "Payroll & Staff Costs",
-  "Transport & Fuel",
-  "Marketing & Advertising",
-  "Repairs & Maintenance",
-  "Office & Admin",
-  "Communication & Internet",
-  "Professional & Legal Fees",
-  "Bank Charges & Mobile Money Fees",
-  "Taxes, Levies & Licences",
-  "Insurance",
-  "Miscellaneous",
+  "Utilities",
+  "Logistics",
+  "Operational",
+  "Staff Salary",
+  "Maintenance",
+  "Marketing",
 ];
 
 const EXPENSE_CATEGORY_ALIASES = {
-  Logistics: "Transport & Fuel",
-  Operational: "Office & Admin",
-  Payroll: "Payroll & Staff Costs",
-  Marketing: "Marketing & Advertising",
-  Maintenance: "Repairs & Maintenance",
-  Transport: "Transport & Fuel",
-  Utilities: "Rent & Utilities",
-  "Bank Charges": "Bank Charges & Mobile Money Fees",
+  Utilities: "Utilities",
+  Utility: "Utilities",
+  "Rent & Utilities": "Utilities",
+  "Communication & Internet": "Utilities",
+  Logistics: "Logistics",
+  Transport: "Logistics",
+  "Transport & Fuel": "Logistics",
+  Operational: "Operational",
+  "Office & Admin": "Operational",
+  "Professional & Legal Fees": "Operational",
+  "Bank Charges & Mobile Money Fees": "Operational",
+  "Taxes, Levies & Licences": "Operational",
+  Insurance: "Operational",
+  Miscellaneous: "Operational",
+  Payroll: "Staff Salary",
+  Salary: "Staff Salary",
+  "Payroll & Staff Costs": "Staff Salary",
+  "Staff Salary": "Staff Salary",
+  "Staff Salaries": "Staff Salary",
+  Maintenance: "Maintenance",
+  "Repairs & Maintenance": "Maintenance",
+  Repairs: "Maintenance",
+  Marketing: "Marketing",
+  "Marketing & Advertising": "Marketing",
 };
 
 const EXPENSE_CATEGORY_RULES = [
   {
-    category: "Rent & Utilities",
-    keywords: ["rent", "lease", "water", "electricity", "ecg", "utility", "generator", "fuel for gen"],
+    category: "Utilities",
+    keywords: [
+      "rent",
+      "lease",
+      "water",
+      "electricity",
+      "ecg",
+      "utility",
+      "internet",
+      "wifi",
+      "airtime",
+      "data",
+      "phone",
+      "telecom",
+      "power",
+      "generator",
+      "fuel for gen",
+    ],
   },
   {
-    category: "Payroll & Staff Costs",
+    category: "Staff Salary",
     keywords: ["salary", "payroll", "wage", "staff", "allowance", "ssnit", "bonus"],
   },
   {
-    category: "Transport & Fuel",
+    category: "Logistics",
     keywords: ["fuel", "transport", "uber", "bolt", "delivery", "toll", "trip", "driver"],
   },
   {
-    category: "Marketing & Advertising",
+    category: "Marketing",
     keywords: ["marketing", "promo", "advert", "ad", "campaign", "facebook", "instagram", "tiktok", "seo"],
   },
   {
-    category: "Repairs & Maintenance",
+    category: "Maintenance",
     keywords: ["maintenance", "repair", "service", "fix", "spare", "technician"],
   },
   {
-    category: "Office & Admin",
-    keywords: ["office", "stationery", "printer", "supplies", "admin", "cleaning"],
-  },
-  {
-    category: "Communication & Internet",
-    keywords: ["internet", "wifi", "airtime", "data", "phone", "telecom"],
-  },
-  {
-    category: "Professional & Legal Fees",
-    keywords: ["legal", "lawyer", "consultant", "professional", "audit", "accountant", "advisory"],
-  },
-  {
-    category: "Bank Charges & Mobile Money Fees",
-    keywords: ["bank", "charge", "fee", "momo", "mobile money", "transfer", "merchant fee"],
-  },
-  {
-    category: "Taxes, Levies & Licences",
-    keywords: ["tax", "vat", "gra", "permit", "license", "licence", "levy", "fee payment"],
-  },
-  {
-    category: "Insurance",
-    keywords: ["insurance", "premium", "policy", "cover"],
+    category: "Operational",
+    keywords: [
+      "office",
+      "stationery",
+      "printer",
+      "supplies",
+      "admin",
+      "cleaning",
+      "legal",
+      "lawyer",
+      "consultant",
+      "professional",
+      "audit",
+      "accountant",
+      "advisory",
+      "bank",
+      "momo",
+      "mobile money",
+      "transfer",
+      "merchant fee",
+      "tax",
+      "vat",
+      "gra",
+      "permit",
+      "license",
+      "licence",
+      "levy",
+      "insurance",
+      "premium",
+      "policy",
+      "cover",
+    ],
   },
 ];
 
@@ -86,7 +122,7 @@ export const EXPENSE_CATEGORIES = Object.freeze([...EXPENSE_CATEGORY_DEFINITIONS
 export const normalizeExpenseCategory = (value) => {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  return EXPENSE_CATEGORY_LOOKUP.get(toLookupKey(raw)) || raw;
+  return EXPENSE_CATEGORY_LOOKUP.get(toLookupKey(raw)) || "";
 };
 
 export const isSupportedExpenseCategory = (value) => {
@@ -102,7 +138,7 @@ export const inferExpenseCategory = ({ category = "", description = "" } = {}) =
   const match = EXPENSE_CATEGORY_RULES.find((rule) =>
     rule.keywords.some((keyword) => text.includes(keyword))
   );
-  return match?.category || "Miscellaneous";
+  return match?.category || "Operational";
 };
 
 export const resolveExpenseTable = async (client) => {

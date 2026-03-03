@@ -33,7 +33,7 @@ const getMonthRange = (value) => {
 
 const normalizeExpenseRow = (row) => ({
   ...row,
-  category: normalizeExpenseCategory(row?.category) || "Miscellaneous",
+  category: normalizeExpenseCategory(row?.category) || "Operational",
 });
 
 export async function handler(event = {}) {
@@ -146,7 +146,7 @@ export async function handler(event = {}) {
 
       const maintenanceRows = (maintenanceRes.rows || []).map((row) => ({
         id: `maintenance-${row.id}`,
-        category: "Repairs & Maintenance",
+        category: "Maintenance",
         amount: row.cost,
         description: `${row.productName || "Asset"}: ${row.issue || row.type || "Maintenance"}`,
         date: row.date,
@@ -188,37 +188,37 @@ export async function handler(event = {}) {
       const daysAgo = (days) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       const samples = [
         {
-          category: "Transport & Fuel",
+          category: "Logistics",
           amount: 12050,
           description: "Fuel for delivery to East Legon",
           date: daysAgo(2),
         },
         {
-          category: "Rent & Utilities",
+          category: "Utilities",
           amount: 85000,
-          description: "Monthly warehouse rent",
+          description: "Rent: Monthly warehouse rent",
           date: daysAgo(6),
         },
         {
-          category: "Payroll & Staff Costs",
+          category: "Staff Salary",
           amount: 300000,
           description: "Staff salaries and overtime",
           date: daysAgo(10),
         },
         {
-          category: "Marketing & Advertising",
+          category: "Marketing",
           amount: 45000,
           description: "Instagram promo campaign",
           date: daysAgo(12),
         },
         {
-          category: "Communication & Internet",
+          category: "Utilities",
           amount: 23000,
-          description: "Internet and call credits",
+          description: "Internet: Internet and call credits",
           date: daysAgo(15),
         },
         {
-          category: "Repairs & Maintenance",
+          category: "Maintenance",
           amount: 9575,
           description: "Vehicle servicing and minor repairs",
           date: daysAgo(18),
