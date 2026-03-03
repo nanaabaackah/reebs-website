@@ -2,6 +2,10 @@
   --page-hero-image: url("/imgs/IMG_3858.JPG");
 }
 
+.contact-hero::before {
+  background-image: url("/imgs/IMG_3858.JPG");
+}
+
 .contact-shell {
   gap: clamp(1.6rem, 4vw, 3rem);
 }
@@ -329,5 +333,4 @@
     grid-template-columns: 1fr;
   }
 }
-
 

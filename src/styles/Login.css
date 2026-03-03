@@ -17,6 +17,14 @@
   --page-hero-image: var(--login-stage-image);
 }
 
+.staff-login-page .login-stage::before {
+  background-image: url("/imgs/background26.svg");
+}
+
+.customer-login-page .login-stage::before {
+  background-image: url("/imgs/IMG_3858.JPG");
+}
+
 .login-stage-inner {
   width: min(760px, 100%);
   margin-inline: auto;
