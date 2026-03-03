@@ -95,31 +95,52 @@ export async function handler(event = {}) {
     await ensureAccountingHistoryTable(client);
 
     if (event.httpMethod === "GET") {
-      const year = parseYear(event.queryStringParameters?.year || MANUAL_SALES_YEAR);
-      if (!year) {
-        return json(400, { error: "A valid year is required." });
+      const rawYear = event.queryStringParameters?.year;
+      const hasYearFilter = typeof rawYear === "string" ? rawYear.trim() !== "" : rawYear != null;
+
+      if (hasYearFilter) {
+        const year = parseYear(rawYear);
+        if (!year) {
+          return json(400, { error: "A valid year is required." });
+        }
+
+        const result = await client.query(
+          `SELECT "year", "monthlySales", "updatedAt"
+           FROM "accountingManualSales"
+           WHERE "organizationId" = $1 AND "year" = $2
+           LIMIT 1`,
+          [Number(authUser.organizationId), year]
+        );
+
+        if (result.rowCount === 0) {
+          return json(200, {
+            year,
+            monthlySales: { ...EMPTY_MONTHLY_SALES },
+            updatedAt: null,
+          });
+        }
+
+        return json(200, {
+          year,
+          monthlySales: normalizeMonthlySales(result.rows[0]?.monthlySales),
+          updatedAt: result.rows[0]?.updatedAt || null,
+        });
       }
 
       const result = await client.query(
         `SELECT "year", "monthlySales", "updatedAt"
          FROM "accountingManualSales"
-         WHERE "organizationId" = $1 AND "year" = $2
-         LIMIT 1`,
-        [Number(authUser.organizationId), year]
+         WHERE "organizationId" = $1
+         ORDER BY "year" ASC`,
+        [Number(authUser.organizationId)]
       );
 
-      if (result.rowCount === 0) {
-        return json(200, {
-          year,
-          monthlySales: { ...EMPTY_MONTHLY_SALES },
-          updatedAt: null,
-        });
-      }
-
       return json(200, {
-        year,
-        monthlySales: normalizeMonthlySales(result.rows[0]?.monthlySales),
-        updatedAt: result.rows[0]?.updatedAt || null,
+        years: (result.rows || []).map((row) => ({
+          year: Number(row?.year || MANUAL_SALES_YEAR),
+          monthlySales: normalizeMonthlySales(row?.monthlySales),
+          updatedAt: row?.updatedAt || null,
+        })),
       });
     }
 

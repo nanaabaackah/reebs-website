@@ -69,7 +69,16 @@ const CORPORATE_RATE_MAP = {
   custom: { label: "Custom rate", rate: null },
 };
 
-const MANUAL_SALES_YEAR = 2024;
+const HISTORICAL_START_YEAR = 2024;
+const HISTORICAL_INPUT_YEARS = (() => {
+  const currentYear = new Date().getFullYear();
+  const lastHistoricalYear = Math.max(HISTORICAL_START_YEAR, currentYear - 1);
+  return Array.from(
+    { length: lastHistoricalYear - HISTORICAL_START_YEAR + 1 },
+    (_, index) => HISTORICAL_START_YEAR + index
+  );
+})();
+const DEFAULT_HISTORICAL_YEAR = HISTORICAL_INPUT_YEARS[0] || HISTORICAL_START_YEAR;
 const MANUAL_SALES_MONTHS = [
   { key: "jan", label: "Jan", monthIndex: 0 },
   { key: "feb", label: "Feb", monthIndex: 1 },
@@ -110,6 +119,14 @@ const toHistoricalSalesInputs = (value) => {
 
 const serializeHistoricalSalesInputs = (value) =>
   JSON.stringify(normalizeManualSalesPayload(value));
+
+const createEmptyHistoricalSalesRecordMap = () =>
+  Object.fromEntries(HISTORICAL_INPUT_YEARS.map((year) => [year, { ...EMPTY_MANUAL_SALES_PAYLOAD }]));
+
+const createHistoricalSalesDraftMap = (value = {}) =>
+  Object.fromEntries(
+    HISTORICAL_INPUT_YEARS.map((year) => [year, toHistoricalSalesInputs(value[year])])
+  );
 
 function AdminAccounting() {
   const [windowKey, setWindowKey] = useState("allTime");
@@ -167,13 +184,16 @@ function AdminAccounting() {
   const [taxInputs, setTaxInputs] = useState(() =>
     loadLocalState("reebs_ghana_tax_inputs_v1", taxInputDefaults)
   );
-  const [historicalSalesInputs, setHistoricalSalesInputs] = useState(MANUAL_SALES_DEFAULTS);
+  const [historicalSalesByYear, setHistoricalSalesByYear] = useState(() =>
+    createEmptyHistoricalSalesRecordMap()
+  );
+  const [historicalSalesDrafts, setHistoricalSalesDrafts] = useState(() =>
+    createHistoricalSalesDraftMap(createEmptyHistoricalSalesRecordMap())
+  );
+  const [selectedHistoricalYear, setSelectedHistoricalYear] = useState(DEFAULT_HISTORICAL_YEAR);
   const [historicalSalesLoaded, setHistoricalSalesLoaded] = useState(false);
   const [historicalSalesSaving, setHistoricalSalesSaving] = useState(false);
   const [historicalSalesError, setHistoricalSalesError] = useState("");
-  const [historicalSalesSnapshot, setHistoricalSalesSnapshot] = useState(() =>
-    serializeHistoricalSalesInputs(MANUAL_SALES_DEFAULTS)
-  );
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
   );
@@ -240,16 +260,22 @@ function AdminAccounting() {
     (async () => {
       setHistoricalSalesError("");
       try {
-        const result = await fetchJson(`/.netlify/functions/accounting-history?year=${MANUAL_SALES_YEAR}`);
+        const result = await fetchJson("/.netlify/functions/accounting-history");
         if (cancelled) return;
-        const nextInputs = toHistoricalSalesInputs(result?.monthlySales);
-        setHistoricalSalesInputs(nextInputs);
-        setHistoricalSalesSnapshot(serializeHistoricalSalesInputs(nextInputs));
+        const nextRecords = createEmptyHistoricalSalesRecordMap();
+        const rows = Array.isArray(result?.years) ? result.years : [];
+        rows.forEach((row) => {
+          const year = Number(row?.year);
+          if (!HISTORICAL_INPUT_YEARS.includes(year)) return;
+          nextRecords[year] = normalizeManualSalesPayload(row?.monthlySales);
+        });
+        setHistoricalSalesByYear(nextRecords);
+        setHistoricalSalesDrafts(createHistoricalSalesDraftMap(nextRecords));
       } catch (err) {
         if (cancelled) return;
-        setHistoricalSalesError(err.message || "Unable to load saved 2024 sales.");
-        setHistoricalSalesInputs({ ...MANUAL_SALES_DEFAULTS });
-        setHistoricalSalesSnapshot(serializeHistoricalSalesInputs(MANUAL_SALES_DEFAULTS));
+        setHistoricalSalesError(err.message || "Unable to load saved historical sales.");
+        setHistoricalSalesByYear(createEmptyHistoricalSalesRecordMap());
+        setHistoricalSalesDrafts(createHistoricalSalesDraftMap(createEmptyHistoricalSalesRecordMap()));
       } finally {
         if (!cancelled) {
           setHistoricalSalesLoaded(true);
@@ -263,44 +289,11 @@ function AdminAccounting() {
   }, []);
 
   useEffect(() => {
-    if (!historicalSalesLoaded) return undefined;
-    const currentSnapshot = serializeHistoricalSalesInputs(historicalSalesInputs);
-    if (currentSnapshot === historicalSalesSnapshot) return undefined;
-
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      (async () => {
-        setHistoricalSalesSaving(true);
-        setHistoricalSalesError("");
-        try {
-          await fetchJson("/.netlify/functions/accounting-history", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              year: MANUAL_SALES_YEAR,
-              monthlySales: normalizeManualSalesPayload(historicalSalesInputs),
-            }),
-          });
-          if (cancelled) return;
-          setHistoricalSalesSnapshot(currentSnapshot);
-        } catch (err) {
-          if (cancelled) return;
-          setHistoricalSalesError(err.message || "Unable to save 2024 sales to the database.");
-        } finally {
-          if (!cancelled) {
-            setHistoricalSalesSaving(false);
-          }
-        }
-      })();
-    }, 600);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [historicalSalesInputs, historicalSalesLoaded, historicalSalesSnapshot]);
+    const yearMatch = /^year(\d{4})$/.exec(windowKey || "");
+    const matchedYear = Number(yearMatch?.[1] || 0);
+    if (!HISTORICAL_INPUT_YEARS.includes(matchedYear)) return;
+    setSelectedHistoricalYear(matchedYear);
+  }, [windowKey]);
 
   const fetchData = async (key = windowKey) => {
     if (!data) setLoading(true);
@@ -350,24 +343,45 @@ function AdminAccounting() {
     fetchListData();
   }, [viewMode, listLoaded, isMobileView]);
 
+  const selectedHistoricalInputs = useMemo(
+    () => historicalSalesDrafts[selectedHistoricalYear] || { ...MANUAL_SALES_DEFAULTS },
+    [historicalSalesDrafts, selectedHistoricalYear]
+  );
+  const selectedHistoricalSavedValues = useMemo(
+    () => historicalSalesByYear[selectedHistoricalYear] || { ...EMPTY_MANUAL_SALES_PAYLOAD },
+    [historicalSalesByYear, selectedHistoricalYear]
+  );
+  const historicalSalesDirty =
+    serializeHistoricalSalesInputs(selectedHistoricalInputs)
+    !== serializeHistoricalSalesInputs(selectedHistoricalSavedValues);
+  const lastHistoricalYear =
+    HISTORICAL_INPUT_YEARS[HISTORICAL_INPUT_YEARS.length - 1] || selectedHistoricalYear;
+  const selectedHistoricalYearTotal = useMemo(
+    () =>
+      MANUAL_SALES_MONTHS.reduce(
+        (sum, month) => sum + Math.max(0, toNumber(selectedHistoricalInputs[month.key])),
+        0
+      ),
+    [selectedHistoricalInputs]
+  );
   const historicalSalesMonths = useMemo(
     () =>
-      MANUAL_SALES_MONTHS.map((month) => {
-        const start = new Date(Date.UTC(MANUAL_SALES_YEAR, month.monthIndex, 1));
-        const end = new Date(Date.UTC(MANUAL_SALES_YEAR, month.monthIndex + 1, 1));
-        return {
-          ...month,
-          amount: Math.max(0, toNumber(historicalSalesInputs[month.key])),
-          start,
-          end,
-          dateKey: start.toISOString().slice(0, 10),
-        };
-      }),
-    [historicalSalesInputs]
-  );
-  const historicalSalesYearTotal = useMemo(
-    () => historicalSalesMonths.reduce((sum, month) => sum + month.amount, 0),
-    [historicalSalesMonths]
+      HISTORICAL_INPUT_YEARS.flatMap((year) =>
+        MANUAL_SALES_MONTHS.map((month) => {
+          const start = new Date(Date.UTC(year, month.monthIndex, 1));
+          const end = new Date(Date.UTC(year, month.monthIndex + 1, 1));
+          const savedValues = historicalSalesByYear[year] || EMPTY_MANUAL_SALES_PAYLOAD;
+          return {
+            ...month,
+            year,
+            amount: Math.max(0, toNumber(savedValues[month.key])),
+            start,
+            end,
+            dateKey: start.toISOString().slice(0, 10),
+          };
+        })
+      ),
+    [historicalSalesByYear]
   );
   const historicalSalesInWindow = useMemo(() => {
     if (!data?.startDate || !data?.endDate) return [];
@@ -431,12 +445,12 @@ function AdminAccounting() {
   const hasHistoricalSalesInWindow = historicalSalesWindowTotal > 0;
   const windowLabel = data?.windowLabel || "";
   const cashflowWindowLabel = hasHistoricalSalesInWindow
-    ? `${windowLabel || "Selected window"} + 2024 monthly carry-over`
+    ? `${windowLabel || "Selected window"} + saved historical carry-over`
     : windowLabel
       ? `Daily revenue in ${windowLabel}`
       : "Daily revenue";
   const cashflowPanelLabel = hasHistoricalSalesInWindow
-    ? "Live daily sales plus the 2024 monthly carry-over you entered."
+    ? "Live daily sales plus the saved historical carry-over you entered."
     : "Fast SQL aggregation keeps this chart snappy at scale.";
   const financeTransactions = useMemo(() => data?.transactions || [], [data]);
   const expenseBreakdown = useMemo(() => {
@@ -543,7 +557,13 @@ function AdminAccounting() {
   const updateHistoricalSales = (field) => (event) => {
     const value = event.target.value;
     const sanitized = typeof value === "string" ? value.replace(/^-+/, "") : value;
-    setHistoricalSalesInputs((prev) => ({ ...prev, [field]: sanitized }));
+    setHistoricalSalesDrafts((prev) => ({
+      ...prev,
+      [selectedHistoricalYear]: {
+        ...(prev[selectedHistoricalYear] || MANUAL_SALES_DEFAULTS),
+        [field]: sanitized,
+      },
+    }));
   };
 
   const updateGhanaTax = (field) => (event) => {
@@ -732,8 +752,64 @@ function AdminAccounting() {
     setNotice("Ghana tax rates reset to default template values.");
   };
 
+  const changeHistoricalYear = async (yearValue) => {
+    const year = Number(yearValue);
+    if (!HISTORICAL_INPUT_YEARS.includes(year)) return;
+    setSelectedHistoricalYear(year);
+    const nextWindowKey = `year${year}`;
+    setWindowKey(nextWindowKey);
+    await fetchData(nextWindowKey);
+  };
+
+  const saveHistoricalSales = async () => {
+    if (!historicalSalesLoaded || historicalSalesSaving || !historicalSalesDirty) return;
+
+    const year = selectedHistoricalYear;
+    const currentInputs = selectedHistoricalInputs;
+    setHistoricalSalesSaving(true);
+    setHistoricalSalesError("");
+
+    try {
+      const result = await fetchJson("/.netlify/functions/accounting-history", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          year,
+          monthlySales: normalizeManualSalesPayload(currentInputs),
+        }),
+      });
+
+      const savedValues = normalizeManualSalesPayload(result?.monthlySales);
+      setHistoricalSalesByYear((prev) => ({
+        ...prev,
+        [year]: savedValues,
+      }));
+      setHistoricalSalesDrafts((prev) => ({
+        ...prev,
+        [year]: toHistoricalSalesInputs(savedValues),
+      }));
+
+      const nextYear = HISTORICAL_INPUT_YEARS.find((candidate) => candidate > year);
+      if (nextYear) {
+        await changeHistoricalYear(nextYear);
+        setNotice(`Saved ${year} historical sales. Continue with ${nextYear}.`);
+      } else {
+        setNotice(`Saved ${year} historical sales.`);
+      }
+    } catch (err) {
+      setHistoricalSalesError(err.message || `Unable to save ${year} sales to the database.`);
+    } finally {
+      setHistoricalSalesSaving(false);
+    }
+  };
+
   const clearHistoricalSales = () => {
-    setHistoricalSalesInputs({ ...MANUAL_SALES_DEFAULTS });
+    setHistoricalSalesDrafts((prev) => ({
+      ...prev,
+      [selectedHistoricalYear]: { ...MANUAL_SALES_DEFAULTS },
+    }));
     setHistoricalSalesError("");
   };
 
@@ -764,7 +840,11 @@ function AdminAccounting() {
                 >
                   <option value="today">Today</option>
                   <option value="allTime">All time</option>
-                  <option value="year2024">2024</option>
+                  {HISTORICAL_INPUT_YEARS.map((year) => (
+                    <option key={year} value={`year${year}`}>
+                      {year}
+                    </option>
+                  ))}
                   <option value="thisMonth">This month</option>
                   <option value="lastMonth">Last month</option>
                   <option value="thisQuarter">This quarter</option>
@@ -880,42 +960,66 @@ function AdminAccounting() {
               <div className="accounting-panel-head">
                 <div>
                   <p className="accounting-panel-label">Historical carry-over</p>
-                  <h3>Enter 2024 monthly sales</h3>
+                  <h3>Enter {selectedHistoricalYear} monthly sales</h3>
                   <p className="accounting-panel-sub">
-                    Use the handwritten book totals for 2024. Ongoing sales still flow in automatically as new orders are recorded.
+                    Use the handwritten book totals, save each year, then move forward. Ongoing sales still flow in automatically as new orders are recorded.
                   </p>
                 </div>
                 <div className="accounting-panel-actions">
+                  <label className="accounting-field">
+                    Historical year
+                    <select
+                      value={selectedHistoricalYear}
+                      onChange={(event) => changeHistoricalYear(event.target.value)}
+                      disabled={!historicalSalesLoaded || historicalSalesSaving}
+                    >
+                      {HISTORICAL_INPUT_YEARS.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="accounting-secondary"
+                    onClick={saveHistoricalSales}
+                    disabled={!historicalSalesLoaded || historicalSalesSaving || !historicalSalesDirty}
+                  >
+                    {historicalSalesSaving ? "Saving..." : `Save ${selectedHistoricalYear}`}
+                  </button>
                   <button
                     type="button"
                     className="accounting-secondary"
                     onClick={clearHistoricalSales}
-                    disabled={!historicalSalesLoaded}
+                    disabled={!historicalSalesLoaded || historicalSalesSaving}
                   >
-                    Clear 2024
+                    Clear {selectedHistoricalYear}
                   </button>
                 </div>
               </div>
               <div className="accounting-form-grid">
                 {historicalSalesMonths.map((month) => (
-                  <label key={month.key} className="accounting-field">
-                    {month.label} {MANUAL_SALES_YEAR}
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      value={historicalSalesInputs[month.key]}
-                      onChange={updateHistoricalSales(month.key)}
-                      disabled={!historicalSalesLoaded}
-                    />
-                  </label>
+                  month.year === selectedHistoricalYear ? (
+                    <label key={`${month.year}-${month.key}`} className="accounting-field">
+                      {month.label} {selectedHistoricalYear}
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        value={selectedHistoricalInputs[month.key]}
+                        onChange={updateHistoricalSales(month.key)}
+                        disabled={!historicalSalesLoaded || historicalSalesSaving}
+                      />
+                    </label>
+                  ) : null
                 ))}
               </div>
               {historicalSalesError && <p className="accounting-error">{historicalSalesError}</p>}
               <div className="accounting-pnl">
                 <div className="accounting-pnl-row">
-                  <span>Manual {MANUAL_SALES_YEAR} total</span>
-                  <strong>{formatCurrency(historicalSalesYearTotal)}</strong>
+                  <span>Input total for {selectedHistoricalYear}</span>
+                  <strong>{formatCurrency(selectedHistoricalYearTotal)}</strong>
                 </div>
                 <div className="accounting-pnl-row">
                   <span>Applied in {windowLabel || "selected window"}</span>
@@ -924,15 +1028,17 @@ function AdminAccounting() {
               </div>
               <p className="accounting-muted">
                 {historicalSalesError
-                  ? "The current values are still on screen. Edit any field to retry saving to the database."
+                  ? "The current values are still on screen. Edit and save again to retry."
                   : !historicalSalesLoaded
-                  ? "Loading saved 2024 sales from the database…"
+                  ? "Loading saved historical sales from the database…"
                   : historicalSalesSaving
-                    ? "Saving 2024 sales to the database…"
-                    : "Stored per organization in the database. Changes save automatically."}
+                    ? `Saving ${selectedHistoricalYear} sales to the database…`
+                    : historicalSalesDirty
+                      ? `Unsaved changes for ${selectedHistoricalYear}. Click Save to store them${selectedHistoricalYear < lastHistoricalYear ? ` and continue with ${selectedHistoricalYear + 1}` : ""}.`
+                      : `Saved per organization in the database. ${selectedHistoricalYear} is up to date.`}
               </p>
               <p className="accounting-muted">
-                Included in gross revenue, revenue mix, cash flow, and VAT sales. It does not change COGS, item-level sales, or profit-based taxes until detailed receipts are entered.
+                Saved historical totals are included in gross revenue, revenue mix, cash flow, and VAT sales. They do not change COGS, item-level sales, or profit-based taxes until detailed receipts are entered.
               </p>
             </div>
           </section>
@@ -1042,7 +1148,7 @@ function AdminAccounting() {
                 )}
                 {hasHistoricalSalesInWindow && (
                   <p className="accounting-muted">
-                    Manual 2024 sales of {formatCurrency(historicalSalesWindowTotal)} are included in gross revenue above, but this margin view stays live-only until detailed receipts are entered.
+                    Saved historical sales of {formatCurrency(historicalSalesWindowTotal)} are included in gross revenue above, but this margin view stays live-only until detailed receipts are entered.
                   </p>
                 )}
               </div>
@@ -1342,7 +1448,7 @@ function AdminAccounting() {
                 )}
                 {hasHistoricalSalesInWindow && (
                   <p className="accounting-muted">
-                    Manual 2024 sales of {formatCurrency(historicalSalesWindowTotal)} remain outside this profit statement until detailed line items are backfilled.
+                    Saved historical sales of {formatCurrency(historicalSalesWindowTotal)} remain outside this profit statement until detailed line items are backfilled.
                   </p>
                 )}
               </div>
@@ -2078,7 +2184,7 @@ function AdminAccounting() {
               </div>
               <p className="accounting-muted">
                 {hasHistoricalSalesInWindow
-                  ? "Manual 2024 sales are included in taxable sales and VAT. Profit-based taxes still follow tracked profit only."
+                  ? "Saved historical sales are included in taxable sales and VAT. Profit-based taxes still follow tracked profit only."
                   : "Rates are editable—confirm current GRA requirements before filing."}
               </p>
             </div>

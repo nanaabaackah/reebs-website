@@ -6306,7 +6306,6 @@ button.admin-kpi-card {
   justify-content: space-between;
   flex-wrap: wrap;
   width: 100%;
-  padding: 1.5rem 1.6rem;
   box-sizing: border-box;
   max-width: 100%;
 }

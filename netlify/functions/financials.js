@@ -28,6 +28,7 @@ const getWindowRange = (windowKey = "thisMonth") => {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
+  const customYearMatch = /^year(\d{4})$/.exec(windowKey);
 
   const startOfMonth = (y, m) => new Date(Date.UTC(y, m, 1));
   const endOfMonth = (y, m) => new Date(Date.UTC(y, m + 1, 1));
@@ -35,6 +36,15 @@ const getWindowRange = (windowKey = "thisMonth") => {
     const q = Math.floor(m / 3) * 3;
     return new Date(Date.UTC(y, q, 1));
   };
+
+  if (customYearMatch) {
+    const targetYear = Number(customYearMatch[1]);
+    if (Number.isInteger(targetYear)) {
+      const start = new Date(Date.UTC(targetYear, 0, 1));
+      const end = new Date(Date.UTC(targetYear + 1, 0, 1));
+      return { start, end, label: String(targetYear) };
+    }
+  }
 
   switch (windowKey) {
     case "lastMonth": {
@@ -71,11 +81,6 @@ const getWindowRange = (windowKey = "thisMonth") => {
       const start = new Date(Date.UTC(2000, 0, 1));
       const end = new Date(Date.UTC(2100, 0, 1));
       return { start, end, label: "All time" };
-    }
-    case "year2024": {
-      const start = new Date(Date.UTC(2024, 0, 1));
-      const end = new Date(Date.UTC(2025, 0, 1));
-      return { start, end, label: "2024" };
     }
     case "thisMonth":
     default: {
