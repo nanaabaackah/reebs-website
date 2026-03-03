@@ -270,6 +270,20 @@ function AdminDocuments() {
     });
   }, [allDocs, activeTab, searchTerm]);
 
+  const documentsStats = useMemo(() => {
+    const datedDocs = allDocs
+      .filter((doc) => doc?.date)
+      .slice()
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return {
+      receiptCount: allDocs.filter((doc) => doc.docType === "receipt").length,
+      invoiceCount: allDocs.filter((doc) => doc.docType === "invoice").length,
+      visibleCount: filteredDocs.length,
+      latestLabel: datedDocs[0]?.date ? formatDate(datedDocs[0].date) : "No activity",
+    };
+  }, [allDocs, filteredDocs]);
+
   const downloadUpload = async (doc) => {
     if (!doc?.referenceId) return;
     setDownloading(doc.id);
@@ -514,7 +528,7 @@ function AdminDocuments() {
   };
 
   return (
-    <div className="documents-page">
+    <div className="documents-page documents-page--redesign">
       <div className="documents-shell">
         <AdminBreadcrumb items={[{ label: "Documents" }]} />
 
@@ -534,6 +548,14 @@ function AdminDocuments() {
             <div>
               <span>Uploads</span>
               <strong>{uploads.length}</strong>
+            </div>
+            <div>
+              <span>In view</span>
+              <strong>{documentsStats.visibleCount}</strong>
+            </div>
+            <div>
+              <span>Last activity</span>
+              <strong>{documentsStats.latestLabel}</strong>
             </div>
           </div>
         </header>
@@ -562,10 +584,21 @@ function AdminDocuments() {
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
+          <p className="documents-toolbar-note">
+            {documentsStats.receiptCount} receipts and {documentsStats.invoiceCount} invoices are available alongside
+            uploaded contracts and proofs.
+          </p>
         </section>
 
         <div className="documents-layout">
           <section className="documents-list-panel">
+            <div className="documents-panel-head">
+              <div>
+                <p className="documents-card-label">Library</p>
+                <h3>Active document stream</h3>
+              </div>
+              <span>{documentsStats.visibleCount} showing</span>
+            </div>
             {loading ? (
               <p className="documents-muted">Loading documents...</p>
             ) : error ? (

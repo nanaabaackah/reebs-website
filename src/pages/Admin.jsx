@@ -87,6 +87,7 @@ function Admin() {
   const pageSize = 10;
   const [stockActivity, setStockActivity] = useState([]);
   const [stockActivityError, setStockActivityError] = useState("");
+  const [stockActivityLoading, setStockActivityLoading] = useState(false);
   const [formState, setFormState] = useState({
     type: "StockIn",
     quantity: "",
@@ -181,7 +182,7 @@ function Admin() {
       const matches = mediaQuery.matches;
       setIsMobileView(matches);
       if (matches) {
-        setViewMode("cards");
+        setViewMode((prev) => (prev === "table" ? "cards" : prev));
         setActiveItem(null);
         setDetailItem(null);
         setDetailForm(null);
@@ -307,6 +308,7 @@ function Admin() {
   }, []);
 
   const loadStockActivity = useCallback(async () => {
+    setStockActivityLoading(true);
     setStockActivityError("");
     try {
       const res = await fetch("/.netlify/functions/stockActivity");
@@ -317,6 +319,8 @@ function Admin() {
       console.error("Failed to load stock activity", err);
       setStockActivity([]);
       setStockActivityError(err.message || "Unable to load stock history.");
+    } finally {
+      setStockActivityLoading(false);
     }
   }, []);
 
@@ -494,6 +498,23 @@ function Admin() {
   }, []);
 
   useEffect(() => {
+    if (!openMenuId) return undefined;
+
+    const closeOnLayoutChange = () => {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+    };
+
+    window.addEventListener("resize", closeOnLayoutChange);
+    window.addEventListener("scroll", closeOnLayoutChange, true);
+
+    return () => {
+      window.removeEventListener("resize", closeOnLayoutChange);
+      window.removeEventListener("scroll", closeOnLayoutChange, true);
+    };
+  }, [openMenuId]);
+
+  useEffect(() => {
     setPage(0);
   }, [search, categoryFilter, inStockOnly, outOfStockOnly, reorderOnly, viewMode, items.length]);
 
@@ -593,6 +614,17 @@ function Admin() {
     ];
   }, [inventory]);
   const stockHealthTotal = stockHealthSegments.reduce((sum, segment) => sum + segment.value, 0);
+  const stockActivityMax = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...stockActivity.flatMap((row) => [
+          Math.abs(Number(row?.stock_in) || 0),
+          Math.abs(Number(row?.stock_out) || 0),
+        ])
+      ),
+    [stockActivity]
+  );
   const donutRadius = 46;
   const donutCircumference = 2 * Math.PI * donutRadius;
   const stockHealthDonut = useMemo(() => {
@@ -677,27 +709,22 @@ function Admin() {
   const buildMenuPosition = (rect) => {
     const gutter = 12;
     const isMobile = typeof window !== "undefined" && window.matchMedia(MOBILE_VIEW_QUERY).matches;
-    const width = isMobile ? 240 : 320;
-
-    if (isMobile) {
-      const maxHeight = Math.min(320, window.innerHeight - gutter * 2);
-      const left = Math.max(gutter, (window.innerWidth - width) / 2);
-      const top = Math.max(gutter, window.innerHeight - maxHeight - gutter);
-      return { top, left, maxHeight };
-    }
-
-    const initialTop = rect.bottom + 8;
+    const width = isMobile ? Math.min(240, window.innerWidth - gutter * 2) : 320;
+    const spacing = 8;
+    const maxPanelHeight = isMobile ? 320 : 420;
+    const minPanelHeight = isMobile ? 120 : 160;
+    const initialTop = rect.bottom + spacing;
     const maxBelow = window.innerHeight - initialTop - gutter;
-    const maxAbove = rect.top - gutter - 8;
-    let maxHeight = Math.min(420, Math.max(160, maxBelow));
+    const maxAbove = rect.top - gutter - spacing;
+    let maxHeight = Math.min(maxPanelHeight, Math.max(minPanelHeight, maxBelow));
     let top = initialTop;
-    if (maxBelow < 160 && maxAbove > maxBelow) {
-      maxHeight = Math.min(420, Math.max(160, maxAbove));
-      top = Math.max(gutter, rect.top - maxHeight - 8);
+    if (maxBelow < minPanelHeight && maxAbove > maxBelow) {
+      maxHeight = Math.min(maxPanelHeight, Math.max(minPanelHeight, maxAbove));
+      top = Math.max(gutter, rect.top - maxHeight - spacing);
     }
-    let left = rect.left;
+    let left = rect.right - width;
     if (left + width > window.innerWidth - gutter) {
-      left = rect.right - width;
+      left = window.innerWidth - width - gutter;
     }
     left = Math.min(Math.max(gutter, left), window.innerWidth - width - gutter);
     return { top, left, maxHeight };
@@ -705,20 +732,25 @@ function Admin() {
 
   const toggleRowMenu = (id, event) => {
     const rect = event?.currentTarget?.getBoundingClientRect();
-    setOpenMenuId((prev) => {
-      const next = prev === id ? null : id;
-      if (next && rect) {
-        setMenuPosition(buildMenuPosition(rect));
-      } else {
-        setMenuPosition(null);
-      }
-      return next;
-    });
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+      return;
+    }
+    setOpenMenuId(id);
+    setMenuPosition(rect ? buildMenuPosition(rect) : null);
   };
 
   const closeMenu = () => {
     setOpenMenuId(null);
     setMenuPosition(null);
+  };
+
+  const getStockActivityBarStyle = (value) => {
+    const amount = Math.abs(Number(value) || 0);
+    if (!amount) return { width: "0%" };
+    const ratio = Math.min(100, (amount / stockActivityMax) * 100);
+    return { width: `max(${ratio}%, 4.5rem)` };
   };
 
   const requestSort = (key) => {
@@ -1706,8 +1738,8 @@ function Admin() {
                 Needs reorder
               </label>
             </div>
-            {!isMobileView && (
-              <div className="admin-view-toggle" role="group" aria-label="Toggle inventory view">
+            <div className="admin-view-toggle" role="group" aria-label="Toggle inventory view">
+              {!isMobileView && (
                 <button
                   type="button"
                   className={`admin-chip ${viewMode === "table" ? "is-active" : ""}`}
@@ -1715,28 +1747,31 @@ function Admin() {
                 >
                   Table view
                 </button>
-                <button
-                  type="button"
-                  className={`admin-chip ${viewMode === "cards" ? "is-active" : ""}`}
-                  onClick={() => setViewMode("cards")}
-                >
-                  Card view
-                </button>
-                <button
-                  type="button"
-                  className={`admin-chip ${viewMode === "activity" ? "is-active" : ""}`}
-                  onClick={() => setViewMode("activity")}
-                >
-                  Activity view
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                className={`admin-chip ${viewMode === "cards" ? "is-active" : ""}`}
+                onClick={() => setViewMode("cards")}
+              >
+                Card view
+              </button>
+              <button
+                type="button"
+                className={`admin-chip ${viewMode === "activity" ? "is-active" : ""}`}
+                onClick={() => setViewMode("activity")}
+              >
+                Activity view
+              </button>
+            </div>
           </div>
 
-          {viewMode === "activity" && !isMobileView && (
+          {viewMode === "activity" && (
             <div className="stock-activity-grid">
               {stockActivityError && <p className="admin-error">{stockActivityError}</p>}
-              {stockActivity.length === 0 && !stockActivityError && <p className="admin-empty">No movement history.</p>}
+              {stockActivityLoading && <p className="admin-status">Loading movement history...</p>}
+              {!stockActivityLoading && stockActivity.length === 0 && !stockActivityError && (
+                <p className="admin-empty">No movement history.</p>
+              )}
               {stockActivity.map((row) => (
                 <div key={row.month_key} className="stock-activity-row">
                   <div>
@@ -1744,10 +1779,10 @@ function Admin() {
                     <p className="stock-activity-meta">Stock in / out</p>
                   </div>
                   <div className="stock-activity-bars">
-                    <div className="stock-activity-bar in" style={{ width: `${Math.min(100, Math.abs(row.stock_in || 0))}%` }}>
+                    <div className="stock-activity-bar in" style={getStockActivityBarStyle(row.stock_in)}>
                       <span>+{row.stock_in || 0}</span>
                     </div>
-                    <div className="stock-activity-bar out" style={{ width: `${Math.min(100, Math.abs(row.stock_out || 0))}%` }}>
+                    <div className="stock-activity-bar out" style={getStockActivityBarStyle(row.stock_out)}>
                       <span>-{row.stock_out || 0}</span>
                     </div>
                   </div>
@@ -2063,8 +2098,7 @@ function Admin() {
 	                            ⋮
 	                          </button>
 	                          <div
-	                            className={`bookings-menu-list inventory-menu-list ${openMenuId === `card-${item.id}` ? "open" : ""}`}
-	                            style={openMenuId === `card-${item.id}` ? menuPosition : undefined}
+	                            className={`bookings-menu-list inventory-menu-list inventory-card-menu-list ${openMenuId === `card-${item.id}` ? "open" : ""}`}
 	                            onClick={(e) => e.stopPropagation()}
 	                          >
 	                            <div className="bookings-menu-actions inventory-menu-actions">

@@ -15,6 +15,7 @@ const json = (statusCode, body) => ({
 const tableStatements = [
   `CREATE TABLE IF NOT EXISTS "vendor" (
     "id" SERIAL PRIMARY KEY,
+    "organizationId" INTEGER DEFAULT 1,
     "name" TEXT NOT NULL,
     "contactName" TEXT,
     "email" TEXT,
@@ -29,6 +30,7 @@ const tableStatements = [
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE "vendor" ADD COLUMN IF NOT EXISTS "organizationId" INTEGER DEFAULT 1`,
   `ALTER TABLE "vendor" ADD COLUMN IF NOT EXISTS "contactName" TEXT`,
   `ALTER TABLE "vendor" ADD COLUMN IF NOT EXISTS "email" TEXT`,
   `ALTER TABLE "vendor" ADD COLUMN IF NOT EXISTS "phone" TEXT`,
@@ -43,6 +45,13 @@ const tableStatements = [
   `ALTER TABLE "vendor" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
 ];
 
+const productLinkStatements = [
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "organizationId" INTEGER DEFAULT 1`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "vendorId" INTEGER`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isArchived" BOOLEAN DEFAULT false`,
+];
+
 const ensureVendorTable = async (client) => {
   for (const statement of tableStatements) {
     try {
@@ -51,6 +60,29 @@ const ensureVendorTable = async (client) => {
       console.warn("Vendor table check failed:", err?.message || err);
     }
   }
+};
+
+const ensureProductLinkColumns = async (client) => {
+  for (const statement of productLinkStatements) {
+    try {
+      await client.query(statement);
+    } catch (err) {
+      console.warn("Product link column check failed:", err?.message || err);
+    }
+  }
+};
+
+const hasColumn = async (client, tableName, columnName) => {
+  const result = await client.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = $1
+       AND column_name = $2
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+  return result.rowCount > 0;
 };
 
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
@@ -183,20 +215,17 @@ export async function handler(event = {}) {
     }
     const organizationId = authUser.organizationId;
     await ensureVendorTable(client);
-    const orgColumnRes = await client.query(
-      `SELECT 1
-       FROM information_schema.columns
-       WHERE table_schema = 'public'
-         AND table_name = 'vendor'
-         AND column_name = 'organizationId'
-       LIMIT 1`
-    );
-    const hasOrganizationId = orgColumnRes.rowCount > 0;
+    await ensureProductLinkColumns(client);
+    const hasVendorOrganizationId = await hasColumn(client, "vendor", "organizationId");
+    const hasProductOrganizationId = await hasColumn(client, "product", "organizationId");
+    const hasProductVendorId = await hasColumn(client, "product", "vendorId");
+    const hasProductIsDeleted = await hasColumn(client, "product", "isDeleted");
+    const hasProductIsArchived = await hasColumn(client, "product", "isArchived");
 
     if (event.httpMethod === "GET") {
-      const params = [];
-      const whereClause = hasOrganizationId ? `WHERE v."organizationId" = $1` : "";
-      if (hasOrganizationId) params.push(organizationId);
+      const params =
+        hasVendorOrganizationId || hasProductOrganizationId ? [organizationId] : [];
+      const whereClause = hasVendorOrganizationId ? `WHERE v."organizationId" = $1` : "";
       const result = await client.query(
         `SELECT
           v.id,
@@ -223,7 +252,7 @@ export async function handler(event = {}) {
             ARRAY_AGG(DISTINCT name ORDER BY name) AS product_names
           FROM "product"
           WHERE "vendorId" IS NOT NULL
-            ${hasOrganizationId ? `AND "organizationId" = $1` : ""}
+            ${hasProductOrganizationId ? `AND "organizationId" = $1` : ""}
           GROUP BY "vendorId"
         ) p ON p."vendorId" = v.id
         ${whereClause}
@@ -253,7 +282,7 @@ export async function handler(event = {}) {
       const vendorIdFilter = Number(payload.vendorId);
       const params = [];
       let vendorWhere = `WHERE COALESCE(array_length(v."suppliedItems", 1), 0) > 0`;
-      if (hasOrganizationId) {
+      if (hasVendorOrganizationId) {
         params.push(organizationId);
         vendorWhere += ` AND v."organizationId" = $${params.length}`;
       }
@@ -287,14 +316,25 @@ export async function handler(event = {}) {
         });
       }
 
-      const productParams = [organizationId];
-      const productWhere = [
-        `"organizationId" = $1`,
-        `COALESCE("isDeleted", false) = false`,
-        `COALESCE("isArchived", false) = false`,
-        `COALESCE(stock, 0) > 0`,
-      ];
-      if (!(Number.isFinite(vendorIdFilter) && vendorIdFilter > 0)) {
+      if (!hasProductVendorId) {
+        return json(500, {
+          error: "Product vendor links are not available in this local database yet.",
+        });
+      }
+
+      const productParams = [];
+      const productWhere = [`COALESCE(stock, 0) > 0`];
+      if (hasProductOrganizationId) {
+        productParams.push(organizationId);
+        productWhere.push(`"organizationId" = $${productParams.length}`);
+      }
+      if (hasProductIsDeleted) {
+        productWhere.push(`COALESCE("isDeleted", false) = false`);
+      }
+      if (hasProductIsArchived) {
+        productWhere.push(`COALESCE("isArchived", false) = false`);
+      }
+      if (!(Number.isFinite(vendorIdFilter) && vendorIdFilter > 0) && hasProductVendorId) {
         productWhere.push(`"vendorId" IS NULL`);
       }
 
@@ -327,8 +367,8 @@ export async function handler(event = {}) {
         await client.query(
           `UPDATE "product"
            SET "vendorId" = $2
-           WHERE id = $1${hasOrganizationId ? ` AND "organizationId" = $3` : ""}`,
-          hasOrganizationId
+           WHERE id = $1${hasProductOrganizationId ? ` AND "organizationId" = $3` : ""}`,
+          hasProductOrganizationId
             ? [product.id, match.vendorId, organizationId]
             : [product.id, match.vendorId]
         );
@@ -373,10 +413,10 @@ export async function handler(event = {}) {
 
       const result = await client.query(
         `INSERT INTO "vendor"
-          (${hasOrganizationId ? `"organizationId", ` : ""}name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", "suppliedItems", notes, "createdAt", "updatedAt")
-         VALUES (${hasOrganizationId ? `$1, ` : ""}$${hasOrganizationId ? 2 : 1}, $${hasOrganizationId ? 3 : 2}, $${hasOrganizationId ? 4 : 3}, $${hasOrganizationId ? 5 : 4}, $${hasOrganizationId ? 6 : 5}, $${hasOrganizationId ? 7 : 6}, $${hasOrganizationId ? 8 : 7}, $${hasOrganizationId ? 9 : 8}, $${hasOrganizationId ? 10 : 9}, $${hasOrganizationId ? 11 : 10}, $${hasOrganizationId ? 12 : 11}, NOW(), NOW())
+          (${hasVendorOrganizationId ? `"organizationId", ` : ""}name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", "suppliedItems", notes, "createdAt", "updatedAt")
+         VALUES (${hasVendorOrganizationId ? `$1, ` : ""}$${hasVendorOrganizationId ? 2 : 1}, $${hasVendorOrganizationId ? 3 : 2}, $${hasVendorOrganizationId ? 4 : 3}, $${hasVendorOrganizationId ? 5 : 4}, $${hasVendorOrganizationId ? 6 : 5}, $${hasVendorOrganizationId ? 7 : 6}, $${hasVendorOrganizationId ? 8 : 7}, $${hasVendorOrganizationId ? 9 : 8}, $${hasVendorOrganizationId ? 10 : 9}, $${hasVendorOrganizationId ? 11 : 10}, $${hasVendorOrganizationId ? 12 : 11}, NOW(), NOW())
          RETURNING id, name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", "suppliedItems", notes, "createdAt", "updatedAt"`,
-        hasOrganizationId
+        hasVendorOrganizationId
           ? [
               organizationId,
               name,
@@ -431,14 +471,14 @@ export async function handler(event = {}) {
     updates.push(`"updatedAt" = NOW()`);
 
     values.push(id);
-    if (hasOrganizationId) {
+    if (hasVendorOrganizationId) {
       values.push(organizationId);
     }
 
     const result = await client.query(
       `UPDATE "vendor"
        SET ${updates.join(", ")}
-       WHERE id = $${index}${hasOrganizationId ? ` AND "organizationId" = $${index + 1}` : ""}
+       WHERE id = $${index}${hasVendorOrganizationId ? ` AND "organizationId" = $${index + 1}` : ""}
        RETURNING id, name, "contactName", email, phone, "mobileMoneyNumber", address, "bankName", "bankAccount", "leadTimeDays", "suppliedItems", notes, "createdAt", "updatedAt"`,
       values
     );
@@ -450,7 +490,12 @@ export async function handler(event = {}) {
     return json(200, result.rows[0]);
   } catch (err) {
     console.error("❌ Vendors error:", err);
-    return json(500, { error: "Failed to process vendors." });
+    return json(500, {
+      error:
+        process.env.NODE_ENV === "production"
+          ? "Failed to process vendors."
+          : err?.message || "Failed to process vendors.",
+    });
   } finally {
     await client.end().catch(() => {});
   }

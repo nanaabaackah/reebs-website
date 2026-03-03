@@ -178,6 +178,23 @@ function OrdersList() {
   }, []);
 
   useEffect(() => {
+    if (!openMenuId) return undefined;
+
+    const closeOnLayoutChange = () => {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+    };
+
+    window.addEventListener("resize", closeOnLayoutChange);
+    window.addEventListener("scroll", closeOnLayoutChange, true);
+
+    return () => {
+      window.removeEventListener("resize", closeOnLayoutChange);
+      window.removeEventListener("scroll", closeOnLayoutChange, true);
+    };
+  }, [openMenuId]);
+
+  useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
       setError("");
@@ -436,15 +453,13 @@ function OrdersList() {
 
   const toggleOrderMenu = (menuId, event) => {
     const rect = event?.currentTarget?.getBoundingClientRect();
-    setOpenMenuId((prev) => {
-      const next = prev === menuId ? null : menuId;
-      if (next && rect) {
-        setMenuPosition(buildMenuPosition(rect));
-      } else {
-        setMenuPosition(null);
-      }
-      return next;
-    });
+    if (openMenuId === menuId) {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+      return;
+    }
+    setOpenMenuId(menuId);
+    setMenuPosition(rect ? buildMenuPosition(rect) : null);
   };
 
   const updateOrderStatus = async (order, nextStatus) => {

@@ -201,8 +201,18 @@ function AdminDelivery() {
     const issues = deliveries.filter(
       (item) => normalizeStatus(item.deliveryStatus) === "issue"
     ).length;
-    return { total, inProgress, delivered, issues };
-  }, [deliveries]);
+    const assignedDriverCount = new Set(
+      deliveries
+        .map((item) => item.driverName || item.assignedUserName || "")
+        .map((name) => String(name || "").trim())
+        .filter(Boolean)
+    ).size;
+    const unassignedCount = deliveries.filter(
+      (item) => !(item.driverName || item.assignedUserName)
+    ).length;
+    const routeCount = routeGroups.filter((route) => route.name !== "Unassigned").length;
+    return { total, inProgress, delivered, issues, assignedDriverCount, unassignedCount, routeCount };
+  }, [deliveries, routeGroups]);
 
   const saveDelivery = async (event) => {
     event.preventDefault();
@@ -272,7 +282,7 @@ function AdminDelivery() {
   const selectedStatus = normalizeStatus(selected?.deliveryStatus);
 
   return (
-    <div className="delivery-page">
+    <div className="delivery-page delivery-page--redesign">
       <div className="delivery-shell">
         <AdminBreadcrumb items={[{ label: "Delivery" }]} />
 
@@ -298,18 +308,22 @@ function AdminDelivery() {
           <div className="delivery-kpi">
             <span>Total stops</span>
             <strong>{stats.total}</strong>
+            <small>{stats.routeCount} routed groups</small>
           </div>
           <div className="delivery-kpi">
             <span>In progress</span>
             <strong>{stats.inProgress}</strong>
+            <small>{stats.assignedDriverCount} drivers assigned</small>
           </div>
           <div className="delivery-kpi">
             <span>Completed</span>
             <strong>{stats.delivered}</strong>
+            <small>{Math.max(stats.total - stats.delivered, 0)} still open</small>
           </div>
           <div className="delivery-kpi">
             <span>Issues</span>
             <strong>{stats.issues}</strong>
+            <small>{stats.unassignedCount} unassigned</small>
           </div>
         </section>
 
@@ -335,6 +349,9 @@ function AdminDelivery() {
               </button>
             ))}
           </div>
+          <p className="delivery-filter-note">
+            Select a stop to update the driver, route order, ETA, and handoff notes from the same screen.
+          </p>
         </div>
 
         <div className="delivery-grid">

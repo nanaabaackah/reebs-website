@@ -660,6 +660,14 @@ function AdminInvoicing() {
     });
   }, [bookings, searchTerm]);
 
+  const orderQueueTotal = useMemo(() => {
+    return filteredOrders.reduce((sum, order) => sum + toNumber(order.total, 0), 0);
+  }, [filteredOrders]);
+
+  const bookingQueueTotal = useMemo(() => {
+    return filteredBookings.reduce((sum, booking) => sum + toNumber(booking.totalAmount, 0) / 100, 0);
+  }, [filteredBookings]);
+
   const metaKey = selectedId ? `${viewType}-${selectedId}` : "";
 
   const currentMeta = useMemo(() => {
@@ -694,6 +702,15 @@ function AdminInvoicing() {
   const effectiveDeposit = isPaid ? totalDue : deposit;
   const balanceDue = isPaid ? 0 : Math.max(totalDue - deposit, 0);
   const depositPct = totalDue > 0 ? Math.min((effectiveDeposit / totalDue) * 100, 100) : 0;
+  const activeQueueCount = viewType === "orders" ? filteredOrders.length : filteredBookings.length;
+  const activeQueueTotal = viewType === "orders" ? orderQueueTotal : bookingQueueTotal;
+  const activePaidCount = (viewType === "orders" ? filteredOrders : filteredBookings).reduce((count, item) => {
+    const rowKey = `${viewType}-${item.id}`;
+    return count + (((invoiceMeta[rowKey]?.status || "unpaid").toLowerCase() === "paid") ? 1 : 0);
+  }, 0);
+  const activeUnpaidCount = Math.max(activeQueueCount - activePaidCount, 0);
+  const activeModeLabel = viewType === "orders" ? "Shop receipt queue" : "Rental invoice queue";
+  const selectedFocusValue = displayInvoice ? balanceDue : activeQueueTotal;
 
   const createPdfDoc = async () => {
     if (!displayInvoice) return null;
@@ -1029,8 +1046,38 @@ function AdminInvoicing() {
           </div>
         </header>
 
+        <section className="invoicing-overview no-print" aria-label="Invoicing summary">
+          <article className="invoicing-metric">
+            <p className="invoicing-label">Queue</p>
+            <strong>{activeQueueCount}</strong>
+            <span>{activeModeLabel}</span>
+          </article>
+          <article className="invoicing-metric">
+            <p className="invoicing-label">Unpaid</p>
+            <strong>{activeUnpaidCount}</strong>
+            <span>{activePaidCount} marked paid</span>
+          </article>
+          <article className="invoicing-metric">
+            <p className="invoicing-label">Queue value</p>
+            <strong>{formatCurrency(activeQueueTotal)}</strong>
+            <span>Visible records only</span>
+          </article>
+          <article className="invoicing-metric">
+            <p className="invoicing-label">{displayInvoice ? "Selected due" : "Next action"}</p>
+            <strong>{formatCurrency(selectedFocusValue)}</strong>
+            <span>{displayInvoice ? `#${displayInvoice.invoiceNumber}` : "Choose a document to continue"}</span>
+          </article>
+        </section>
+
         <div className="invoicing-layout">
           <aside className="invoicing-sidebar no-print">
+            <div className="invoicing-sidebar-head">
+              <div>
+                <p className="invoicing-label">{activeModeLabel}</p>
+                <h2>{activeQueueCount} document{activeQueueCount === 1 ? "" : "s"}</h2>
+              </div>
+              <strong className="invoicing-sidebar-total">{formatCurrency(activeQueueTotal)}</strong>
+            </div>
             <div className="invoicing-search">
               <AppIcon icon={faSearch} />
               <input
@@ -1059,15 +1106,18 @@ function AdminInvoicing() {
                         className={`invoicing-list-item ${selectedId === order.id ? "is-active" : ""}`}
                         onClick={() => setSelectedId(order.id)}
                       >
-                        <div>
-                          <strong>{order.orderNumber}</strong>
-                          <span>{order.customerName || "Unknown customer"}</span>
-                        </div>
-                        <div>
-                          <span className={`invoice-pill ${orderStatus === "paid" ? "paid" : "unpaid"}`}>
-                            {orderStatus}
-                          </span>
-                          <span>{formatCurrency(order.total || 0)}</span>
+                        <div className="invoicing-list-item-main">
+                          <div className="invoicing-list-item-row">
+                            <strong>{order.orderNumber}</strong>
+                            <span className={`invoice-pill ${orderStatus === "paid" ? "paid" : "unpaid"}`}>
+                              {orderStatus}
+                            </span>
+                          </div>
+                          <p className="invoicing-list-item-sub">{order.customerName || "Unknown customer"}</p>
+                          <div className="invoicing-list-item-meta">
+                            <span>{formatShortDate(order.date || order.createdAt)}</span>
+                            <strong>{formatCurrency(order.total || 0)}</strong>
+                          </div>
                         </div>
                       </button>
                     );
@@ -1092,16 +1142,18 @@ function AdminInvoicing() {
                       className={`invoicing-list-item ${selectedId === booking.id ? "is-active" : ""}`}
                       onClick={() => setSelectedId(booking.id)}
                     >
-                      <div>
-                        <strong>Booking #{booking.id}</strong>
-                        <span>{booking.customerName || "Unknown customer"}</span>
-                        <span>{formatShortDate(booking.eventDate)}</span>
-                      </div>
-                      <div>
-                        <span className={`invoice-pill ${bookingStatus === "paid" ? "paid" : "unpaid"}`}>
-                          {bookingStatus}
-                        </span>
-                        <span>{formatCurrency(toNumber(booking.totalAmount, 0) / 100)}</span>
+                      <div className="invoicing-list-item-main">
+                        <div className="invoicing-list-item-row">
+                          <strong>Booking #{booking.id}</strong>
+                          <span className={`invoice-pill ${bookingStatus === "paid" ? "paid" : "unpaid"}`}>
+                            {bookingStatus}
+                          </span>
+                        </div>
+                        <p className="invoicing-list-item-sub">{booking.customerName || "Unknown customer"}</p>
+                        <div className="invoicing-list-item-meta">
+                          <span>{formatShortDate(booking.eventDate)}</span>
+                          <strong>{formatCurrency(toNumber(booking.totalAmount, 0) / 100)}</strong>
+                        </div>
                       </div>
                     </button>
                   );
@@ -1122,6 +1174,17 @@ function AdminInvoicing() {
             ) : (
               <>
                 <div className="invoicing-balance no-print">
+                  <div className="invoicing-balance-head">
+                    <div>
+                      <p className="invoicing-label">Payment tracker</p>
+                      <h3>
+                        {displayInvoice.docLabel} #{displayInvoice.invoiceNumber}
+                      </h3>
+                    </div>
+                    <span className={`invoice-pill ${statusValue === "paid" ? "paid" : "unpaid"}`}>
+                      {statusValue}
+                    </span>
+                  </div>
                   <div>
                     <p className="invoicing-label">{displayInvoice.docLabel} status</p>
                     <select
@@ -1149,37 +1212,37 @@ function AdminInvoicing() {
                     <strong>{formatCurrency(balanceDue)}</strong>
                     <p className="invoicing-muted">Total: {formatCurrency(totalDue)}</p>
                   </div>
-                {isBooking && (
-                  <div className="invoicing-progress">
-                    <span style={{ width: `${depositPct}%` }} />
-                  </div>
-                )}
-              </div>
+                  {isBooking && (
+                    <div className="invoicing-progress">
+                      <span style={{ width: `${depositPct}%` }} />
+                    </div>
+                  )}
+                </div>
 
-              <div className="invoice-preview-actions no-print">
-                <button
-                  type="button"
-                  className="invoicing-primary"
-                  onClick={buildPdf}
-                  disabled={!displayInvoice || pdfLoading}
-                >
-                  <AppIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
-                </button>
-                <button
-                  type="button"
-                  className="invoicing-secondary"
-                  onClick={saveToDocuments}
-                  disabled={!displayInvoice || savingDoc}
-                >
-                  <AppIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
-                </button>
-              </div>
+                <div className="invoice-preview-actions no-print">
+                  <button
+                    type="button"
+                    className="invoicing-primary"
+                    onClick={buildPdf}
+                    disabled={!displayInvoice || pdfLoading}
+                  >
+                    <AppIcon icon={faFilePdf} /> {pdfLoading ? "Preparing..." : "Download PDF"}
+                  </button>
+                  <button
+                    type="button"
+                    className="invoicing-secondary"
+                    onClick={saveToDocuments}
+                    disabled={!displayInvoice || savingDoc}
+                  >
+                    <AppIcon icon={faFolderOpen} /> {savingDoc ? "Saving..." : "Save to Documents"}
+                  </button>
+                </div>
 
-              <div className="invoice-paper">
-                <div className="invoice-header">
-                  <div className="invoice-brand"> 
-                    <div>
-                        <img className="invoice-logo" src={COMPANY.logo} alt="Reebs logo" />
+                <div className="invoice-paper">
+                  <div className="invoice-header">
+                    <div className="invoice-brand">
+                      <img className="invoice-logo" src={COMPANY.logo} alt="Reebs logo" />
+                      <div>
                         <h2>{COMPANY.name}</h2>
                         <p>{COMPANY.location}</p>
                         <p>{COMPANY.phone}</p>
@@ -1187,29 +1250,48 @@ function AdminInvoicing() {
                       </div>
                     </div>
                     <div className="invoice-meta">
-                      <h3>{displayInvoice.docLabel}</h3>
-                      <p>#{displayInvoice.invoiceNumber}</p>
+                      <p className="invoicing-label">{displayInvoice.docLabel}</p>
+                      <h3>#{displayInvoice.invoiceNumber}</h3>
                       <p>Date: {displayInvoice.date}</p>
                     </div>
                   </div>
 
-                  {displayInvoice.type === "booking" && displayInvoice.event && (
-                    <div className="invoice-billing">
-                      <h4>Event</h4>
-                      <p>
-                        {formatShortDate(displayInvoice.event.eventDate)}{" "}
-                        {displayInvoice.event.startTime ? `· ${displayInvoice.event.startTime}` : ""}
-                        {displayInvoice.event.endTime ? ` - ${displayInvoice.event.endTime}` : ""}
-                      </p>
-                      <p>{displayInvoice.event.venueAddress || "-"}</p>
-                    </div>
-                  )}
+                  <div className="invoice-chip-row">
+                    <span className={`invoice-pill ${statusValue === "paid" ? "paid" : "unpaid"}`}>
+                      {statusValue}
+                    </span>
+                    {isBooking && (
+                      <span className="invoice-chip-detail">Deposit {formatCurrency(effectiveDeposit)}</span>
+                    )}
+                    {transportLoading && (
+                      <span className="invoice-chip-detail">Updating transport…</span>
+                    )}
+                    {toNumber(summary?.transportCost, 0) > 0 && (
+                      <span className="invoice-chip-detail">
+                        Transport {formatCurrency(summary?.transportCost || 0)}
+                      </span>
+                    )}
+                  </div>
 
-                  <div className="invoice-billing">
-                    <h4>Bill To</h4>
-                    <p>{displayInvoice.customer?.name || "-"}</p>
-                    <p>{displayInvoice.customer?.phone || "-"}</p>
-                    <p>{displayInvoice.customer?.email || "-"}</p>
+                  <div className="invoice-bill-grid">
+                    {displayInvoice.type === "booking" && displayInvoice.event && (
+                      <div className="invoice-bill-card invoice-event-card">
+                        <h4>Event</h4>
+                        <p>
+                          {formatShortDate(displayInvoice.event.eventDate)}{" "}
+                          {displayInvoice.event.startTime ? `· ${displayInvoice.event.startTime}` : ""}
+                          {displayInvoice.event.endTime ? ` - ${displayInvoice.event.endTime}` : ""}
+                        </p>
+                        <p>{displayInvoice.event.venueAddress || "-"}</p>
+                      </div>
+                    )}
+
+                    <div className="invoice-bill-card">
+                      <h4>Bill To</h4>
+                      <p>{displayInvoice.customer?.name || "-"}</p>
+                      <p>{displayInvoice.customer?.phone || "-"}</p>
+                      <p>{displayInvoice.customer?.email || "-"}</p>
+                    </div>
                   </div>
 
                   <div className="invoice-table-wrapper">
@@ -1235,52 +1317,60 @@ function AdminInvoicing() {
                     </table>
                   </div>
 
-                  <div className="invoice-terms">
-                    {displayInvoice.type === "booking" ? (
-                      <p>
-                        Terms: 70% deposit secures the booking. Balance is due before delivery/setup. Delivery fees are
-                        non-refundable. Late cancellations may forfeit deposits; refunds are not guaranteed within 48
-                        hours of the event. Date changes are subject to availability and may incur a reschedule fee.
-                        Digital waivers & contracts are available for rentals (e.g., bouncy castles); our attendants
-                        supervise rentals on-site and a signed liability release is required.
-                      </p>
-                    ) : (
-                      <p>
-                        Refund policy: Returns/exchanges are accepted within 7 days with the original receipt. Items
-                        must be unused and in original packaging; custom orders are non-refundable. Digital waivers &
-                        contracts are available for rentals (e.g., bouncy castles); our attendants supervise rentals
-                        on-site and a signed liability release is required.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="invoice-totals">
-                    <div className="invoice-total-row">
-                      <span>Subtotal</span>
-                      <span>{formatCurrency(summary?.subtotal || 0)}</span>
-                    </div>
-                    {(summary?.taxRate || 0) > 0 && (
-                      <div className="invoice-total-row">
-                        <span>VAT ({Math.round((summary?.taxRate || 0) * 100)}%)</span>
-                        <span>{formatCurrency(summary?.taxTotal || 0)}</span>
+                  <div className="invoice-notes-grid">
+                    <div className="invoice-note-block">
+                      <h4>Terms & policy</h4>
+                      <div className="invoice-terms">
+                        {displayInvoice.type === "booking" ? (
+                          <p>
+                            Terms: 70% deposit secures the booking. Balance is due before delivery/setup. Delivery fees are
+                            non-refundable. Late cancellations may forfeit deposits; refunds are not guaranteed within 48
+                            hours of the event. Date changes are subject to availability and may incur a reschedule fee.
+                            Digital waivers & contracts are available for rentals (e.g., bouncy castles); our attendants
+                            supervise rentals on-site and a signed liability release is required.
+                          </p>
+                        ) : (
+                          <p>
+                            Refund policy: Returns/exchanges are accepted within 7 days with the original receipt. Items
+                            must be unused and in original packaging; custom orders are non-refundable. Digital waivers &
+                            contracts are available for rentals (e.g., bouncy castles); our attendants supervise rentals
+                            on-site and a signed liability release is required.
+                          </p>
+                        )}
                       </div>
-                    )}
-                    <div className="invoice-total-row grand">
-                      <strong>Total</strong>
-                      <strong>{formatCurrency(summary?.grandTotal || 0)}</strong>
                     </div>
-                    {isBooking && (
-                      <>
+
+                    <div className="invoice-summary-panel">
+                      <p className="invoicing-label">Amount summary</p>
+                      <div className="invoice-totals">
                         <div className="invoice-total-row">
-                          <span>Deposit</span>
-                          <span>{formatCurrency(effectiveDeposit)}</span>
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(summary?.subtotal || 0)}</span>
                         </div>
-                        <div className="invoice-total-row">
-                          <span>Balance Due</span>
-                          <span>{formatCurrency(balanceDue)}</span>
+                        {(summary?.taxRate || 0) > 0 && (
+                          <div className="invoice-total-row">
+                            <span>VAT ({Math.round((summary?.taxRate || 0) * 100)}%)</span>
+                            <span>{formatCurrency(summary?.taxTotal || 0)}</span>
+                          </div>
+                        )}
+                        <div className="invoice-total-row grand">
+                          <strong>Total</strong>
+                          <strong>{formatCurrency(summary?.grandTotal || 0)}</strong>
                         </div>
-                      </>
-                    )}
+                        {isBooking && (
+                          <>
+                            <div className="invoice-total-row">
+                              <span>Deposit</span>
+                              <span>{formatCurrency(effectiveDeposit)}</span>
+                            </div>
+                            <div className="invoice-total-row">
+                              <span>Balance Due</span>
+                              <span>{formatCurrency(balanceDue)}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {displayInvoice.expenses && displayInvoice.expenses.length > 0 && (
@@ -1307,6 +1397,7 @@ function AdminInvoicing() {
                     </div>
                   )}
                 </div>
+
                 {displayInvoice.type === "booking" && (
                   <div className="invoice-paper invoice-waiver-paper">
                     <div className="invoice-waiver-header">

@@ -34,6 +34,45 @@ const formatDate = (value) => {
   return date.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
+const formatRelativeTime = (value) => {
+  if (!value) return "No recent activity";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No recent activity";
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 60 * 1000) return "Active just now";
+  const diffMinutes = Math.round(diffMs / (60 * 1000));
+  if (diffMinutes < 60) return `Active ${diffMinutes}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `Active ${diffHours}h ago`;
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `Active ${diffDays}d ago`;
+  return `Seen ${formatDate(value)}`;
+};
+
+const getSessionCount = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const describeSessionDevice = (userAgent = "") => {
+  const ua = String(userAgent || "").toLowerCase();
+  const browser =
+    ua.includes("edg/") ? "Edge"
+      : ua.includes("chrome/") && !ua.includes("edg/") ? "Chrome"
+        : ua.includes("firefox/") ? "Firefox"
+          : ua.includes("safari/") && !ua.includes("chrome/") ? "Safari"
+            : "Browser";
+  const device =
+    ua.includes("iphone") ? "iPhone"
+      : ua.includes("ipad") ? "iPad"
+        : ua.includes("android") ? "Android"
+          : ua.includes("windows") ? "Windows"
+            : ua.includes("macintosh") || ua.includes("mac os") ? "Mac"
+              : ua.includes("linux") ? "Linux"
+                : "Device";
+  return `${device} · ${browser}`;
+};
+
 const buildDefaultPermissions = (role = "") => {
   const normalized = (role || "").toLowerCase();
   const isAdmin = normalized === "admin";
@@ -73,8 +112,9 @@ function AdminRoles() {
   const [inviteSaving, setInviteSaving] = useState(false);
   const [inviteError, setInviteError] = useState("");
   const [inviteForm, setInviteForm] = useState({ firstName: "", lastName: "", role: "Staff", password: "" });
-  const [openMenuId, setOpenMenuId] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
   const openDetailModal = (user) => {
+    setOpenMenu(null);
     setDetailUser(user);
     setDetailRole(user.role || "Staff");
     setPermissionStatus("");
@@ -128,6 +168,19 @@ function AdminRoles() {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    if (!openMenu) return undefined;
+
+    const closeMenu = () => setOpenMenu(null);
+    window.addEventListener("resize", closeMenu);
+    window.addEventListener("scroll", closeMenu, true);
+
+    return () => {
+      window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("scroll", closeMenu, true);
+    };
+  }, [openMenu]);
+
   const roleCounts = useMemo(() => {
     const counts = { admin: 0, staff: 0, custodian: 0, manager: 0 };
     for (const user of users) {
@@ -159,6 +212,54 @@ function AdminRoles() {
         return nameA.localeCompare(nameB);
       });
   }, [users, query, roleFilter]);
+
+  const totalActiveSessions = useMemo(
+    () => users.reduce((sum, entry) => sum + getSessionCount(entry.activeSessionCount), 0),
+    [users]
+  );
+
+  const usersWithActiveSessions = useMemo(
+    () => users.filter((entry) => getSessionCount(entry.activeSessionCount) > 0).length,
+    [users]
+  );
+
+  const detailSessions = useMemo(
+    () => (Array.isArray(detailUser?.sessions) ? detailUser.sessions : []),
+    [detailUser?.sessions]
+  );
+
+  const openMenuUser = useMemo(
+    () => users.find((entry) => entry.id === openMenu?.userId) || null,
+    [users, openMenu?.userId]
+  );
+
+  const toggleUserMenu = (userId, event) => {
+    event.stopPropagation();
+    if (openMenu?.userId === userId) {
+      setOpenMenu(null);
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 196;
+    const menuHeight = 156;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const left = Math.min(
+      Math.max(12, rect.right - menuWidth),
+      Math.max(12, viewportWidth - menuWidth - 12)
+    );
+    const shouldOpenUp = viewportHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+    const top = shouldOpenUp
+      ? Math.max(12, rect.top - menuHeight - 8)
+      : Math.min(Math.max(12, viewportHeight - menuHeight - 12), rect.bottom + 8);
+
+    setOpenMenu({
+      userId,
+      top,
+      left,
+    });
+  };
 
   const addUser = async (event) => {
     event.preventDefault();
@@ -283,8 +384,14 @@ function AdminRoles() {
           </div>
           <div className="roles-card">
             <p className="roles-label">Active sessions</p>
-            <h3>Coming soon</h3>
-            <p className="roles-sub">Who is logged in</p>
+            <h3>{loading ? "..." : totalActiveSessions}</h3>
+            <p className="roles-sub">
+              {loading
+                ? "Checking live sessions"
+                : usersWithActiveSessions
+                  ? `${usersWithActiveSessions} user${usersWithActiveSessions === 1 ? "" : "s"} signed in`
+                  : "No signed-in staff"}
+            </p>
           </div>
           <div className="roles-card">
             <p className="roles-label">Role distribution</p>
@@ -347,13 +454,18 @@ function AdminRoles() {
                 <tbody>
                   {filteredUsers.map((user) => {
                     const roleKey = (user.role || "").toLowerCase();
-                    const menuOpen = openMenuId === user.id;
+                    const menuOpen = openMenu?.userId === user.id;
                     return (
                         <tr key={user.id} onClick={() => openDetailModal(user)} className="roles-row">
                         <td>
                           <div className="roles-user">
                             <strong>{user.fullName || user.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed"}</strong>
                             <p className="roles-sub">{user.email}</p>
+                            {getSessionCount(user.activeSessionCount) > 0 && (
+                              <span className="roles-session-pill">
+                                {getSessionCount(user.activeSessionCount)} active
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td>
@@ -361,7 +473,7 @@ function AdminRoles() {
                             {user.role || "Staff"}
                           </span>
                         </td>
-                        <td>{formatDate(user.updatedAt || user.createdAt)}</td>
+                        <td>{formatDate(user.lastSessionAt || user.updatedAt || user.createdAt)}</td>
                         <td className="roles-actions-col" onClick={(e) => e.stopPropagation()}>
                           <div className="roles-menu">
                             <button
@@ -369,20 +481,11 @@ function AdminRoles() {
                               className="roles-menu-trigger"
                               aria-haspopup="true"
                               aria-expanded={menuOpen}
-                              onClick={() => setOpenMenuId((prev) => (prev === user.id ? null : user.id))}
+                              onClick={(event) => toggleUserMenu(user.id, event)}
                             >
                               <AppIcon icon={faEllipsisVertical} />
                               <span className="sr-only">Actions</span>
                             </button>
-                            {menuOpen && (
-                              <div className="roles-menu-list">
-                                <button type="button" onClick={() => { openDetailModal(user); setOpenMenuId(null); }}>
-                                  Edit permissions
-                                </button>
-                                <button type="button" onClick={() => setOpenMenuId(null)}>Reset password</button>
-                                <button type="button" className="danger" onClick={() => setOpenMenuId(null)}>Deactivate</button>
-                              </div>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -399,6 +502,39 @@ function AdminRoles() {
           )}
         </section>
       </div>
+
+      {openMenu && openMenuUser && (
+        <>
+          <div
+            className="roles-menu-backdrop"
+            aria-hidden="true"
+            onClick={() => setOpenMenu(null)}
+          />
+          <div
+            className="roles-menu-list roles-menu-list--floating"
+            style={{
+              top: `${openMenu.top}px`,
+              left: `${openMenu.left}px`,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                openDetailModal(openMenuUser);
+                setOpenMenu(null);
+              }}
+            >
+              Edit permissions
+            </button>
+            <button type="button" onClick={() => setOpenMenu(null)}>
+              Reset password
+            </button>
+            <button type="button" className="danger" onClick={() => setOpenMenu(null)}>
+              Deactivate
+            </button>
+          </div>
+        </>
+      )}
 
       {inviteOpen && (
         <div className="customers-modal" role="dialog" aria-modal="true">
@@ -599,6 +735,45 @@ function AdminRoles() {
                 </div>
               </div>
             </div>
+            <section className="roles-session-panel">
+              <div className="roles-session-summary">
+                <div>
+                  <p className="roles-label">Active sessions</p>
+                  <h3>{getSessionCount(detailUser.activeSessionCount)}</h3>
+                  <p className="roles-sub">
+                    {getSessionCount(detailUser.activeSessionCount) > detailSessions.length
+                      ? `Showing the latest ${detailSessions.length} active sessions.`
+                      : getSessionCount(detailUser.activeSessionCount) > 0
+                        ? "Live sign-ins linked to this user."
+                        : "No active sessions right now."}
+                  </p>
+                </div>
+              </div>
+              {detailSessions.length > 0 && (
+                <div className="roles-session-list">
+                  {detailSessions.map((session, index) => (
+                    <div
+                      key={session.id || `${detailUser.id}-session-${index}`}
+                      className="roles-session-item"
+                    >
+                      <div className="roles-session-copy">
+                        <strong className="roles-session-device">
+                          {describeSessionDevice(session.userAgent)}
+                        </strong>
+                        <p className="roles-session-meta">
+                          {session.ipAddress ? `IP ${session.ipAddress}` : "IP unavailable"}
+                          {session.remember ? " · Remembered sign-in" : " · Session-only sign-in"}
+                        </p>
+                      </div>
+                      <div className="roles-session-times">
+                        <span>{formatRelativeTime(session.lastSeenAt || session.createdAt)}</span>
+                        <span>Expires {formatDate(session.expiresAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
               <div className="customers-form-actions">
                 <button type="button" className="customers-secondary" onClick={() => setDetailUser(null)}>
                   Close

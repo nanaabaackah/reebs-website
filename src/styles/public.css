@@ -57,7 +57,7 @@
 .contact-card-intro,
 .muted,
 .hint {
-  color: var(--white);
+  color: var(--text-main);
   font-weight: 700;
   line-height: 1.58;
 }

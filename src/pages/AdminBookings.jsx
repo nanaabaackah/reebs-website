@@ -181,6 +181,23 @@ function AdminBookings() {
   }, []);
 
   useEffect(() => {
+    if (!openMenuId) return undefined;
+
+    const closeOnLayoutChange = () => {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+    };
+
+    window.addEventListener("resize", closeOnLayoutChange);
+    window.addEventListener("scroll", closeOnLayoutChange, true);
+
+    return () => {
+      window.removeEventListener("resize", closeOnLayoutChange);
+      window.removeEventListener("scroll", closeOnLayoutChange, true);
+    };
+  }, [openMenuId]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     try {
       const raw = window.localStorage.getItem(viewStorageKey);
@@ -594,15 +611,13 @@ function AdminBookings() {
 
   const toggleBookingMenu = (bookingId, event) => {
     const rect = event?.currentTarget?.getBoundingClientRect();
-    setOpenMenuId((prev) => {
-      const next = prev === bookingId ? null : bookingId;
-      if (next && rect) {
-        setMenuPosition(buildMenuPosition(rect));
-      } else {
-        setMenuPosition(null);
-      }
-      return next;
-    });
+    if (openMenuId === bookingId) {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+      return;
+    }
+    setOpenMenuId(bookingId);
+    setMenuPosition(rect ? buildMenuPosition(rect) : null);
   };
 
   const closeMenu = () => {

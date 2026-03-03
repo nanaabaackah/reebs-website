@@ -69,6 +69,48 @@ const CORPORATE_RATE_MAP = {
   custom: { label: "Custom rate", rate: null },
 };
 
+const MANUAL_SALES_YEAR = 2024;
+const MANUAL_SALES_MONTHS = [
+  { key: "jan", label: "Jan", monthIndex: 0 },
+  { key: "feb", label: "Feb", monthIndex: 1 },
+  { key: "mar", label: "Mar", monthIndex: 2 },
+  { key: "apr", label: "Apr", monthIndex: 3 },
+  { key: "may", label: "May", monthIndex: 4 },
+  { key: "jun", label: "Jun", monthIndex: 5 },
+  { key: "jul", label: "Jul", monthIndex: 6 },
+  { key: "aug", label: "Aug", monthIndex: 7 },
+  { key: "sep", label: "Sep", monthIndex: 8 },
+  { key: "oct", label: "Oct", monthIndex: 9 },
+  { key: "nov", label: "Nov", monthIndex: 10 },
+  { key: "dec", label: "Dec", monthIndex: 11 },
+];
+const MANUAL_SALES_DEFAULTS = Object.fromEntries(
+  MANUAL_SALES_MONTHS.map(({ key }) => [key, "0"])
+);
+const EMPTY_MANUAL_SALES_PAYLOAD = Object.fromEntries(
+  MANUAL_SALES_MONTHS.map(({ key }) => [key, 0])
+);
+
+const normalizeManualSalesPayload = (value) => {
+  const source = value && typeof value === "object" ? value : {};
+  return MANUAL_SALES_MONTHS.reduce((acc, month) => {
+    const amount = Math.max(0, toNumber(source[month.key]));
+    acc[month.key] = Math.round(amount * 100) / 100;
+    return acc;
+  }, { ...EMPTY_MANUAL_SALES_PAYLOAD });
+};
+
+const toHistoricalSalesInputs = (value) => {
+  const normalized = normalizeManualSalesPayload(value);
+  return MANUAL_SALES_MONTHS.reduce((acc, month) => {
+    acc[month.key] = String(normalized[month.key] || 0);
+    return acc;
+  }, { ...MANUAL_SALES_DEFAULTS });
+};
+
+const serializeHistoricalSalesInputs = (value) =>
+  JSON.stringify(normalizeManualSalesPayload(value));
+
 function AdminAccounting() {
   const [windowKey, setWindowKey] = useState("allTime");
   const [viewMode, setViewMode] = useState("overview"); // overview | statements | charts | kanban | list | taxes
@@ -125,6 +167,13 @@ function AdminAccounting() {
   const [taxInputs, setTaxInputs] = useState(() =>
     loadLocalState("reebs_ghana_tax_inputs_v1", taxInputDefaults)
   );
+  const [historicalSalesInputs, setHistoricalSalesInputs] = useState(MANUAL_SALES_DEFAULTS);
+  const [historicalSalesLoaded, setHistoricalSalesLoaded] = useState(false);
+  const [historicalSalesSaving, setHistoricalSalesSaving] = useState(false);
+  const [historicalSalesError, setHistoricalSalesError] = useState("");
+  const [historicalSalesSnapshot, setHistoricalSalesSnapshot] = useState(() =>
+    serializeHistoricalSalesInputs(MANUAL_SALES_DEFAULTS)
+  );
   const [isMobileView, setIsMobileView] = useState(
     typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches
   );
@@ -171,8 +220,8 @@ function AdminAccounting() {
     saveLocalState("reebs_ghana_tax_inputs_v1", taxInputs);
   }, [taxInputs]);
 
-  const fetchJson = async (url) => {
-    const res = await fetch(url);
+  const fetchJson = async (url, init) => {
+    const res = await fetch(url, init);
     const text = await res.text();
     const json = (() => {
       try {
@@ -184,6 +233,74 @@ function AdminAccounting() {
     if (!res.ok) throw new Error(json?.error || "Failed to load data.");
     return json;
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setHistoricalSalesError("");
+      try {
+        const result = await fetchJson(`/.netlify/functions/accounting-history?year=${MANUAL_SALES_YEAR}`);
+        if (cancelled) return;
+        const nextInputs = toHistoricalSalesInputs(result?.monthlySales);
+        setHistoricalSalesInputs(nextInputs);
+        setHistoricalSalesSnapshot(serializeHistoricalSalesInputs(nextInputs));
+      } catch (err) {
+        if (cancelled) return;
+        setHistoricalSalesError(err.message || "Unable to load saved 2024 sales.");
+        setHistoricalSalesInputs({ ...MANUAL_SALES_DEFAULTS });
+        setHistoricalSalesSnapshot(serializeHistoricalSalesInputs(MANUAL_SALES_DEFAULTS));
+      } finally {
+        if (!cancelled) {
+          setHistoricalSalesLoaded(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!historicalSalesLoaded) return undefined;
+    const currentSnapshot = serializeHistoricalSalesInputs(historicalSalesInputs);
+    if (currentSnapshot === historicalSalesSnapshot) return undefined;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      (async () => {
+        setHistoricalSalesSaving(true);
+        setHistoricalSalesError("");
+        try {
+          await fetchJson("/.netlify/functions/accounting-history", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              year: MANUAL_SALES_YEAR,
+              monthlySales: normalizeManualSalesPayload(historicalSalesInputs),
+            }),
+          });
+          if (cancelled) return;
+          setHistoricalSalesSnapshot(currentSnapshot);
+        } catch (err) {
+          if (cancelled) return;
+          setHistoricalSalesError(err.message || "Unable to save 2024 sales to the database.");
+        } finally {
+          if (!cancelled) {
+            setHistoricalSalesSaving(false);
+          }
+        }
+      })();
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [historicalSalesInputs, historicalSalesLoaded, historicalSalesSnapshot]);
 
   const fetchData = async (key = windowKey) => {
     if (!data) setLoading(true);
@@ -233,8 +350,41 @@ function AdminAccounting() {
     fetchListData();
   }, [viewMode, listLoaded, isMobileView]);
 
+  const historicalSalesMonths = useMemo(
+    () =>
+      MANUAL_SALES_MONTHS.map((month) => {
+        const start = new Date(Date.UTC(MANUAL_SALES_YEAR, month.monthIndex, 1));
+        const end = new Date(Date.UTC(MANUAL_SALES_YEAR, month.monthIndex + 1, 1));
+        return {
+          ...month,
+          amount: Math.max(0, toNumber(historicalSalesInputs[month.key])),
+          start,
+          end,
+          dateKey: start.toISOString().slice(0, 10),
+        };
+      }),
+    [historicalSalesInputs]
+  );
+  const historicalSalesYearTotal = useMemo(
+    () => historicalSalesMonths.reduce((sum, month) => sum + month.amount, 0),
+    [historicalSalesMonths]
+  );
+  const historicalSalesInWindow = useMemo(() => {
+    if (!data?.startDate || !data?.endDate) return [];
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    return historicalSalesMonths.filter(
+      (month) => month.amount > 0 && month.end > start && month.start < end
+    );
+  }, [data?.endDate, data?.startDate, historicalSalesMonths]);
+  const historicalSalesWindowTotal = useMemo(
+    () => historicalSalesInWindow.reduce((sum, month) => sum + month.amount, 0),
+    [historicalSalesInWindow]
+  );
+
   const revenueSplit = useMemo(() => {
-    const retail = data?.revenueByCategory?.retail || 0;
+    const retail = (data?.revenueByCategory?.retail || 0) + historicalSalesWindowTotal;
     const rental = data?.revenueByCategory?.rental || 0;
     const other = data?.revenueByCategory?.other || 0;
     const total = retail + rental + other || 1;
@@ -246,16 +396,48 @@ function AdminAccounting() {
       rentalPct: Math.round((rental / total) * 100),
       otherPct: Math.round((other / total) * 100),
     };
-  }, [data]);
+  }, [data, historicalSalesWindowTotal]);
 
-  const cashflowTrend = useMemo(() => data?.cashflow || [], [data]);
+  const cashflowTrend = useMemo(() => {
+    const baseRows = Array.isArray(data?.cashflow) ? data.cashflow : [];
+    if (!historicalSalesInWindow.length) return baseRows;
+    const totals = new Map();
+    baseRows.forEach((entry) => {
+      totals.set(entry.date, {
+        date: entry.date,
+        revenue: toNumber(entry.revenue),
+      });
+    });
+    historicalSalesInWindow.forEach((entry) => {
+      const existing = totals.get(entry.dateKey);
+      totals.set(entry.dateKey, {
+        date: entry.dateKey,
+        revenue: (existing?.revenue || 0) + entry.amount,
+      });
+    });
+    return Array.from(totals.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [data?.cashflow, historicalSalesInWindow]);
   const topProducts = useMemo(() => data?.topProducts || [], [data]);
   const totalRevenue = useMemo(() => data?.revenue || 0, [data]);
+  const grossRevenue = useMemo(
+    () => totalRevenue + historicalSalesWindowTotal,
+    [historicalSalesWindowTotal, totalRevenue]
+  );
   const topProductsMax = useMemo(() => Math.max(...topProducts.map((p) => p.revenue || 0), 0), [topProducts]);
   const topRentals = useMemo(() => data?.topRentals || [], [data]);
   const topRentalsMax = useMemo(() => Math.max(...topRentals.map((p) => p.revenue || 0), 0), [topRentals]);
   const financeSummary = useMemo(() => data?.summary || null, [data]);
   const expenseWindowLabel = data?.expenseWindowLabel || data?.windowLabel || "";
+  const hasHistoricalSalesInWindow = historicalSalesWindowTotal > 0;
+  const windowLabel = data?.windowLabel || "";
+  const cashflowWindowLabel = hasHistoricalSalesInWindow
+    ? `${windowLabel || "Selected window"} + 2024 monthly carry-over`
+    : windowLabel
+      ? `Daily revenue in ${windowLabel}`
+      : "Daily revenue";
+  const cashflowPanelLabel = hasHistoricalSalesInWindow
+    ? "Live daily sales plus the 2024 monthly carry-over you entered."
+    : "Fast SQL aggregation keeps this chart snappy at scale.";
   const financeTransactions = useMemo(() => data?.transactions || [], [data]);
   const expenseBreakdown = useMemo(() => {
     const rows = Array.isArray(data?.expenseBreakdown) ? data.expenseBreakdown : [];
@@ -358,6 +540,12 @@ function AdminAccounting() {
     setTaxInputs((prev) => ({ ...prev, [field]: value }));
   };
 
+  const updateHistoricalSales = (field) => (event) => {
+    const value = event.target.value;
+    const sanitized = typeof value === "string" ? value.replace(/^-+/, "") : value;
+    setHistoricalSalesInputs((prev) => ({ ...prev, [field]: sanitized }));
+  };
+
   const updateGhanaTax = (field) => (event) => {
     const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
     setGhanaTaxConfig((prev) => {
@@ -421,7 +609,7 @@ function AdminAccounting() {
   const corporateRate = parsePercent(ghanaTaxConfig.corporateRate);
   const vatTotalRate = vatCoreRate + nhilRate + getFundRate + covidRate;
   const exemptSales = toNumber(taxInputs.exemptSales);
-  const salesBaseForTax = Math.max(combinedTotal, toNumber(data?.revenue || 0));
+  const salesBaseForTax = Math.max(combinedTotal, grossRevenue);
   const taxableSales = Math.max(0, salesBaseForTax - exemptSales);
   const outputVat = taxableSales * vatTotalRate;
   const inputVatCredits = toNumber(taxInputs.inputVatCredits);
@@ -461,7 +649,7 @@ function AdminAccounting() {
   const toMoneyString = (value) => toNumber(value).toFixed(2);
 
   const autoFillBalanceInputs = () => {
-    const revenue = toNumber(data?.revenue || 0);
+    const revenue = grossRevenue;
     const cogs = toNumber(financeSummary?.cogs || 0);
     const operatingExpenses = toNumber(financeSummary?.operatingExpenses || 0);
     const projectedLiquid = Math.max(0, revenue - cogs - operatingExpenses);
@@ -521,11 +709,11 @@ function AdminAccounting() {
       ownerEquity: toMoneyString(ownerEquityAuto),
       retainedEarnings: toMoneyString(retainedEarningsAuto),
     });
-    setNotice("Balance inputs auto-filled from live sales, costs, expense, and tax estimates.");
+    setNotice("Balance inputs auto-filled from recorded revenue, costs, expense, and tax estimates.");
   };
 
   const autoFillTaxInputs = () => {
-    const salesBase = Math.max(0, toNumber(data?.revenue || 0));
+    const salesBase = Math.max(0, grossRevenue);
     const operatingExpenses = toNumber(financeSummary?.operatingExpenses || 0);
     const defaultExemptSales = salesBase * 0.05;
     const estimatedInputVat = operatingExpenses * vatCoreRate;
@@ -544,6 +732,11 @@ function AdminAccounting() {
     setNotice("Ghana tax rates reset to default template values.");
   };
 
+  const clearHistoricalSales = () => {
+    setHistoricalSalesInputs({ ...MANUAL_SALES_DEFAULTS });
+    setHistoricalSalesError("");
+  };
+
   return (
     <div className="accounting-page accounting-page--redesign">
       <div className="accounting-shell accounting-shell--redesign">
@@ -556,11 +749,6 @@ function AdminAccounting() {
             <p className="accounting-subtitle">
               Mostly automated for non-accountants: statements, reconciliations, and tax estimates refresh from live records.
             </p>
-            {data?.automation?.expenseSourceTable && (
-              <p className="accounting-muted">
-                Expense source: <strong>{data.automation.expenseSourceTable}</strong>
-              </p>
-            )}
           </div>
           <div className="accounting-filters">
             <div className="accounting-filters-left">
@@ -576,6 +764,7 @@ function AdminAccounting() {
                 >
                   <option value="today">Today</option>
                   <option value="allTime">All time</option>
+                  <option value="year2024">2024</option>
                   <option value="thisMonth">This month</option>
                   <option value="lastMonth">Last month</option>
                   <option value="thisQuarter">This quarter</option>
@@ -685,12 +874,76 @@ function AdminAccounting() {
         )}
         {!loading && !error && notice && <p className="accounting-status">{notice}</p>}
 
+        {!loading && !error && data && (
+          <section className="accounting-panels accounting-panels-stack">
+            <div className="accounting-panel">
+              <div className="accounting-panel-head">
+                <div>
+                  <p className="accounting-panel-label">Historical carry-over</p>
+                  <h3>Enter 2024 monthly sales</h3>
+                  <p className="accounting-panel-sub">
+                    Use the handwritten book totals for 2024. Ongoing sales still flow in automatically as new orders are recorded.
+                  </p>
+                </div>
+                <div className="accounting-panel-actions">
+                  <button
+                    type="button"
+                    className="accounting-secondary"
+                    onClick={clearHistoricalSales}
+                    disabled={!historicalSalesLoaded}
+                  >
+                    Clear 2024
+                  </button>
+                </div>
+              </div>
+              <div className="accounting-form-grid">
+                {historicalSalesMonths.map((month) => (
+                  <label key={month.key} className="accounting-field">
+                    {month.label} {MANUAL_SALES_YEAR}
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      value={historicalSalesInputs[month.key]}
+                      onChange={updateHistoricalSales(month.key)}
+                      disabled={!historicalSalesLoaded}
+                    />
+                  </label>
+                ))}
+              </div>
+              {historicalSalesError && <p className="accounting-error">{historicalSalesError}</p>}
+              <div className="accounting-pnl">
+                <div className="accounting-pnl-row">
+                  <span>Manual {MANUAL_SALES_YEAR} total</span>
+                  <strong>{formatCurrency(historicalSalesYearTotal)}</strong>
+                </div>
+                <div className="accounting-pnl-row">
+                  <span>Applied in {windowLabel || "selected window"}</span>
+                  <strong>{formatCurrency(historicalSalesWindowTotal)}</strong>
+                </div>
+              </div>
+              <p className="accounting-muted">
+                {historicalSalesError
+                  ? "The current values are still on screen. Edit any field to retry saving to the database."
+                  : !historicalSalesLoaded
+                  ? "Loading saved 2024 sales from the database…"
+                  : historicalSalesSaving
+                    ? "Saving 2024 sales to the database…"
+                    : "Stored per organization in the database. Changes save automatically."}
+              </p>
+              <p className="accounting-muted">
+                Included in gross revenue, revenue mix, cash flow, and VAT sales. It does not change COGS, item-level sales, or profit-based taxes until detailed receipts are entered.
+              </p>
+            </div>
+          </section>
+        )}
+
         {!loading && !error && data && viewMode === "overview" && (
           <>
             <section className="accounting-kpis">
               <div className="accounting-kpi-card">
                 <p className="accounting-kpi-label">Gross revenue</p>
-                <h3 className="accounting-kpi-value">{formatCurrency(data.revenue || 0)}</h3>
+                <h3 className="accounting-kpi-value">{formatCurrency(grossRevenue)}</h3>
                 <p className="accounting-kpi-sub">Orders: {data.orders || 0}</p>
               </div>
               <div className="accounting-kpi-card">
@@ -701,9 +954,13 @@ function AdminAccounting() {
               <div className="accounting-kpi-card">
                 <p className="accounting-kpi-label">Cash flow trend</p>
                 <h3 className="accounting-kpi-value">
-                  {cashflowTrend.length ? `${cashflowTrend.length} day${cashflowTrend.length > 1 ? "s" : ""}` : "No data"}
+                  {cashflowTrend.length
+                    ? `${cashflowTrend.length} ${hasHistoricalSalesInWindow ? "point" : "day"}${
+                        cashflowTrend.length > 1 ? "s" : ""
+                      }`
+                    : "No data"}
                 </h3>
-                <p className="accounting-kpi-sub">Daily revenue in {data.windowLabel || ""}</p>
+                <p className="accounting-kpi-sub">{cashflowWindowLabel}</p>
               </div>
               <div className="accounting-kpi-card">
                 <p className="accounting-kpi-label">Bookings revenue</p>
@@ -782,6 +1039,11 @@ function AdminAccounting() {
                   </div>
                 ) : (
                   <p className="accounting-muted">No reconciliation data in this window.</p>
+                )}
+                {hasHistoricalSalesInWindow && (
+                  <p className="accounting-muted">
+                    Manual 2024 sales of {formatCurrency(historicalSalesWindowTotal)} are included in gross revenue above, but this margin view stays live-only until detailed receipts are entered.
+                  </p>
                 )}
               </div>
 
@@ -965,8 +1227,8 @@ function AdminAccounting() {
                 <div className="accounting-panel-head">
                   <div>
                     <p className="accounting-panel-label">Cash flow trend</p>
-                    <h3>Daily revenue</h3>
-                    <p className="accounting-panel-sub">Fast SQL aggregation keeps this chart snappy at scale.</p>
+                    <h3>Revenue trend</h3>
+                    <p className="accounting-panel-sub">{cashflowPanelLabel}</p>
                   </div>
                 </div>
                 {cashflowTrend.length === 0 ? (
@@ -994,7 +1256,7 @@ function AdminAccounting() {
                         <div className="accounting-trend-bar">
                           <span
                             style={{
-                              width: `${Math.min(100, Math.max(8, (entry.revenue / (data.revenue || 1)) * 100))}%`,
+                              width: `${Math.min(100, Math.max(8, (entry.revenue / Math.max(grossRevenue, 1)) * 100))}%`,
                             }}
                           />
                         </div>
@@ -1077,6 +1339,11 @@ function AdminAccounting() {
                   </div>
                 ) : (
                   <p className="accounting-muted">No reconciliation data in this window.</p>
+                )}
+                {hasHistoricalSalesInWindow && (
+                  <p className="accounting-muted">
+                    Manual 2024 sales of {formatCurrency(historicalSalesWindowTotal)} remain outside this profit statement until detailed line items are backfilled.
+                  </p>
                 )}
               </div>
 
@@ -1399,7 +1666,7 @@ function AdminAccounting() {
             <section className="accounting-kpis">
               <div className="accounting-kpi-card">
                 <p className="accounting-kpi-label">Gross revenue</p>
-                <h3 className="accounting-kpi-value">{formatCurrency(data.revenue || 0)}</h3>
+                <h3 className="accounting-kpi-value">{formatCurrency(grossRevenue)}</h3>
                 <p className="accounting-kpi-sub">{data.windowLabel || ""}</p>
               </div>
               <div className="accounting-kpi-card">
@@ -1459,7 +1726,7 @@ function AdminAccounting() {
                   <div>
                     <p className="accounting-panel-label">Cash flow</p>
                     <h3>Sparkline</h3>
-                    <p className="accounting-panel-sub">Daily revenue trend for {data.windowLabel || ""}.</p>
+                    <p className="accounting-panel-sub">{cashflowPanelLabel}</p>
                   </div>
                 </div>
                 {cashflowSpark.points ? (
@@ -1564,7 +1831,7 @@ function AdminAccounting() {
               <h4>Revenue</h4>
               <div className="accounting-kanban-card">
                 <p className="accounting-muted">{data.windowLabel || ""}</p>
-                <h3>{formatCurrency(data.revenue || 0)}</h3>
+                <h3>{formatCurrency(grossRevenue)}</h3>
                 <p className="accounting-panel-sub">Orders {data.orders || 0}</p>
               </div>
               <div className="accounting-kanban-card">
@@ -1810,7 +2077,9 @@ function AdminAccounting() {
                 </div>
               </div>
               <p className="accounting-muted">
-                Rates are editable—confirm current GRA requirements before filing.
+                {hasHistoricalSalesInWindow
+                  ? "Manual 2024 sales are included in taxable sales and VAT. Profit-based taxes still follow tracked profit only."
+                  : "Rates are editable—confirm current GRA requirements before filing."}
               </p>
             </div>
 

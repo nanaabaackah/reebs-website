@@ -180,6 +180,13 @@ const formatMoney = (value, currency = "GHS") => {
   }
 };
 
+const normalizeVenueAddress = (value) =>
+  String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getVenueAddressKey = (value) => normalizeVenueAddress(value).toLowerCase();
+
 const geocodeCacheKey = "reebs_booking_geocode_v1";
 const googleMapContainerStyle = { width: "100%", height: "440px" };
 
@@ -542,15 +549,25 @@ function AdminScheduler() {
     return map;
   }, [bookings]);
 
-  const bookingsByAddress = useMemo(() => {
+  const addressGroups = useMemo(() => {
     const map = new Map();
     for (const booking of bookings) {
-      const address = typeof booking.venueAddress === "string" ? booking.venueAddress.trim() : "";
+      const address = normalizeVenueAddress(booking.venueAddress);
       if (!address) continue;
-      if (!map.has(address)) map.set(address, []);
-      map.get(address).push(booking);
+      const key = getVenueAddressKey(address);
+      if (!map.has(key)) {
+        map.set(key, { key, address, bookings: [] });
+      }
+      map.get(key).bookings.push(booking);
     }
-    return map;
+    return Array.from(map.values()).map((group) => ({
+      ...group,
+      bookings: [...group.bookings].sort(
+        (a, b) =>
+          new Date(a.eventDate) - new Date(b.eventDate) ||
+          String(a.startTime || "").localeCompare(String(b.startTime || ""))
+      ),
+    }));
   }, [bookings]);
 
   const activeDayBookings = useMemo(() => {
@@ -595,6 +612,18 @@ function AdminScheduler() {
     mapInstanceRef.current.fitBounds(bounds, 48);
   }, [isGoogleLoaded, locations]);
 
+  useEffect(() => {
+    if (!selectedLocation) return;
+    const updatedLocation = locations.find((location) => location.key === selectedLocation.key);
+    if (!updatedLocation) {
+      setSelectedLocation(null);
+      return;
+    }
+    if (updatedLocation !== selectedLocation) {
+      setSelectedLocation(updatedLocation);
+    }
+  }, [locations, selectedLocation]);
+
   const loadGeocodeCache = () => {
     try {
       const raw = localStorage.getItem(geocodeCacheKey);
@@ -615,12 +644,18 @@ function AdminScheduler() {
   };
 
   const geocodeAddress = async (address) => {
-    const cleaned = String(address || "").trim();
+    const cleaned = normalizeVenueAddress(address);
     if (!cleaned) return null;
 
     const cache = loadGeocodeCache();
-    if (cache[cleaned]) {
-      return { ok: true, address: cleaned, coords: cache[cleaned], cached: true };
+    const cacheKey = getVenueAddressKey(cleaned);
+    const cachedValue = cache[cacheKey] || cache[cleaned];
+    if (cachedValue) {
+      if (!cache[cacheKey]) {
+        cache[cacheKey] = cachedValue;
+        saveGeocodeCache(cache);
+      }
+      return { ok: true, address: cleaned, coords: cachedValue, cached: true };
     }
 
     const response = await fetch("/.netlify/functions/geocode", {
@@ -658,7 +693,7 @@ function AdminScheduler() {
     }
 
     const value = { lat, lng, updatedAt: Date.now() };
-    cache[cleaned] = value;
+    cache[cacheKey] = value;
     saveGeocodeCache(cache);
     return { ok: true, address: cleaned, coords: value };
   };
@@ -667,15 +702,7 @@ function AdminScheduler() {
     if (view !== "map") return;
     setSelectedLocation(null);
 
-    const uniqueAddresses = Array.from(
-      new Set(
-        bookings
-          .map((booking) => booking.venueAddress)
-          .filter((addr) => typeof addr === "string" && addr.trim())
-      )
-    );
-
-    if (!uniqueAddresses.length) {
+    if (!addressGroups.length) {
       setLocations([]);
       setMapStats({ total: 0, geocoded: 0 });
       setMapFailures([]);
@@ -683,28 +710,43 @@ function AdminScheduler() {
     }
 
     let cancelled = false;
+    geocodeQueueRef.current = Promise.resolve();
 
     const schedule = (task) => {
+      let shouldDelay = false;
       geocodeQueueRef.current = geocodeQueueRef.current
-        .then(task)
-        .catch(() => {})
-        .then(() => new Promise((resolve) => setTimeout(resolve, 350)));
+        .then(async () => {
+          const result = await task();
+          shouldDelay = !result?.cached;
+          return result;
+        })
+        .catch(() => null)
+        .then(
+          (result) =>
+            shouldDelay
+              ? new Promise((resolve) => setTimeout(() => resolve(result), 350))
+              : result
+        );
       return geocodeQueueRef.current;
     };
 
     const run = async () => {
       const results = [];
       const failures = [];
-      for (const address of uniqueAddresses.slice(0, 25)) {
-        // limit to keep it lightweight
-         
-        const result = await schedule(() => geocodeAddress(address));
+      for (const group of addressGroups) {
+        const result = await schedule(() => geocodeAddress(group.address));
         if (cancelled) return;
         if (result?.ok) {
-          results.push({ address, ...result.coords });
+          results.push({
+            key: group.key,
+            address: group.address,
+            bookings: group.bookings,
+            count: group.bookings.length,
+            ...result.coords,
+          });
         } else {
           failures.push({
-            address: result?.address || address,
+            address: result?.address || group.address,
             reason: result?.reason || "No match",
             tried: result?.tried,
           });
@@ -713,7 +755,7 @@ function AdminScheduler() {
 
       if (!cancelled) {
         setLocations(results);
-        setMapStats({ total: uniqueAddresses.length, geocoded: results.length });
+        setMapStats({ total: addressGroups.length, geocoded: results.length });
         setMapFailures(failures);
       }
     };
@@ -722,8 +764,9 @@ function AdminScheduler() {
 
     return () => {
       cancelled = true;
+      geocodeQueueRef.current = Promise.resolve();
     };
-  }, [bookings, view]);
+  }, [addressGroups, view]);
 
   return (
     <div className="scheduler-page">
@@ -1008,9 +1051,25 @@ function AdminScheduler() {
                 >
                   {locations.map((loc) => (
                     <MarkerF
-                      key={loc.address}
+                      key={loc.key}
                       position={{ lat: loc.lat, lng: loc.lng }}
-                      onClick={() => setSelectedLocation(loc)}
+                      title={`${loc.count} booking${loc.count === 1 ? "" : "s"} · ${loc.address}`}
+                      label={
+                        loc.count > 1
+                          ? {
+                              text: String(loc.count),
+                              color: "#ffffff",
+                              fontWeight: "700",
+                              fontSize: "12px",
+                            }
+                          : undefined
+                      }
+                      onClick={() => {
+                        setSelectedLocation(loc);
+                        if (mapInstanceRef.current?.panTo) {
+                          mapInstanceRef.current.panTo({ lat: loc.lat, lng: loc.lng });
+                        }
+                      }}
                     />
                   ))}
 
@@ -1021,15 +1080,18 @@ function AdminScheduler() {
                     >
                       <div className="map-popup">
                         <strong>{selectedLocation.address}</strong>
+                        <div style={{ marginTop: 4, fontWeight: 600 }}>
+                          {selectedLocation.count} booking{selectedLocation.count === 1 ? "" : "s"}
+                        </div>
                         <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
-                          {(bookingsByAddress.get(selectedLocation.address) || [])
+                          {(selectedLocation.bookings || [])
                             .slice(0, 6)
                             .map((booking) => (
                               <div key={booking.id}>
                                 #{booking.id} · {booking.customerName} · {formatDate(booking.eventDate)}
                               </div>
                             ))}
-                          {(bookingsByAddress.get(selectedLocation.address) || []).length > 6 && (
+                          {(selectedLocation.bookings || []).length > 6 && (
                             <div>…more bookings</div>
                           )}
                         </div>
@@ -1040,7 +1102,7 @@ function AdminScheduler() {
               )}
             </div>
 
-            {locations.length === 0 && (
+            {locations.length === 0 && mapStats.total === 0 && (
               <p className="scheduler-muted">
                 No map pins yet — check venue addresses or try Refresh.
               </p>

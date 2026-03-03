@@ -7,12 +7,15 @@ const parseOrganizationId = (value) => {
 const DEFAULT_BACKEND_BASE_URL = "https://portal.reebspartythemes.com";
 
 const getBackendBaseUrl = () => {
-  const envBase = import.meta.env?.VITE_BACKEND_BASE_URL;
-  const trimmed = typeof envBase === "string" ? envBase.trim() : "";
-  if (trimmed) return trimmed.replace(/\/+$/, "");
+  // In local dev, always keep Netlify function calls on the local origin so
+  // form tests and mutations stay isolated from production data.
   if (import.meta.env?.DEV && typeof window !== "undefined") {
     return window.location.origin;
   }
+
+  const envBase = import.meta.env?.VITE_BACKEND_BASE_URL;
+  const trimmed = typeof envBase === "string" ? envBase.trim() : "";
+  if (trimmed) return trimmed.replace(/\/+$/, "");
   return DEFAULT_BACKEND_BASE_URL;
 };
 

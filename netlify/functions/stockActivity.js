@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { resolveOrganizationId } from "./_shared/organization.js";
 
 const corsHeaders = {
   "Content-Type": "application/json",
@@ -21,6 +22,7 @@ export async function handler(event = {}) {
 
   try {
     await client.connect();
+    const organizationId = await resolveOrganizationId(client, event);
 
     const result = await client.query(
       `SELECT
@@ -29,9 +31,11 @@ export async function handler(event = {}) {
          SUM(CASE WHEN lower(type) = 'stockin' THEN quantity ELSE 0 END)::int AS stock_in,
          SUM(CASE WHEN lower(type) = 'stockout' THEN quantity ELSE 0 END)::int AS stock_out
        FROM "stockMovement"
+       WHERE "organizationId" = $1
        GROUP BY month_key, month_start
        ORDER BY month_start DESC
-       LIMIT 12`
+       LIMIT 12`,
+      [organizationId]
     );
 
     return {

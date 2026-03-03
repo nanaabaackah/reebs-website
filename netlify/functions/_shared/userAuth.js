@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { touchUserSession } from "./userSessions.js";
 
 const getSecret = () => process.env.USER_APP_SECRET || "";
 
@@ -61,7 +62,37 @@ export const requireUser = async (client, event) => {
   const payload = getUserFromEvent(event);
   const userId = Number(payload?.userId);
   const organizationId = Number(payload?.organizationId);
+  const sessionTokenId = typeof payload?.sessionTokenId === "string" ? payload.sessionTokenId.trim() : "";
   if (!Number.isFinite(userId) || !Number.isFinite(organizationId)) return null;
+
+  if (sessionTokenId) {
+    try {
+      const sessionResult = await client.query(
+        `SELECT u.id, u."organizationId", u.role, u."fullName", u.email
+         FROM "user" u
+         INNER JOIN "userSession" s
+           ON s."userId" = u.id
+          AND s."organizationId" = u."organizationId"
+         WHERE u.id = $1
+           AND u."organizationId" = $2
+           AND s."sessionTokenId" = $3
+           AND s."revokedAt" IS NULL
+           AND s."expiresAt" > NOW()
+         LIMIT 1`,
+        [userId, organizationId, sessionTokenId]
+      );
+
+      if (sessionResult.rowCount > 0) {
+        await touchUserSession(client, sessionTokenId).catch(() => {});
+        return sessionResult.rows[0];
+      }
+      return null;
+    } catch (error) {
+      if (error?.code !== "42P01") {
+        throw error;
+      }
+    }
+  }
 
   const result = await client.query(
     `SELECT id, "organizationId", role, "fullName", email

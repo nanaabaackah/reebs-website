@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { setAuthToken } from "../utils/organization.js";
+import { getAuthToken, setAuthToken } from "../utils/organization.js";
 
 const AuthContext = createContext(null);
 
@@ -81,7 +81,7 @@ function AuthProvider({ children }) {
       const res = await fetch("/.netlify/functions/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Login failed");
@@ -98,6 +98,17 @@ function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    const token = getAuthToken();
+    if (token && typeof window !== "undefined" && typeof window.fetch === "function") {
+      window.fetch("/.netlify/functions/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch((err) => {
+        console.warn("Failed to close auth session", err);
+      });
+    }
     setUser(null);
     setAuthToken("");
     clearStoredUser();

@@ -54,7 +54,10 @@ function AdminBottomNav() {
     <nav
       className="aw-nav"
       aria-label="Admin navigation"
-      style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+      style={{
+        gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))`,
+        "--aw-nav-count": navItems.length,
+      }}
     >
       {navItems.map((item) => {
         const isActive =

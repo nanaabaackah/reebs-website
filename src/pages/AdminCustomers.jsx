@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import "../styles/admin.css";
 import { AppIcon } from "/src/components/Icon";
@@ -90,6 +91,36 @@ const getDaysSince = (date) => {
   if (!date) return Infinity;
   const diff = Date.now() - date.getTime();
   return diff / (1000 * 60 * 60 * 24);
+};
+
+const SEGMENT_LABELS = {
+  prospect: "Prospect",
+  nurture: "Nurture",
+  active: "Active",
+  loyal: "Loyal",
+  risk: "At risk",
+};
+
+const getSegmentLabel = (segment) => SEGMENT_LABELS[segment] || "Active";
+
+const getNextStep = (customer) => {
+  if (!customer) return "Review customer history";
+  if (customer.segment === "risk") return "Follow up with a check-in";
+  if (customer.segment === "prospect") return "Send welcome + pricing deck";
+  if (customer.segment === "loyal") return "Offer VIP renewal";
+  return "Schedule a monthly touchpoint";
+};
+
+const getTouchLabel = (customer) => {
+  if (!customer?.lastTouch) return "No recent touch";
+  const days = Math.max(0, Math.floor(customer.daysSince || 0));
+  if (days <= 1) return "Touched today";
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} since touch`;
+  if (days < 30) {
+    const weeks = Math.max(1, Math.floor(days / 7));
+    return `${weeks} week${weeks === 1 ? "" : "s"} since touch`;
+  }
+  return `${days} days since touch`;
 };
 
 function AdminCustomers() {
@@ -256,6 +287,8 @@ function AdminCustomers() {
     { id: "risk", label: "At risk", segments: ["risk"] },
   ];
 
+  const spotlightCustomers = useMemo(() => sorted.slice(0, 4), [sorted]);
+
   const openDetail = async (customer) => {
     setActiveCustomer(customer);
     setDetail(null);
@@ -296,111 +329,165 @@ function AdminCustomers() {
       <div className="crm-shell">
         <AdminBreadcrumb items={[{ label: "Customers" }]} />
 
-        <header className="crm-header">
-          <div>
-            <p className="crm-eyebrow">Customer CRM</p>
-            <h1>Customer relationships</h1>
-            <p className="crm-subtitle">
-              Track the full customer journey, from first inquiry to loyal repeat renter.
-            </p>
-          </div>
-          <div className="crm-header-actions">
-            <button type="button" className="crm-secondary" onClick={fetchCustomers} disabled={loading}>
-              <AppIcon icon={faRotateRight} /> Refresh
-            </button>
-            <button type="button" className="crm-primary" onClick={() => setCreateOpen(true)}>
-              <AppIcon icon={faUserPlus} /> Add Customer
-            </button>
-          </div>
-        </header>
+        <section className="crm-hero">
+          <header className="crm-header">
+            <div className="crm-header-copy">
+              <p className="crm-eyebrow">Customer CRM</p>
+              <h1>Customer Relationship Management</h1>
+              <div className="crm-segment-strip" aria-label="Customer segment distribution">
+                <span className="crm-segment-pill is-prospect">
+                  {segmentCounts.prospect} {getSegmentLabel("prospect")}
+                </span>
+                <span className="crm-segment-pill is-active">
+                  {segmentCounts.active + segmentCounts.nurture} Active
+                </span>
+                <span className="crm-segment-pill is-loyal">
+                  {segmentCounts.loyal} {getSegmentLabel("loyal")}
+                </span>
+                <span className="crm-segment-pill is-risk">
+                  {segmentCounts.risk} {getSegmentLabel("risk")}
+                </span>
+              </div>
+            </div>
+            <div className="crm-header-actions">
+              <button type="button" className="crm-secondary" onClick={fetchCustomers} disabled={loading}>
+                <AppIcon icon={faRotateRight} /> Refresh
+              </button>
+              <button type="button" className="crm-primary" onClick={() => setCreateOpen(true)}>
+                <AppIcon icon={faUserPlus} /> Add Customer
+              </button>
+            </div>
+          </header>
 
-        <section className="crm-kpi-grid">
-          <article className="crm-kpi-card">
-            <p className="crm-kpi-label">Total customers</p>
-            <h3 className="crm-kpi-value">{enrichedCustomers.length}</h3>
-            <span className="crm-kpi-sub">{totals.newCount} new in 30 days</span>
-          </article>
-          <article className="crm-kpi-card">
-            <p className="crm-kpi-label">Active relationships</p>
-            <h3 className="crm-kpi-value">{totals.activeCount}</h3>
-            <span className="crm-kpi-sub">{segmentCounts.prospect} prospects</span>
-          </article>
-          <article className="crm-kpi-card">
-            <p className="crm-kpi-label">Lifetime revenue</p>
-            <h3 className="crm-kpi-value">{formatMoney(totals.totalRevenue)}</h3>
-            <span className="crm-kpi-sub">Avg LTV {formatMoney(totals.avgLtv)}</span>
-          </article>
-          <article className="crm-kpi-card">
-            <p className="crm-kpi-label">Needs follow-up</p>
-            <h3 className="crm-kpi-value">{segmentCounts.risk}</h3>
-            <span className="crm-kpi-sub">At-risk accounts</span>
-          </article>
+          <div className="crm-hero-grid">
+            <section className="crm-kpi-grid">
+              <article className="crm-kpi-card crm-kpi-card--customers">
+                <p className="crm-kpi-label">Total customers</p>
+                <h3 className="crm-kpi-value">{enrichedCustomers.length}</h3>
+                <span className="crm-kpi-sub">{totals.newCount} new in 30 days</span>
+              </article>
+              <article className="crm-kpi-card crm-kpi-card--active">
+                <p className="crm-kpi-label">Active relationships</p>
+                <h3 className="crm-kpi-value">{totals.activeCount}</h3>
+                <span className="crm-kpi-sub">{segmentCounts.prospect} prospects to convert</span>
+              </article>
+              <article className="crm-kpi-card crm-kpi-card--revenue">
+                <p className="crm-kpi-label">Lifetime revenue</p>
+                <h3 className="crm-kpi-value">{formatMoney(totals.totalRevenue)}</h3>
+                <span className="crm-kpi-sub">Avg LTV {formatMoney(totals.avgLtv)}</span>
+              </article>
+              <article className="crm-kpi-card crm-kpi-card--risk">
+                <p className="crm-kpi-label">Needs follow-up</p>
+                <h3 className="crm-kpi-value">{segmentCounts.risk}</h3>
+                <span className="crm-kpi-sub">At-risk accounts</span>
+              </article>
+            </section>
+
+            <aside className="crm-spotlight-card">
+              <div className="crm-spotlight-head">
+                <div>
+                  <p className="crm-kpi-label">Priority queue</p>
+                  <h3>Customers to act on</h3>
+                </div>
+                <span className="crm-count">
+                  {sorted.length} visible / {enrichedCustomers.length} total
+                </span>
+              </div>
+              {spotlightCustomers.length ? (
+                <div className="crm-spotlight-list">
+                  {spotlightCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      className="crm-spotlight-item"
+                      onClick={() => openDetail(customer)}
+                    >
+                      <span className="crm-avatar">{getInitials(customer.name)}</span>
+                      <span className="crm-spotlight-copy">
+                        <strong>{customer.name || "Unnamed"}</strong>
+                        <small>{getTouchLabel(customer)}</small>
+                      </span>
+                      <span className={`crm-tag is-${customer.segment}`}>
+                        {getSegmentLabel(customer.segment)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="crm-muted">No customers match the current filters.</p>
+              )}
+            </aside>
+          </div>
         </section>
 
         <section className="crm-controls">
-          <label className="crm-search">
-            <span>Search</span>
-            <input
-              type="text"
-              placeholder="Name, email, or phone"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </label>
-          <div className="crm-filters">
-            <label className="crm-filter">
-              <span>Segment</span>
-              <select value={segmentFilter} onChange={(e) => setSegmentFilter(e.target.value)}>
-                <option value="all">All segments</option>
-                <option value="prospect">Prospects</option>
-                <option value="nurture">Nurture</option>
-                <option value="active">Active</option>
-                <option value="loyal">Loyal</option>
-                <option value="risk">At risk</option>
-              </select>
+          <div className="crm-control-panel">
+            <label className="crm-search">
+              <span>Search</span>
+              <input
+                type="text"
+                placeholder="Name, email, or phone"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </label>
-            <label className="crm-filter">
-              <span>Sort by</span>
-              <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
-                <option value="ltv">Lifetime value</option>
-                <option value="activity">Activity volume</option>
-                <option value="recent">Last touch</option>
-                <option value="name">Name (A-Z)</option>
-              </select>
-            </label>
+            <div className="crm-filters">
+              <label className="crm-filter">
+                <span>Segment</span>
+                <select value={segmentFilter} onChange={(e) => setSegmentFilter(e.target.value)}>
+                  <option value="all">All segments</option>
+                  <option value="prospect">Prospects</option>
+                  <option value="nurture">Nurture</option>
+                  <option value="active">Active</option>
+                  <option value="loyal">Loyal</option>
+                  <option value="risk">At risk</option>
+                </select>
+              </label>
+              <label className="crm-filter">
+                <span>Sort by</span>
+                <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
+                  <option value="ltv">Lifetime value</option>
+                  <option value="activity">Activity volume</option>
+                  <option value="recent">Last touch</option>
+                  <option value="name">Name (A-Z)</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div className="crm-view-toggle" role="tablist" aria-label="CRM views">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "board"}
-              className={viewMode === "board" ? "is-active" : ""}
-              onClick={() => setViewMode("board")}
-            >
-              <AppIcon icon={faColumns} /> Board
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "list"}
-              className={viewMode === "list" ? "is-active" : ""}
-              onClick={() => setViewMode("list")}
-            >
-              <AppIcon icon={faTableCells} /> List
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "timeline"}
-              className={viewMode === "timeline" ? "is-active" : ""}
-              onClick={() => setViewMode("timeline")}
-            >
-              <AppIcon icon={faClock} /> Timeline
-            </button>
+          <div className="crm-view-panel">
+            <div className="crm-view-toggle" role="tablist" aria-label="CRM views">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "board"}
+                className={viewMode === "board" ? "is-active" : ""}
+                onClick={() => setViewMode("board")}
+              >
+                <AppIcon icon={faColumns} /> Board
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "list"}
+                className={viewMode === "list" ? "is-active" : ""}
+                onClick={() => setViewMode("list")}
+              >
+                <AppIcon icon={faTableCells} /> List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "timeline"}
+                className={viewMode === "timeline" ? "is-active" : ""}
+                onClick={() => setViewMode("timeline")}
+              >
+                <AppIcon icon={faClock} /> Timeline
+              </button>
+            </div>
+            <p className="crm-count">
+              Showing {sorted.length} of {enrichedCustomers.length} customers
+            </p>
           </div>
-          <p className="crm-count">
-            Showing {sorted.length} of {enrichedCustomers.length} customers
-          </p>
         </section>
 
         {loading && <p className="crm-muted">Loading customers...</p>}
@@ -410,11 +497,15 @@ function AdminCustomers() {
           <div className="crm-board">
             {boardColumns.map((column) => {
               const columnCustomers = sorted.filter((customer) => column.segments.includes(customer.stage));
+              const columnRevenue = columnCustomers.reduce((sum, customer) => sum + customer.ltv, 0);
               return (
                 <section key={column.id} className="crm-column">
                   <div className="crm-column-head">
-                    <h3>{column.label}</h3>
-                    <span>{columnCustomers.length}</span>
+                    <div>
+                      <h3>{column.label}</h3>
+                      <p className="crm-column-meta">{formatMoney(columnRevenue)} in value</p>
+                    </div>
+                    <span className="crm-column-count">{columnCustomers.length}</span>
                   </div>
                   <div className="crm-column-list">
                     {columnCustomers.map((customer) => (
@@ -428,15 +519,7 @@ function AdminCustomers() {
                             </div>
                           </div>
                           <span className={`crm-tag is-${customer.segment}`}>
-                            {customer.segment === "risk"
-                              ? "At risk"
-                              : customer.segment === "loyal"
-                              ? "Loyal"
-                              : customer.segment === "prospect"
-                              ? "Prospect"
-                              : customer.segment === "nurture"
-                              ? "Nurture"
-                              : "Active"}
+                            {getSegmentLabel(customer.segment)}
                           </span>
                         </div>
                         <div className="crm-card-body">
@@ -461,25 +544,28 @@ function AdminCustomers() {
                             <strong>{formatMoney(customer.ltv)}</strong>
                           </div>
                         </div>
-                        <div className="crm-actions">
-                          {customer.phone && (
-                            <>
-                              <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
-                                <AppIcon icon={faPhone} /> Call
-                              </a>
-                              <a
-                                href={`https://wa.me/${sanitizePhone(customer.phone)}`}
-                                className="crm-action"
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <AppIcon icon={faWhatsapp} /> WhatsApp
-                              </a>
-                            </>
-                          )}
-                          <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
-                            <AppIcon icon={faHistory} /> View profile
-                          </button>
+                        <div className="crm-card-footer">
+                          <span className="crm-next-step">{getNextStep(customer)}</span>
+                          <div className="crm-actions">
+                            {customer.phone && (
+                              <>
+                                <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
+                                  <AppIcon icon={faPhone} /> Call
+                                </a>
+                                <a
+                                  href={`https://wa.me/${sanitizePhone(customer.phone)}`}
+                                  className="crm-action"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <AppIcon icon={faWhatsapp} /> WhatsApp
+                                </a>
+                              </>
+                            )}
+                            <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
+                              <AppIcon icon={faHistory} /> View profile
+                            </button>
+                          </div>
                         </div>
                       </article>
                     ))}
@@ -492,43 +578,61 @@ function AdminCustomers() {
         )}
 
         {!loading && !error && viewMode === "list" && (
-          <div className="crm-table">
-            <div className="crm-table-row crm-table-head">
-              <span>Customer</span>
-              <span>Segment</span>
-              <span>Orders</span>
-              <span>Bookings</span>
-              <span>LTV</span>
-              <span>Last touch</span>
-              <span>Actions</span>
-            </div>
+          <div className="crm-list-grid">
             {sorted.map((customer) => (
-              <div className="crm-table-row" key={customer.id}>
-                <span className="crm-table-strong">
-                  {customer.name || "Unnamed"}
-                  <span className="crm-meta">Client #{customer.id}</span>
-                </span>
-                <span className={`crm-tag is-${customer.segment}`}>
-                  {customer.segment === "risk"
-                    ? "At risk"
-                    : customer.segment === "loyal"
-                    ? "Loyal"
-                    : customer.segment === "prospect"
-                    ? "Prospect"
-                    : customer.segment === "nurture"
-                    ? "Nurture"
-                    : "Active"}
-                </span>
-                <span>{toNumber(customer.orders)}</span>
-                <span>{toNumber(customer.bookings)}</span>
-                <span className="crm-table-strong">{formatMoney(customer.ltv)}</span>
-                <span>{customer.lastTouch ? formatDate(customer.lastTouch) : "-"}</span>
-                <span className="crm-table-actions">
-                  <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
-                    View
-                  </button>
-                </span>
-              </div>
+              <article className="crm-list-card" key={customer.id}>
+                <div className="crm-list-main">
+                  <div className="crm-profile">
+                    <div className="crm-avatar">{getInitials(customer.name)}</div>
+                    <div className="crm-table-strong">
+                      {customer.name || "Unnamed"}
+                      <span className="crm-meta">Client #{customer.id}</span>
+                    </div>
+                  </div>
+                  <span className={`crm-tag is-${customer.segment}`}>
+                    {getSegmentLabel(customer.segment)}
+                  </span>
+                </div>
+                <div className="crm-list-contact">
+                  <span>
+                    <AppIcon icon={faEnvelope} /> {customer.email || "No email"}
+                  </span>
+                  <span>
+                    <AppIcon icon={faPhone} /> {customer.phone || "No phone"}
+                  </span>
+                </div>
+                <div className="crm-list-stats">
+                  <div>
+                    <span>Orders</span>
+                    <strong>{toNumber(customer.orders)}</strong>
+                  </div>
+                  <div>
+                    <span>Bookings</span>
+                    <strong>{toNumber(customer.bookings)}</strong>
+                  </div>
+                  <div>
+                    <span>LTV</span>
+                    <strong>{formatMoney(customer.ltv)}</strong>
+                  </div>
+                  <div>
+                    <span>Last touch</span>
+                    <strong>{customer.lastTouch ? formatDate(customer.lastTouch) : "-"}</strong>
+                  </div>
+                </div>
+                <div className="crm-list-footer">
+                  <span className="crm-next-step">{getNextStep(customer)}</span>
+                  <div className="crm-table-actions">
+                    {customer.phone && (
+                      <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
+                        <AppIcon icon={faPhone} /> Call
+                      </a>
+                    )}
+                    <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
+                      View record
+                    </button>
+                  </div>
+                </div>
+              </article>
             ))}
             {!sorted.length && <p className="crm-muted">No customers found.</p>}
           </div>
@@ -547,32 +651,32 @@ function AdminCustomers() {
                   : "Schedule a monthly touchpoint";
               return (
                 <div key={customer.id} className="crm-timeline-row">
-                  <div className="crm-avatar">{getInitials(customer.name)}</div>
-                  <div>
+                  <div className="crm-timeline-rail">
+                    <div className="crm-avatar">{getInitials(customer.name)}</div>
+                    <span className={`crm-timeline-dot is-${customer.segment}`} aria-hidden="true" />
+                  </div>
+                  <div className="crm-timeline-body">
                     <div className="crm-timeline-head">
                       <h4>{customer.name || "Unnamed"}</h4>
-                      <span>{customer.lastTouch ? formatDate(customer.lastTouch) : "-"}</span>
+                      <span>{getTouchLabel(customer)}</span>
                     </div>
                     <p className="crm-muted">
                       {customer.email || "No email"} · {customer.phone || "No phone"}
                     </p>
                     <div className="crm-timeline-meta">
                       <span className={`crm-tag is-${customer.segment}`}>
-                        {customer.segment === "risk"
-                          ? "At risk"
-                          : customer.segment === "loyal"
-                          ? "Loyal"
-                          : customer.segment === "prospect"
-                          ? "Prospect"
-                          : customer.segment === "nurture"
-                          ? "Nurture"
-                          : "Active"}
+                        {getSegmentLabel(customer.segment)}
                       </span>
                       <span>{customer.activity} touches</span>
                       <span>LTV {formatMoney(customer.ltv)}</span>
                     </div>
                     <div className="crm-timeline-actions">
                       <span className="crm-next-step">{nextStep}</span>
+                      {customer.phone && (
+                        <a href={`tel:${sanitizePhone(customer.phone)}`} className="crm-action">
+                          <AppIcon icon={faPhone} /> Call
+                        </a>
+                      )}
                       <button type="button" className="crm-secondary" onClick={() => openDetail(customer)}>
                         Open record
                       </button>
@@ -639,11 +743,18 @@ function AdminCustomers() {
       {activeCustomer && (
         <div className="customers-modal" role="dialog" aria-modal="true">
           <div className="customers-modal-panel crm-detail-panel">
-            <header>
+            <header className="crm-detail-header">
               <div>
                 <p className="customers-eyebrow">Client 360</p>
                 <h2>{activeCustomer.name}</h2>
                 <p className="crm-muted">{activeCustomer.email || "No email"} · {activeCustomer.phone || "No phone"}</p>
+                <div className="crm-detail-header-meta">
+                  <span className={`crm-tag is-${activeCustomer.segment || "active"}`}>
+                    {getSegmentLabel(activeCustomer.segment)}
+                  </span>
+                  <span className="crm-meta">LTV {formatMoney(activeCustomer.ltv)}</span>
+                  <span className="crm-meta">{activeCustomer.activity} interactions</span>
+                </div>
               </div>
               <button className="customers-modal-close" onClick={() => setActiveCustomer(null)} aria-label="Close">
                 <AppIcon icon={faXmark} />
@@ -651,78 +762,104 @@ function AdminCustomers() {
             </header>
             {detailLoading && <p className="crm-muted">Loading history...</p>}
             {detail && (
-              <div className="crm-detail-grid">
-                <div className="crm-detail-card">
-                  <h4>Totals</h4>
-                  <p>Orders: {detail.totals.orders}</p>
-                  <p>Bookings: {detail.totals.bookings}</p>
-                  <p>Retail spent: {formatMoney(detail.totals.totalSpent)}</p>
-                  <p>Rental spent: {formatMoney(detail.totals.totalRented)}</p>
+              <>
+                <div className="crm-detail-quick-actions">
+                  {activeCustomer.phone && (
+                    <>
+                      <a href={`tel:${sanitizePhone(activeCustomer.phone)}`} className="crm-action">
+                        <AppIcon icon={faPhone} /> Call
+                      </a>
+                      <a
+                        href={`https://wa.me/${sanitizePhone(activeCustomer.phone)}`}
+                        className="crm-action"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <AppIcon icon={faWhatsapp} /> WhatsApp
+                      </a>
+                    </>
+                  )}
+                  {activeCustomer.email && (
+                    <a href={`mailto:${activeCustomer.email}`} className="crm-action">
+                      <AppIcon icon={faEnvelope} /> Email
+                    </a>
+                  )}
                 </div>
-                <div className="crm-detail-card crm-address-card">
-                  <h4>Primary address</h4>
-                  <p className="crm-address-name">{activeCustomer?.name || "Customer"}</p>
-                  {addressLines.length ? (
-                    <div className="crm-address-lines">
-                      {addressLines.map((line, index) => (
-                        <span key={`${activeCustomer?.id || "customer"}-address-${index}`}>{line}</span>
-                      ))}
+                <div className="crm-detail-grid">
+                  <div className="crm-detail-card">
+                    <h4>Totals</h4>
+                    <div className="crm-detail-stats">
+                      <p><span>Orders</span><strong>{detail.totals.orders}</strong></p>
+                      <p><span>Bookings</span><strong>{detail.totals.bookings}</strong></p>
+                      <p><span>Retail spent</span><strong>{formatMoney(detail.totals.totalSpent)}</strong></p>
+                      <p><span>Rental spent</span><strong>{formatMoney(detail.totals.totalRented)}</strong></p>
                     </div>
-                  ) : (
-                    <p className="crm-muted">No delivery address on file.</p>
-                  )}
-                  <p className="crm-address-phone">
-                    Phone number: {deliverySnapshot?.details?.contact || activeCustomer?.phone || detail?.customer?.phone || "Not provided"}
-                  </p>
-                  {deliverySnapshot?.details?.notes ? (
-                    <p className="crm-address-note">Delivery instructions: {deliverySnapshot.details.notes}</p>
-                  ) : (
-                    <button type="button" className="crm-address-link">
-                      Add delivery instructions
-                    </button>
-                  )}
-                  <div className="crm-address-actions">
-                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
-                      Edit
-                    </button>
-                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
-                      Remove
-                    </button>
-                    <button type="button" className="crm-address-action" disabled={!addressLines.length}>
-                      Set as Default
-                    </button>
+                  </div>
+                  <div className="crm-detail-card crm-address-card">
+                    <h4>Primary address</h4>
+                    <p className="crm-address-name">{activeCustomer?.name || "Customer"}</p>
+                    {addressLines.length ? (
+                      <div className="crm-address-lines">
+                        {addressLines.map((line, index) => (
+                          <span key={`${activeCustomer?.id || "customer"}-address-${index}`}>{line}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="crm-muted">No delivery address on file.</p>
+                    )}
+                    <p className="crm-address-phone">
+                      Phone number: {deliverySnapshot?.details?.contact || activeCustomer?.phone || detail?.customer?.phone || "Not provided"}
+                    </p>
+                    {deliverySnapshot?.details?.notes ? (
+                      <p className="crm-address-note">Delivery instructions: {deliverySnapshot.details.notes}</p>
+                    ) : (
+                      <button type="button" className="crm-address-link">
+                        Add delivery instructions
+                      </button>
+                    )}
+                    <div className="crm-address-actions">
+                      <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                        Edit
+                      </button>
+                      <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                        Remove
+                      </button>
+                      <button type="button" className="crm-address-action" disabled={!addressLines.length}>
+                        Set as Default
+                      </button>
+                    </div>
+                  </div>
+                  <div className="crm-detail-card">
+                    <h4>Orders</h4>
+                    {detail.orders.length === 0 ? (
+                      <p className="crm-muted">No orders yet.</p>
+                    ) : (
+                      <ul className="crm-detail-list">
+                        {detail.orders.slice(0, 6).map((order) => (
+                          <li key={order.id}>
+                            {order.orderNumber} · {formatDate(order.orderDate)} ·{" "}
+                            {formatMoney(order.total_with_delivery ?? order.total_amount)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="crm-detail-card">
+                    <h4>Bookings</h4>
+                    {detail.bookings.length === 0 ? (
+                      <p className="crm-muted">No bookings yet.</p>
+                    ) : (
+                      <ul className="crm-detail-list">
+                        {detail.bookings.slice(0, 6).map((booking) => (
+                          <li key={booking.id}>
+                            #{booking.id} · {formatDate(booking.eventDate)} · {formatMoney(booking.totalAmount)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
-                <div className="crm-detail-card">
-                  <h4>Orders</h4>
-                  {detail.orders.length === 0 ? (
-                    <p className="crm-muted">No orders yet.</p>
-                  ) : (
-                    <ul>
-                      {detail.orders.slice(0, 6).map((order) => (
-                        <li key={order.id}>
-                          {order.orderNumber} · {formatDate(order.orderDate)} ·{" "}
-                          {formatMoney(order.total_with_delivery ?? order.total_amount)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="crm-detail-card">
-                  <h4>Bookings</h4>
-                  {detail.bookings.length === 0 ? (
-                    <p className="crm-muted">No bookings yet.</p>
-                  ) : (
-                    <ul>
-                      {detail.bookings.slice(0, 6).map((booking) => (
-                        <li key={booking.id}>
-                          #{booking.id} · {formatDate(booking.eventDate)} · {formatMoney(booking.totalAmount)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>

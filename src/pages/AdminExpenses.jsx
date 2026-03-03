@@ -182,6 +182,16 @@ function AdminExpenses() {
     [expenses]
   );
 
+  const linkedExpenseCount = useMemo(
+    () => expenses.filter((expense) => expense?.orderId || expense?.bookingId).length,
+    [expenses]
+  );
+
+  const averageExpense = useMemo(
+    () => (expenses.length ? totalExpenses / expenses.length : 0),
+    [expenses.length, totalExpenses]
+  );
+
   const totalsByCategory = useMemo(() => {
     return categoryList.reduce((acc, category) => {
       const total = expenses
@@ -196,6 +206,18 @@ function AdminExpenses() {
     () => (allTimeView ? "All time" : formatMonthLabel(monthFilter)),
     [allTimeView, monthFilter]
   );
+
+  const topCategory = useMemo(() => {
+    if (!categoryList.length) return null;
+    let winner = null;
+    for (const category of categoryList) {
+      const total = toNumber(totalsByCategory[category], 0);
+      if (!winner || total > winner.total) {
+        winner = { category, total };
+      }
+    }
+    return winner;
+  }, [categoryList, totalsByCategory]);
 
   const suggestedCategory = useMemo(
     () => inferExpenseCategory({ category: form.category, description: form.description }),
@@ -268,38 +290,72 @@ function AdminExpenses() {
           </div>
         </header>
 
-        <div className="expenses-filters">
-          <label>
-            Posting period
-            <input
-              type="month"
-              value={monthFilter}
-              onChange={(event) => setMonthFilter(event.target.value)}
-              disabled={allTimeView}
-            />
-          </label>
-          <label className="expenses-check">
-            <input
-              type="checkbox"
-              checked={allTimeView}
-              onChange={(event) => setAllTimeView(event.target.checked)}
-            />
-            Show all time
-          </label>
+        <section className="expenses-overview" aria-label="Expense summary">
+          <article className="expenses-overview-metric">
+            <p className="expenses-card-label">Entries</p>
+            <strong>{expenses.length}</strong>
+            <span>{periodLabel}</span>
+          </article>
+          <article className="expenses-overview-metric">
+            <p className="expenses-card-label">Linked</p>
+            <strong>{linkedExpenseCount}</strong>
+            <span>{Math.max(expenses.length - linkedExpenseCount, 0)} unlinked</span>
+          </article>
+          <article className="expenses-overview-metric">
+            <p className="expenses-card-label">Average spend</p>
+            <strong>{formatCurrency(averageExpense)}</strong>
+            <span>Per recorded expense</span>
+          </article>
+          <article className="expenses-overview-metric">
+            <p className="expenses-card-label">Top category</p>
+            <strong>{topCategory?.category || "None yet"}</strong>
+            <span>{formatCurrency(topCategory?.total || 0)}</span>
+          </article>
+        </section>
+
+        <div className="expenses-filter-rail">
+          <div className="expenses-filters">
+            <label>
+              Posting period
+              <input
+                type="month"
+                value={monthFilter}
+                onChange={(event) => setMonthFilter(event.target.value)}
+                disabled={allTimeView}
+              />
+            </label>
+            <label className="expenses-check">
+              <input
+                type="checkbox"
+                checked={allTimeView}
+                onChange={(event) => setAllTimeView(event.target.checked)}
+              />
+              Show all time
+            </label>
+          </div>
+          <p className="expenses-filter-note">
+            Auto-categorized entries flow straight into accounting totals for this organization.
+          </p>
         </div>
 
         {error && <p className="expenses-error">{error}</p>}
         {status && <p className="expenses-success">{status}</p>}
 
-        <section className="expenses-kpis">
-          {categoryList.map((category) => (
-            <div key={category} className="expenses-kpi">
-              <span className="expenses-tag" style={getExpenseCategoryStyle(category)}>
-                {category}
-              </span>
-              <strong>{formatCurrency(totalsByCategory[category] || 0)}</strong>
-            </div>
-          ))}
+        <section className="expenses-kpis-wrap" aria-label="Category totals">
+          <div className="expenses-kpis-head">
+            <p className="expenses-card-label">Category spread</p>
+            <span>{categoryList.length} categories in view</span>
+          </div>
+          <div className="expenses-kpis">
+            {categoryList.map((category) => (
+              <div key={category} className="expenses-kpi">
+                <span className="expenses-tag" style={getExpenseCategoryStyle(category)}>
+                  {category}
+                </span>
+                <strong>{formatCurrency(totalsByCategory[category] || 0)}</strong>
+              </div>
+            ))}
+          </div>
         </section>
 
         <div className="expenses-grid">
@@ -399,6 +455,7 @@ function AdminExpenses() {
           <section className="admin-table expenses-ledger">
             <div className="admin-table-header">
               <div>
+                <p className="expenses-card-label">Expense ledger</p>
                 <h3>
                   <AppIcon icon={faReceipt} /> Expense ledger
                 </h3>
@@ -425,7 +482,7 @@ function AdminExpenses() {
               </div>
             </div>
             <div className="admin-table-scroll">
-              <table>
+              <table className="expenses-ledger-table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -451,15 +508,15 @@ function AdminExpenses() {
                   ) : (
                     expenses.map((expense) => (
                       <tr key={expense.id}>
-                        <td>{formatDate(expense.date)}</td>
-                        <td>
+                        <td data-label="Date">{formatDate(expense.date)}</td>
+                        <td data-label="Category">
                           <span className="expenses-tag" style={getExpenseCategoryStyle(expense.category)}>
                             {expense.category}
                           </span>
                         </td>
-                        <td>{formatExpenseLink(expense)}</td>
-                        <td>{formatCurrency(toNumber(expense.amount) / 100)}</td>
-                        <td>{expense.description || "-"}</td>
+                        <td data-label="Linked">{formatExpenseLink(expense)}</td>
+                        <td data-label="Amount">{formatCurrency(toNumber(expense.amount) / 100)}</td>
+                        <td data-label="Notes">{expense.description || "-"}</td>
                       </tr>
                     ))
                   )}

@@ -34,6 +34,8 @@ model Organization {
   waterSales      WaterSale[]
   waterExpenses   WaterExpense[]
   waterAdjustments WaterAdjustment[]
+  accountingManualSales AccountingManualSales[]
+  userSessions    UserSession[]
 
   @@map("organization")
 }
@@ -188,8 +190,29 @@ model User {
   expenses  Expense[]
   profile   EmployeeProfile?
   timesheets Timesheet[]
+  sessions  UserSession[]
   
   @@map("user")
+}
+
+model UserSession {
+  id            Int          @id @default(autoincrement())
+  organizationId Int @default(1)
+  organization  Organization @relation(fields: [organizationId], references: [id])
+  userId        Int
+  user          User         @relation(fields: [userId], references: [id])
+  sessionTokenId String      @unique
+  remember      Boolean      @default(true)
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime     @default(now())
+  lastSeenAt    DateTime     @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+
+  @@index([userId, organizationId])
+  @@index([organizationId, expiresAt, revokedAt])
+  @@map("userSession")
 }
 
 model EmployeeProfile {
@@ -223,6 +246,21 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@map("document")
+}
+
+model AccountingManualSales {
+  id              Int          @id @default(autoincrement())
+  organizationId  Int          @default(1)
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  year            Int
+  monthlySales    Json
+  createdByUserId Int?
+  updatedByUserId Int?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([organizationId, year])
+  @@map("accountingManualSales")
 }
 
 model Vendor {

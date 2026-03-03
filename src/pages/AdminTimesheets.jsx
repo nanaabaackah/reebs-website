@@ -86,6 +86,25 @@ function AdminTimesheets() {
     return Math.round(diff / 60000);
   }, [activeShift, now]);
 
+  const completedShiftCount = useMemo(
+    () => history.filter((shift) => shift?.clockOut).length,
+    [history]
+  );
+
+  const geoTaggedCount = useMemo(
+    () => history.filter((shift) => shift?.clockInLat && shift?.clockInLng).length,
+    [history]
+  );
+
+  const averageShiftMinutes = useMemo(() => {
+    if (!completedShiftCount) return 0;
+    const totalMinutes = history.reduce(
+      (sum, shift) => sum + (Number(shift?.durationMinutes) || 0),
+      0
+    );
+    return totalMinutes / completedShiftCount;
+  }, [completedShiftCount, history]);
+
   const toggleShift = async () => {
     if (!user?.id) return;
     setClocking(true);
@@ -129,7 +148,7 @@ function AdminTimesheets() {
   };
 
   return (
-    <div className="timesheet-page">
+    <div className="timesheet-page timesheet-page--redesign">
       <div className="timesheet-shell">
         <AdminBreadcrumb items={[{ label: "Timesheets" }]} />
 
@@ -182,30 +201,41 @@ function AdminTimesheets() {
 
         <section className="timesheet-kpis">
           <div className="timesheet-card">
-            <p className="timesheet-label">Weekly hours</p>
+            <p className="timesheet-card-label">Weekly hours</p>
             <h3>{totals.weeklyHours}</h3>
             <span>{totals.weeklyShifts} shifts logged</span>
           </div>
           <div className="timesheet-card">
-            <p className="timesheet-label">Monthly hours</p>
+            <p className="timesheet-card-label">Monthly hours</p>
             <h3>{totals.monthlyHours}</h3>
             <span>{totals.monthlyShifts} shifts logged</span>
           </div>
           <div className="timesheet-card">
-            <p className="timesheet-label">Active shift</p>
-            <h3>{activeShift ? formatDuration(activeMinutes) : "--"}</h3>
-            <span>{activeShift ? "Time on shift" : "No active shift"}</span>
+            <p className="timesheet-card-label">Avg shift</p>
+            <h3>{completedShiftCount ? formatDuration(averageShiftMinutes) : "--"}</h3>
+            <span>{completedShiftCount} completed shifts</span>
+          </div>
+          <div className="timesheet-card">
+            <p className="timesheet-card-label">Geo-tagged</p>
+            <h3>{geoTaggedCount}</h3>
+            <span>{history.length} entries recorded</span>
           </div>
         </section>
 
         <section className="timesheet-history">
           <div className="timesheet-history-head">
-            <h3>
-              <AppIcon icon={faHistory} /> Recent shifts
-            </h3>
-            <button type="button" className="timesheet-refresh" onClick={fetchTimesheets} disabled={loading}>
-              Refresh
-            </button>
+            <div>
+              <p className="timesheet-card-label">Shift log</p>
+              <h3>
+                <AppIcon icon={faHistory} /> Recent shifts
+              </h3>
+            </div>
+            <div className="timesheet-history-actions">
+              <span className="timesheet-history-meta">{history.length} entries</span>
+              <button type="button" className="timesheet-refresh" onClick={fetchTimesheets} disabled={loading}>
+                Refresh
+              </button>
+            </div>
           </div>
           {loading ? (
             <p className="timesheet-muted">Loading shifts...</p>

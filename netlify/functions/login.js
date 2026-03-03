@@ -3,17 +3,35 @@ import "dotenv/config";
 import { Client } from "pg";
 import { hashPassword, verifyPassword } from "../../utils/passwords.js";
 import { signUserToken } from "./_shared/userAuth.js";
+import {
+  createUserSession,
+  ensureUserSessionsTable,
+  USER_SESSION_TTL_MS,
+} from "./_shared/userSessions.js";
+
+const CORS_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const json = (statusCode, payload = {}) => ({
+  statusCode,
+  headers: CORS_HEADERS,
+  body: statusCode === 204 ? "" : JSON.stringify(payload),
+});
 
 export async function handler(event) {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+  if (event.httpMethod === "OPTIONS") {
+    return json(204);
   }
 
-  const { email, password } = (() => {
+  if (event.httpMethod !== "POST") {
+    return json(405, { error: "Method not allowed" });
+  }
+
+  const { email, password, remember } = (() => {
     try {
       return JSON.parse(event.body || "{}");
     } catch {
@@ -23,13 +41,10 @@ export async function handler(event) {
 
   const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
   const normalizedPassword = typeof password === "string" ? password.trim() : "";
+  const isUsernameOnly = normalizedEmail && !normalizedEmail.includes("@");
 
   if (!normalizedEmail || !normalizedPassword) {
-    return {
-      statusCode: 400,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Email and password are required." }),
-    };
+    return json(400, { error: "Email/username and password are required." });
   }
 
   const client = new Client({
@@ -39,30 +54,30 @@ export async function handler(event) {
 
   try {
     await client.connect();
-    const result = await client.query(
-      `SELECT id, "firstName", "lastName", "fullName", email, role, "organizationId", password
-       FROM "user"
-       WHERE email = $1
-       LIMIT 1`,
-      [normalizedEmail]
-    );
+    const result = isUsernameOnly
+      ? await client.query(
+        `SELECT id, "firstName", "lastName", "fullName", email, role, "organizationId", password
+         FROM "user"
+         WHERE SPLIT_PART(LOWER(email), '@', 1) = $1
+         LIMIT 1`,
+        [normalizedEmail]
+      )
+      : await client.query(
+        `SELECT id, "firstName", "lastName", "fullName", email, role, "organizationId", password
+         FROM "user"
+         WHERE LOWER(email) = $1
+         LIMIT 1`,
+        [normalizedEmail]
+      );
 
     const user = result.rows[0];
     if (!user) {
-      return {
-        statusCode: 401,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Invalid credentials." }),
-      };
+      return json(401, { error: "Invalid credentials." });
     }
 
     const { isValid, needsRehash } = await verifyPassword(normalizedPassword, user.password);
     if (!isValid) {
-      return {
-        statusCode: 401,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Invalid credentials." }),
-      };
+      return json(401, { error: "Invalid credentials." });
     }
 
     if (needsRehash) {
@@ -79,38 +94,33 @@ export async function handler(event) {
 
     // Strip password before returning
     const { password: _, ...safeUser } = user;
+    await ensureUserSessionsTable(client);
+    const session = await createUserSession(client, {
+      organizationId: user.organizationId,
+      userId: user.id,
+      event,
+      remember: remember !== false,
+      ttlMs: USER_SESSION_TTL_MS,
+    });
     const token = signUserToken({
       userId: user.id,
       organizationId: user.organizationId,
       role: user.role,
+      sessionTokenId: session.sessionTokenId,
     });
     if (!token) {
-      return {
-        statusCode: 500,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Auth secret is not configured." }),
-      };
+      return json(500, { error: "Auth secret is not configured." });
     }
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        ...safeUser,
-        token,
-        expiresInHours: 24 * 7,
-      }),
-    };
+    return json(200, {
+      ...safeUser,
+      token,
+      sessionTokenId: session.sessionTokenId,
+      expiresInHours: 24 * 7,
+    });
   } catch (err) {
     console.error("Login error", err);
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Login failed. Please try again." }),
-    };
+    return json(500, { error: "Login failed. Please try again." });
   } finally {
     await client.end().catch(() => {});
   }

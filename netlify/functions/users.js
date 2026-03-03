@@ -4,6 +4,7 @@ import "dotenv/config";
 import { Client } from "pg";
 import { hashPassword } from "../../utils/passwords.js";
 import { requireUser } from "./_shared/userAuth.js";
+import { ensureUserSessionsTable } from "./_shared/userSessions.js";
 
 const SYSTEM_ADMIN_EMAIL = "system_admin@reebs.com";
 const cleanNamePart = (value) => (typeof value === "string" ? value.trim() : "");
@@ -293,11 +294,75 @@ export async function handler(event) {
       };
     }
 
+    await ensureUserSessionsTable(client);
+
     const result = await client.query(
-      `SELECT id, email, "firstName", "lastName", "fullName", role, permissions, "createdAt", "updatedAt"
-       FROM "user"
-       WHERE "organizationId" = $1
-       ORDER BY id DESC`,
+      `SELECT
+         u.id,
+         u.email,
+         u."firstName",
+         u."lastName",
+         u."fullName",
+         u.role,
+         u.permissions,
+         u."createdAt",
+         u."updatedAt",
+         COALESCE(session_meta."activeSessionCount", 0) AS "activeSessionCount",
+         session_meta."lastSessionAt",
+         COALESCE(session_meta.sessions, '[]'::json) AS sessions
+       FROM "user" u
+       LEFT JOIN LATERAL (
+         SELECT
+           (
+             SELECT COUNT(*)::int
+             FROM "userSession" us_count
+             WHERE us_count."organizationId" = u."organizationId"
+               AND us_count."userId" = u.id
+               AND us_count."revokedAt" IS NULL
+               AND us_count."expiresAt" > NOW()
+           ) AS "activeSessionCount",
+           (
+             SELECT MAX(us_last."lastSeenAt")
+             FROM "userSession" us_last
+             WHERE us_last."organizationId" = u."organizationId"
+               AND us_last."userId" = u.id
+               AND us_last."revokedAt" IS NULL
+               AND us_last."expiresAt" > NOW()
+           ) AS "lastSessionAt",
+           (
+             SELECT JSON_AGG(
+               JSON_BUILD_OBJECT(
+                 'id', active.id,
+                 'createdAt', active."createdAt",
+                 'lastSeenAt', active."lastSeenAt",
+                 'expiresAt', active."expiresAt",
+                 'remember', active."remember",
+                 'ipAddress', active."ipAddress",
+                 'userAgent', active."userAgent"
+               )
+               ORDER BY active."lastSeenAt" DESC NULLS LAST, active."createdAt" DESC
+             )
+             FROM (
+               SELECT
+                 id,
+                 "createdAt",
+                 "lastSeenAt",
+                 "expiresAt",
+                 "remember",
+                 "ipAddress",
+                 "userAgent"
+               FROM "userSession"
+               WHERE "organizationId" = u."organizationId"
+                 AND "userId" = u.id
+                 AND "revokedAt" IS NULL
+                 AND "expiresAt" > NOW()
+               ORDER BY "lastSeenAt" DESC NULLS LAST, "createdAt" DESC
+               LIMIT 5
+             ) active
+           ) AS sessions
+       ) session_meta ON TRUE
+       WHERE u."organizationId" = $1
+       ORDER BY u.id DESC`,
       [organizationId]
     );
 

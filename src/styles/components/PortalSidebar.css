@@ -16,9 +16,10 @@
 }
 
 .portal-app-content {
+  --portal-modal-inline-offset: var(--portal-sidebar-collapsed);
   min-width: 0;
   min-height: 100vh;
-  padding: 2rem;
+  padding: 8rem 2rem;
   margin-left: var(--portal-sidebar-collapsed);
   background: var(--surface);
   box-sizing: border-box;
@@ -53,6 +54,7 @@
 }
 
 .portal-sidebar.is-expanded ~ .portal-app-content {
+  --portal-modal-inline-offset: var(--portal-sidebar-expanded);
   margin-left: var(--portal-sidebar-expanded);
 }
 
@@ -724,6 +726,7 @@
   }
 
   .portal-app-content {
+    --portal-modal-inline-offset: 0px;
     padding: 1.25rem;
     margin-left: 0;
   }

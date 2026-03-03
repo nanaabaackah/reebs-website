@@ -44,7 +44,7 @@
 }
 
 .aw-topbar {
-  position: sticky;
+  position: relative;
   top: 0.7rem;
   z-index: 8;
   display: flex;
@@ -52,11 +52,6 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
-  border-radius: 1.1rem;
-  border: 1px solid var(--aw-border);
-  background: var(--aw-card);
-  backdrop-filter: blur(14px);
-  box-shadow: var(--aw-shadow);
 }
 
 .aw-title-block h1 {
@@ -162,9 +157,7 @@
   align-items: center;
   gap: 0.8rem;
   padding: 0.88rem 1rem;
-  border-radius: 0.95rem;
-  border: 1px solid var(--aw-border);
-  background: rgba(255, 255, 255, 0.84);
+  background: transparent;
 }
 
 .aw-user-strip p {
@@ -218,11 +211,8 @@
 }
 
 .aw-panel {
-  border: 1px solid var(--aw-border);
-  background: var(--aw-card);
-  border-radius: 1rem;
+  border-bottom: 1px solid var(--aw-border);
   padding: 0.95rem;
-  box-shadow: var(--aw-shadow);
 }
 
 .aw-panel-header {
@@ -275,12 +265,12 @@
   display: grid;
   gap: 0.65rem;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  padding: 0 1rem;
 }
 
 .aw-home-summary-card {
-  border: 1px solid var(--aw-border);
-  border-radius: 0.92rem;
-  background: rgba(255, 255, 255, 0.88);
+  border-right: 1px solid var(--aw-border);
+  background: transparent;
   padding: 0.72rem 0.82rem;
 }
 
@@ -755,8 +745,7 @@
 }
 
 .aw-queue-item {
-  border: 1px solid var(--aw-border);
-  border-radius: 0.85rem;
+  border-bottom: 1px solid var(--aw-border);
   padding: 0.62rem 0.72rem;
   display: flex;
   justify-content: space-between;
@@ -832,10 +821,15 @@
 }
 
 .aw-nav {
+  --aw-nav-sidebar-offset: var(--portal-sidebar-collapsed);
+  --aw-nav-max-width: calc(100vw - var(--aw-nav-sidebar-offset) - 1.4rem);
   position: fixed;
-  left: 0.7rem;
-  right: 0.7rem;
+  left: calc(50% + (var(--aw-nav-sidebar-offset) / 2));
+  right: auto;
   bottom: calc(0.7rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(var(--aw-nav-max-width), max(10.5rem, calc(var(--aw-nav-count, 4) * 7rem)));
+  max-width: var(--aw-nav-max-width);
   z-index: 12;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -846,6 +840,10 @@
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
   box-shadow: 0 14px 24px rgba(14, 27, 35, 0.18);
+}
+
+.portal-sidebar.is-expanded ~ .aw-nav {
+  --aw-nav-sidebar-offset: var(--portal-sidebar-expanded);
 }
 
 .aw-nav-btn {
@@ -930,8 +928,16 @@
 
   .aw-nav {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    max-width: 760px;
-    margin: 0 auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .aw-nav {
+    left: 0.7rem;
+    right: 0.7rem;
+    transform: none;
+    width: auto;
+    max-width: none;
   }
 }
 
@@ -984,9 +990,6 @@ body.admin-theme.aw-theme :is(
   .portal-sidebar__notifications-body,
   .portal-sidebar__user-menu,
   .portal-sidebar__overlay-content,
-  .aw-topbar,
-  .aw-user-strip,
-  .aw-panel,
   .aw-kpi,
   .aw-home-summary-card,
   .aw-home-kpi-card,
@@ -1034,13 +1037,6 @@ body.admin-theme.aw-theme .aw-topbar {
   top: 1rem;
   padding: 1.15rem 1.2rem;
   border-radius: 1.35rem;
-}
-
-body.admin-theme.aw-theme :is(
-  .aw-user-strip,
-  .aw-panel
-) {
-  border-radius: 1.2rem;
 }
 
 body.admin-theme.aw-theme .aw-home-kpi-card-hero {
@@ -1230,4 +1226,30 @@ body.admin-theme.aw-theme .aw-nav-btn.is-active {
   body.admin-theme.aw-theme .aw-shell {
     padding-bottom: 7rem;
   }
+}
+
+/* Workspace cards follow the same frameless portal treatment. */
+body.admin-theme.aw-theme .portal-app-content :is(
+  .aw-panel,
+  .aw-home-summary-card,
+  .aw-home-kpi-card,
+  .aw-home-kpi-chart-card,
+  .aw-stock-card,
+  .aw-link-card
+) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.admin-theme.aw-theme .portal-app-content .aw-panel-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.85rem;
+}
+
+[data-admin-theme="dark"] body.admin-theme.aw-theme .portal-app-content .aw-panel-header {
+  border-bottom-color: rgba(148, 163, 184, 0.24);
 }
