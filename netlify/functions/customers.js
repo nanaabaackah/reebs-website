@@ -4,8 +4,19 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { buildResponseHeaders, isCrossSiteBrowserRequest } from "./_shared/http.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
 import { requireUser } from "./_shared/userAuth.js";
+
+const publicLookupHeaders = (event) => ({
+  "Content-Type": "application/json",
+  ...buildResponseHeaders(event, {
+    methods: "GET,POST,PUT,OPTIONS",
+    allowHeaders: "Content-Type, Authorization",
+  }),
+});
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -28,6 +39,13 @@ export async function handler(event) {
   try {
     await client.connect();
     const authUser = await requireUser(client, event);
+    if (!authUser && isCrossSiteBrowserRequest(event)) {
+      return {
+        statusCode: 403,
+        headers: publicLookupHeaders(event),
+        body: JSON.stringify({ error: "Cross-site requests are not allowed." }),
+      };
+    }
     let data = null;
     if (event.httpMethod === "POST" || event.httpMethod === "PUT") {
       try {
@@ -343,6 +361,23 @@ export async function handler(event) {
     const lookupPhoneVariants = normalizePhoneVariants(lookupPhone);
 
     if (hasLookup && !hasId) {
+      if (!authUser) {
+        const lookupPhoneDigits = lookupPhone.replace(/\D/g, "");
+        const invalidPublicLookup = (
+          (lookupEmail && !EMAIL_PATTERN.test(lookupEmail))
+          || (lookupPhone && lookupPhoneDigits.length < 9)
+          || (lookupName && lookupName.length < 3)
+        );
+
+        if (invalidPublicLookup) {
+          return {
+            statusCode: 400,
+            headers: publicLookupHeaders(event),
+            body: JSON.stringify({ error: "Enter a valid customer lookup value." }),
+          };
+        }
+      }
+
       let match = null;
       if (lookupEmail) {
         const res = await client.query(
@@ -382,15 +417,24 @@ export async function handler(event) {
       if (!match) {
         return {
           statusCode: 404,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          headers: publicLookupHeaders(event),
           body: JSON.stringify({ error: "Customer not found." }),
         };
       }
 
+      const publicCustomer = authUser
+        ? match
+        : {
+          id: match.id,
+          name: match.name,
+        };
+
       return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        body: JSON.stringify(match),
+        headers: authUser
+          ? { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          : publicLookupHeaders(event),
+        body: JSON.stringify(publicCustomer),
       };
     }
 

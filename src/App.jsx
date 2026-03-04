@@ -13,7 +13,7 @@ import { faArrowRight } from "./icons/iconSet";
 import useScrollReveal from "./hooks/useScrollReveal";
 import { applySeo } from "./utils/seo";
 
-import Home from "./pages/Home";
+const Home = lazy(() => import("./pages/Home"));
 const Footer = lazy(() => import("./components/Footer"));
 const PortalSidebar = lazy(() => import("./components/PortalSidebar"));
 const AdminBottomNav = lazy(() => import("./components/AdminBottomNav"));

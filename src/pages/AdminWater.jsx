@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import {
@@ -44,6 +45,8 @@ const buildDefaultDashboard = () => ({
   product: {
     key: "gwater-12pk",
     name: "12pk Gwater",
+    inventoryProductId: null,
+    linkedVendorIds: [],
     purchaseCost: DEFAULT_PURCHASE_COST,
     pricing: {
       retailSingle: DEFAULT_RETAIL_PRICE,
@@ -111,6 +114,46 @@ const normalizeCustomerName = (value) =>
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();
+
+const normalizeVendorMatchText = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getRecommendedWaterVendors = (vendors, productName) => {
+  const normalizedProductName = normalizeVendorMatchText(productName);
+  if (!normalizedProductName) return [];
+
+  const candidateNeedles = new Set([normalizedProductName]);
+  if (normalizedProductName.includes("gwater")) candidateNeedles.add("gwater");
+  if (normalizedProductName.includes("water")) candidateNeedles.add("water");
+
+  const stopTokens = new Set(["pk", "pack"]);
+  normalizedProductName.split(" ").forEach((token) => {
+    if (!token || stopTokens.has(token) || token.length < 4) return;
+    if (!/[a-z]/.test(token)) return;
+    candidateNeedles.add(token);
+  });
+
+  return (Array.isArray(vendors) ? vendors : []).filter((vendor) => {
+    const candidateValues = [
+      ...(Array.isArray(vendor?.productNames) ? vendor.productNames : []),
+      ...(Array.isArray(vendor?.suppliedItems) ? vendor.suppliedItems : []),
+    ]
+      .map(normalizeVendorMatchText)
+      .filter(Boolean);
+
+    return candidateValues.some((candidate) =>
+      Array.from(candidateNeedles).some((needle) =>
+        candidate === needle || candidate.includes(needle) || needle.includes(candidate)
+      )
+    );
+  });
+};
 
 const getPreviewUnitPrice = (quantity, pricing, saleChannel) => {
   if (saleChannel === "company") return pricing.company;
@@ -298,6 +341,46 @@ function AdminWater() {
   const sales = Array.isArray(dashboard?.sales) ? dashboard.sales : [];
   const expenses = Array.isArray(dashboard?.expenses) ? dashboard.expenses : [];
   const adjustments = Array.isArray(dashboard?.adjustments) ? dashboard.adjustments : [];
+  const productName = dashboard?.product?.name || buildDefaultDashboard().product.name;
+  const hardLinkedVendorIds = useMemo(() => {
+    const source = Array.isArray(dashboard?.product?.linkedVendorIds)
+      ? dashboard.product.linkedVendorIds
+      : [];
+    return source
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0);
+  }, [dashboard?.product?.linkedVendorIds]);
+  const hardLinkedVendorIdSet = useMemo(
+    () => new Set(hardLinkedVendorIds),
+    [hardLinkedVendorIds]
+  );
+  const hardLinkedVendors = useMemo(() => {
+    if (!vendors.length || !hardLinkedVendorIds.length) return [];
+    const vendorById = new Map(
+      vendors.map((vendor) => [Number(vendor.id), vendor]).filter(([id]) => Number.isFinite(id) && id > 0)
+    );
+    return hardLinkedVendorIds.map((vendorId) => vendorById.get(vendorId)).filter(Boolean);
+  }, [hardLinkedVendorIds, vendors]);
+  const fallbackRecommendedVendors = useMemo(
+    () => getRecommendedWaterVendors(vendors, productName),
+    [productName, vendors]
+  );
+  const suggestedVendors = useMemo(
+    () => (hardLinkedVendorIds.length ? hardLinkedVendors : fallbackRecommendedVendors),
+    [fallbackRecommendedVendors, hardLinkedVendorIds.length, hardLinkedVendors]
+  );
+  const hasHardLinkedVendors = hardLinkedVendorIds.length > 0;
+  const suggestedVendorIds = useMemo(
+    () => new Set(suggestedVendors.map((vendor) => Number(vendor.id)).filter((id) => Number.isFinite(id) && id > 0)),
+    [suggestedVendors]
+  );
+  const orderedVendorOptions = useMemo(() => {
+    if (!vendors.length || !suggestedVendors.length) return vendors;
+    return [
+      ...suggestedVendors,
+      ...vendors.filter((vendor) => !suggestedVendorIds.has(Number(vendor.id))),
+    ];
+  }, [suggestedVendorIds, suggestedVendors, vendors]);
 
   const salePreview = useMemo(() => {
     const quantity = Math.max(0, Math.round(toNumber(saleForm.quantity, 0)));
@@ -643,7 +726,7 @@ function AdminWater() {
             <p className="water-module-eyebrow">External Operations Module</p>
             <h1>Water</h1>
             <p className="water-module-subtitle">
-              Standalone sales, stock, and expense tracking for 12pk Gwater. Nothing here feeds
+              Standalone sales, stock, and expense tracking for {productName}. Nothing here feeds
               into the main REEBS stock or sales ledgers.
             </p>
           </div>
@@ -658,7 +741,7 @@ function AdminWater() {
         <section className="water-module-hero">
           <div className="water-module-hero-copy">
             <span className="water-module-pill">Fixed product</span>
-            <h2>{dashboard?.product?.name || "12pk Gwater"}</h2>
+            <h2>{productName || "12pk Gwater"}</h2>
             <p>
               Purchase cost is fixed at {formatCurrency(dashboard?.product?.purchaseCost)} per pack.
               Retail pricing uses a 10+ bulk rule so quantities of {pricing.bulkThreshold} or more
@@ -790,6 +873,36 @@ function AdminWater() {
               <details className="water-module-optional">
                 <summary>Supplier details</summary>
                 <div className="water-module-optional-body">
+                  {suggestedVendors.length ? (
+                    <div>
+                      <div className="water-module-inline-head">
+                        <span className="water-module-field-label">Suggested suppliers</span>
+                        <span className="water-module-inline-note">
+                          {hasHardLinkedVendors
+                            ? `Directly linked to ${productName} from the main inventory item.`
+                            : `Matched from linked stock items and supplier keywords for ${productName}.`}
+                        </span>
+                      </div>
+                      <div className="water-module-quick-actions">
+                        {suggestedVendors.map((vendor) => (
+                          <button
+                            key={vendor.id}
+                            type="button"
+                            className={`water-module-quick-btn ${String(vendor.id) === restockForm.vendorId ? "is-active" : ""}`}
+                            onClick={() =>
+                              setRestockForm((prev) => ({
+                                ...prev,
+                                vendorId: String(vendor.id),
+                                vendorName: "",
+                              }))
+                            }
+                          >
+                            {vendor.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <label>
                     Vendor from REEBS list
                     <select
@@ -803,16 +916,20 @@ function AdminWater() {
                       }
                     >
                       <option value="">No linked vendor</option>
-                      {vendors.map((vendor) => (
+                      {orderedVendorOptions.map((vendor) => (
                         <option key={vendor.id} value={vendor.id}>
-                          {vendor.name}
+                          {vendor.name}{suggestedVendorIds.has(Number(vendor.id)) ? " (Suggested)" : ""}
                         </option>
                       ))}
                     </select>
                   </label>
                   {selectedVendor ? (
                     <p className="water-module-inline-note">
-                      Linked to REEBS vendor #{selectedVendor.id}.
+                      {hardLinkedVendorIdSet.has(Number(selectedVendor.id))
+                        ? `Directly linked to this water item in inventory (Vendor #${selectedVendor.id}).`
+                        : suggestedVendorIds.has(Number(selectedVendor.id))
+                          ? `Suggested supplier from your linked vendor list (Vendor #${selectedVendor.id}).`
+                        : `Linked to REEBS vendor #${selectedVendor.id}.`}
                     </p>
                   ) : null}
                   {!restockForm.vendorId ? (

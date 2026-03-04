@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="//portal.reebspartythemes.com" />
+    <link rel="preconnect" href="https://portal.reebspartythemes.com" crossorigin />
     <link rel="dns-prefetch" href="//www.googletagmanager.com" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
@@ -41,6 +43,17 @@
             ? configuredId
             : "G-5JFM7XNL2Y";
         if (!gaId) return;
+
+        const host = window.location.hostname;
+        const isLocalHost =
+          host === "localhost"
+          || host === "127.0.0.1"
+          || host === "[::1]";
+        const doNotTrackEnabled =
+          window.doNotTrack === "1"
+          || navigator.doNotTrack === "1"
+          || navigator.msDoNotTrack === "1";
+        if (isLocalHost || doNotTrackEnabled) return;
 
         const loadAnalytics = () => {
           if (window.__reebsAnalyticsLoaded) return;

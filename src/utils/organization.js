@@ -4,6 +4,9 @@ const parseOrganizationId = (value) => {
   return parsed;
 };
 
+export const AUTH_USER_STORAGE_KEY = "reebs_auth_user";
+export const AUTH_TOKEN_STORAGE_KEY = "reebs_auth_token";
+
 const DEFAULT_BACKEND_BASE_URL = "https://portal.reebspartythemes.com";
 
 const getBackendBaseUrl = () => {
@@ -28,11 +31,29 @@ const BACKEND_ORIGIN = (() => {
   }
 })();
 
+const readStorageValue = (storage, key) => {
+  if (!storage || typeof storage.getItem !== "function") return "";
+  try {
+    return storage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+};
+
+const removeStorageValue = (storage, key) => {
+  if (!storage || typeof storage.removeItem !== "function") return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Ignore storage write failures and keep the in-memory token available.
+  }
+};
+
 const getStoredUser = () => {
   if (typeof window === "undefined") return null;
   const raw =
-    window.localStorage?.getItem("reebs_auth_user")
-    || window.sessionStorage?.getItem("reebs_auth_user");
+    readStorageValue(window.localStorage, AUTH_USER_STORAGE_KEY)
+    || readStorageValue(window.sessionStorage, AUTH_USER_STORAGE_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -41,18 +62,54 @@ const getStoredUser = () => {
   }
 };
 
-export const setAuthToken = (token) => {
+export const setAuthToken = (token, options = {}) => {
   if (typeof window === "undefined") return;
-  window.__reebsAuthToken = typeof token === "string" ? token.trim() : "";
+  const remember = options?.remember;
+  const nextToken = typeof token === "string" ? token.trim() : "";
+
+  window.__reebsAuthToken = nextToken;
+
+  if (remember === true || remember === false) {
+    removeStorageValue(window.localStorage, AUTH_TOKEN_STORAGE_KEY);
+    removeStorageValue(window.sessionStorage, AUTH_TOKEN_STORAGE_KEY);
+
+    if (nextToken) {
+      const target = remember ? window.localStorage : window.sessionStorage;
+      try {
+        target.setItem(AUTH_TOKEN_STORAGE_KEY, nextToken);
+      } catch {
+        // Keep the in-memory token when storage writes fail.
+      }
+    }
+    return;
+  }
+
+  if (!nextToken) {
+    removeStorageValue(window.localStorage, AUTH_TOKEN_STORAGE_KEY);
+    removeStorageValue(window.sessionStorage, AUTH_TOKEN_STORAGE_KEY);
+  }
 };
 
 export const getAuthToken = () => {
   if (typeof window === "undefined") return null;
-  const stored = getStoredUser();
-  const storedToken = typeof stored?.token === "string" ? stored.token.trim() : "";
-  if (storedToken) return storedToken;
   const memoryToken = typeof window.__reebsAuthToken === "string" ? window.__reebsAuthToken.trim() : "";
-  return memoryToken || null;
+  if (memoryToken) return memoryToken;
+
+  const storedToken =
+    readStorageValue(window.localStorage, AUTH_TOKEN_STORAGE_KEY)
+    || readStorageValue(window.sessionStorage, AUTH_TOKEN_STORAGE_KEY);
+  if (storedToken.trim()) {
+    return storedToken.trim();
+  }
+
+  const legacyUser = getStoredUser();
+  const legacyToken = typeof legacyUser?.token === "string" ? legacyUser.token.trim() : "";
+  if (!legacyToken) return null;
+
+  setAuthToken(legacyToken, {
+    remember: Boolean(readStorageValue(window.localStorage, AUTH_USER_STORAGE_KEY)),
+  });
+  return legacyToken;
 };
 
 export const getOrganizationId = () => {
@@ -135,10 +192,23 @@ export const patchOrganizationFetch = () => {
     if (input instanceof Request) {
       const request = new Request(input, init);
       const requestWithUrl = new Request(nextUrl, request);
-      const nextRequest = new Request(requestWithUrl, { headers });
+      const nextRequest = new Request(requestWithUrl, {
+        cache: request.cache === "default" ? "no-store" : request.cache,
+        credentials: request.credentials || "same-origin",
+        headers,
+      });
       return originalFetch(nextRequest);
     }
-    return originalFetch(nextUrl, { ...(init || {}), headers });
+
+    const nextInit = { ...(init || {}), headers };
+    if (!Object.prototype.hasOwnProperty.call(nextInit, "cache")) {
+      nextInit.cache = "no-store";
+    }
+    if (!Object.prototype.hasOwnProperty.call(nextInit, "credentials")) {
+      nextInit.credentials = "same-origin";
+    }
+
+    return originalFetch(nextUrl, nextInit);
   };
 
   window.__orgFetchPatched = true;

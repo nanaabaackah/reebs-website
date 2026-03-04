@@ -26,6 +26,27 @@ const getReorderQuantity = (item) => {
 const getCategory = (item) =>
   item?.specificCategory || item?.specificcategory || item?.sourceCategoryCode || "-";
 
+const getItemVendorIds = (item) => {
+  if (Array.isArray(item?.vendorIds)) {
+    return item.vendorIds
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .map((value) => String(Math.round(value)));
+  }
+
+  const vendorId = Number(item?.vendorId);
+  return Number.isFinite(vendorId) && vendorId > 0 ? [String(Math.round(vendorId))] : [];
+};
+
+const getItemVendorNames = (item, vendorNameById) =>
+  getItemVendorIds(item).map((vendorId) => vendorNameById.get(vendorId) || `Vendor #${vendorId}`);
+
+const formatItemVendorLabel = (item, vendorNameById) => {
+  const vendorNames = getItemVendorNames(item, vendorNameById);
+  if (!vendorNames.length) return "No vendors linked";
+  return `Vendors: ${vendorNames.join(", ")}`;
+};
+
 const formatDateTime = (value) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -259,6 +280,15 @@ function Admin() {
   useEffect(() => {
     loadVendors();
   }, [loadVendors]);
+
+  const vendorNameById = useMemo(
+    () =>
+      new Map(
+        vendors
+          .map((vendor) => [String(vendor.id), vendor.name || `Vendor #${vendor.id}`])
+      ),
+    [vendors]
+  );
 
   const loadEditRequests = useCallback(async () => {
     if (!canApproveInventoryEdits) {
@@ -1094,7 +1124,7 @@ function Admin() {
         .toString()
         .toUpperCase(),
       specificCategory: item.specificCategory || item.specificcategory || "",
-      vendorId: item.vendorId ? String(item.vendorId) : "",
+      vendorIds: getItemVendorIds(item),
       price: Number.isFinite(Number(item.price)) ? Number(item.price) : "",
       stock: String(getQuantity(item)),
       currency: item.currency || "GHS",
@@ -1151,6 +1181,11 @@ function Admin() {
       detailForm.reorderLevel !== "" ? Number.parseInt(detailForm.reorderLevel, 10) : null;
     const reorderQuantityValue =
       detailForm.reorderQuantity !== "" ? Number.parseInt(detailForm.reorderQuantity, 10) : null;
+    const selectedVendorIds = Array.isArray(detailForm.vendorIds)
+      ? detailForm.vendorIds
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+      : [];
 
     if (!name) {
       setDetailError("Name is required.");
@@ -1193,7 +1228,7 @@ function Admin() {
           stock: stockValue,
           sourceCategoryCode: detailForm.sourceCategoryCode,
           specificCategory: detailForm.specificCategory || undefined,
-          vendorId: detailForm.vendorId ? Number(detailForm.vendorId) : null,
+          vendorIds: selectedVendorIds,
           description: detailForm.description || undefined,
           currency: detailForm.currency || "GHS",
           purchasePriceGbpCents:
@@ -1851,6 +1886,7 @@ function Admin() {
                     const quantity = getQuantity(item);
                     const isLow = quantity <= getReorderLevel(item);
                     const isMenuOpen = openMenuId === item.id;
+                    const vendorLabel = formatItemVendorLabel(item, vendorNameById);
                     return (
                       <tr
                         key={item.id}
@@ -1869,6 +1905,7 @@ function Admin() {
                         <td>
                           <div className="admin-product">
                             <span className="admin-product-name">{item.name || "Untitled"}</span>
+                            <span className="admin-product-id">{vendorLabel}</span>
                           </div>
                         </td>
                         <td>
@@ -2054,6 +2091,7 @@ function Admin() {
                 const isLow = !isOut && quantity <= getReorderLevel(item);
                 const isInteractive = true;
                 const isMenuOpen = openMenuId === `card-${item.id}`;
+                const vendorLabel = formatItemVendorLabel(item, vendorNameById);
                 return (
                   <div
                     key={item.id}
@@ -2185,6 +2223,7 @@ function Admin() {
 	                        <p className="inventory-card-sub">Barcode {item.barcode}</p>
 	                      )}
 	                      <p className="inventory-card-sub">{getCategory(item)}</p>
+                        <p className="inventory-card-sub inventory-card-subtle">{vendorLabel}</p>
 	                    </div>
 	                    <div className="inventory-card-footer">
 	                      <div className="inventory-card-meta">
@@ -2678,19 +2717,25 @@ function Admin() {
                   />
                 </label>
                 <label>
-                  Vendor
+                  Vendors
                   <select
-                    value={detailForm.vendorId}
-                    onChange={(event) => updateDetailForm("vendorId", event.target.value)}
-                    disabled={!isDetailFieldEditable("vendorId")}
+                    multiple
+                    size={Math.min(Math.max(vendors.length || 2, 2), 6)}
+                    value={detailForm.vendorIds}
+                    onChange={(event) => {
+                      const values = Array.from(event.target.selectedOptions, (option) => option.value);
+                      updateDetailForm("vendorIds", values);
+                    }}
+                    disabled={!isDetailFieldEditable("vendorIds")}
                   >
-                    <option value="">No linked vendor</option>
+                    {!vendors.length && <option value="">No vendors available</option>}
                     {vendors.map((vendor) => (
                       <option key={vendor.id} value={vendor.id}>
                         {vendor.name}
                       </option>
                     ))}
                   </select>
+                  <span className="admin-field-hint">Select one or more suppliers for this item.</span>
                 </label>
                 <label>
                   Barcode

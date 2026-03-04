@@ -10,16 +10,23 @@ import {
   resolveActor,
   normalizeActor,
 } from "./auditHelpers.js";
+import { buildResponseHeaders, isCrossSiteBrowserRequest } from "./_shared/http.js";
 import { notifyManager } from "./_shared/managerPush.js";
-import { resolveOrganizationId } from "./_shared/organization.js";
+import {
+  backfillProductVendorLinksFromProducts,
+  ensureProductVendorLinksTable,
+  getProductVendorIdsMap,
+  parseVendorIdsInput,
+  setProductVendorLinks,
+} from "./_shared/productVendors.js";
 import { requireUser } from "./_shared/userAuth.js";
 
-const corsHeaders = {
+const getCorsHeaders = (event) => ({
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
-};
+  ...buildResponseHeaders(event, {
+    methods: "GET,POST,PATCH,DELETE,OPTIONS",
+  }),
+});
 
 const allowedSources = ["CLOTHES", "TOYS", "RENTAL", "WATER"];
 const statusColumnStatements = [
@@ -217,7 +224,15 @@ const generateSku = (name, source) => {
 export async function handler(event = {}) {
   const method = (event.httpMethod || "GET").toUpperCase();
   if (method === "OPTIONS") {
-    return { statusCode: 200, headers: corsHeaders, body: "" };
+    return { statusCode: 200, headers: getCorsHeaders(event), body: "" };
+  }
+
+  if (isCrossSiteBrowserRequest(event)) {
+    return {
+      statusCode: 403,
+      headers: getCorsHeaders(event),
+      body: JSON.stringify({ error: "Cross-site requests are not allowed" }),
+    };
   }
 
   const client = new Client({
@@ -234,16 +249,27 @@ export async function handler(event = {}) {
       } catch {
         return {
           statusCode: 400,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "Invalid JSON body" }),
         };
       }
     }
-    const organizationId = await resolveOrganizationId(client, event, payload);
+    const authenticatedUser = await requireUser(client, event);
+    if (!authenticatedUser) {
+      return {
+        statusCode: 401,
+        headers: getCorsHeaders(event),
+        body: JSON.stringify({ error: "Unauthorized" }),
+      };
+    }
+
+    const organizationId = Number(authenticatedUser.organizationId);
     await ensureAuditColumns(client);
     await ensureProductStatusColumns(client);
     await ensureProductBarcodeColumn(client);
     await ensureProductVendorColumn(client);
+    await ensureProductVendorLinksTable(client);
+    await backfillProductVendorLinksFromProducts(client, organizationId);
     await ensureInventoryEditRequestTable(client);
     await ensureSourceCategoryValue(client, "WATER");
     const admin = await findDefaultAdmin(client, organizationId);
@@ -254,11 +280,11 @@ export async function handler(event = {}) {
     if (method === "GET") {
       const view = (event.queryStringParameters?.view || "").toLowerCase();
       if (view === "edit-requests") {
-        const authUser = await requireUser(client, event);
+        const authUser = authenticatedUser;
         if (!authUser || !canApproveInventoryEditRequests(authUser.role)) {
           return {
             statusCode: 403,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({ error: "Only admins and managers can view edit approvals." }),
           };
         }
@@ -287,7 +313,7 @@ export async function handler(event = {}) {
 
         return {
           statusCode: 200,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify(result.rows),
         };
       }
@@ -349,21 +375,37 @@ export async function handler(event = {}) {
         ORDER BY p.id ASC
       `, [organizationId]);
 
+      const rows = Array.isArray(result.rows) ? result.rows : [];
+      const vendorIdsByProduct = await getProductVendorIdsMap(client, {
+        organizationId,
+        productIds: rows.map((row) => row.id),
+      });
+      const items = rows.map((row) => {
+        const linkedVendorIds = vendorIdsByProduct.get(Number(row.id)) || [];
+        const primaryVendorId = linkedVendorIds[0]
+          ?? (Number.isFinite(Number(row.vendorId)) ? Number(row.vendorId) : null);
+        return {
+          ...row,
+          vendorId: primaryVendorId,
+          vendorIds: primaryVendorId && !linkedVendorIds.length ? [primaryVendorId] : linkedVendorIds,
+        };
+      });
+
       return {
         statusCode: 200,
-        headers: corsHeaders,
-        body: JSON.stringify(result.rows),
+        headers: getCorsHeaders(event),
+        body: JSON.stringify(items),
       };
     }
 
     if (method === "PATCH") {
       const action = String(payload.action || "").toLowerCase();
       if (action === "approve-edit-request" || action === "reject-edit-request") {
-        const authUser = await requireUser(client, event);
+        const authUser = authenticatedUser;
         if (!authUser || !canApproveInventoryEditRequests(authUser.role)) {
           return {
             statusCode: 403,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({ error: "Only admins and managers can review edit requests." }),
           };
         }
@@ -372,7 +414,7 @@ export async function handler(event = {}) {
         if (!Number.isFinite(requestId)) {
           return {
             statusCode: 400,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({ error: "Request id is required." }),
           };
         }
@@ -398,14 +440,14 @@ export async function handler(event = {}) {
           if (result.rowCount === 0) {
             return {
               statusCode: 404,
-              headers: corsHeaders,
+              headers: getCorsHeaders(event),
               body: JSON.stringify({ error: "Pending edit request not found." }),
             };
           }
 
           return {
             statusCode: 200,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify(result.rows[0]),
           };
         }
@@ -429,7 +471,7 @@ export async function handler(event = {}) {
             await client.query("ROLLBACK");
             return {
               statusCode: 404,
-              headers: corsHeaders,
+              headers: getCorsHeaders(event),
               body: JSON.stringify({ error: "Pending edit request not found." }),
             };
           }
@@ -458,7 +500,7 @@ export async function handler(event = {}) {
             await client.query("ROLLBACK");
             return {
               statusCode: 404,
-              headers: corsHeaders,
+              headers: getCorsHeaders(event),
               body: JSON.stringify({ error: "Product not found for this request." }),
             };
           }
@@ -526,7 +568,7 @@ export async function handler(event = {}) {
 
           return {
             statusCode: 200,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({
               requestId,
               status: "approved",
@@ -547,7 +589,7 @@ export async function handler(event = {}) {
       if (!Number.isFinite(parsedId)) {
         return {
           statusCode: 400,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "Product id is required." }),
         };
       }
@@ -569,7 +611,7 @@ export async function handler(event = {}) {
         );
         return {
           statusCode: 200,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify(result.rows[0] || {}),
         };
       }
@@ -590,14 +632,14 @@ export async function handler(event = {}) {
         );
         return {
           statusCode: 200,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify(result.rows[0] || {}),
         };
       }
 
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({ error: "Unsupported action." }),
       };
     }
@@ -607,7 +649,7 @@ export async function handler(event = {}) {
       if (!Number.isFinite(parsedId)) {
         return {
           statusCode: 400,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "Product id is required." }),
         };
       }
@@ -616,7 +658,7 @@ export async function handler(event = {}) {
       if (!canDelete) {
         return {
           statusCode: 403,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "Only system admins can delete items." }),
         };
       }
@@ -640,7 +682,7 @@ export async function handler(event = {}) {
       );
       return {
         statusCode: 200,
-        headers: corsHeaders,
+        headers: getCorsHeaders(event),
         body: JSON.stringify(result.rows[0] || {}),
       };
     }
@@ -648,7 +690,7 @@ export async function handler(event = {}) {
     if (method !== "POST") {
       return {
         statusCode: 405,
-        headers: corsHeaders,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({ error: "Method not allowed" }),
       };
     }
@@ -674,7 +716,7 @@ export async function handler(event = {}) {
     if (!name) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({ error: "Name is required." }),
       };
     }
@@ -708,18 +750,16 @@ export async function handler(event = {}) {
     const parsedId = Number(payload.id);
     const reorderLevelRaw = Number(payload.reorderLevel ?? payload.reorder_level);
     const reorderQuantityRaw = Number(payload.reorderQuantity ?? payload.reorder_quantity);
+    const hasVendorIdsInput = Object.prototype.hasOwnProperty.call(payload, "vendorIds");
     const hasVendorIdInput = Object.prototype.hasOwnProperty.call(payload, "vendorId");
-    const rawVendorId = hasVendorIdInput ? payload.vendorId : undefined;
-    const parsedVendorId =
-      rawVendorId === "" || rawVendorId === null || typeof rawVendorId === "undefined"
-        ? null
-        : Number(rawVendorId);
-    const requestedVendorId =
-      parsedVendorId === null
-        ? null
-        : Number.isFinite(parsedVendorId) && parsedVendorId > 0
-          ? Math.round(parsedVendorId)
-          : Number.NaN;
+    const hasVendorLinkInput = hasVendorIdsInput || hasVendorIdInput;
+    const vendorLinkInput = hasVendorIdsInput
+      ? payload.vendorIds
+      : hasVendorIdInput
+        ? [payload.vendorId]
+        : undefined;
+    const { vendorIds: requestedVendorIds, invalid: hasInvalidVendorIds } =
+      parseVendorIdsInput(vendorLinkInput);
     const isUpdate = Number.isFinite(parsedId) && parsedId > 0;
     const reorderLevel = Number.isFinite(reorderLevelRaw)
       ? Math.max(0, Math.round(reorderLevelRaw))
@@ -732,10 +772,8 @@ export async function handler(event = {}) {
         ? null
         : 0;
 
-    const authUser = isUpdate ? await requireUser(client, event) : null;
-    const actor = authUser
-      ? buildActorFromUser(authUser)
-      : await resolveActor(client, normalizeActor(payload), organizationId);
+    const authUser = authenticatedUser;
+    const actor = buildActorFromUser(authUser);
     const actorRole = normalizeRole(authUser?.role);
 
     // If updating an existing product, retain its SKU and current field values.
@@ -755,15 +793,15 @@ export async function handler(event = {}) {
     let nextSaleValue = saleValue;
     let nextAttendantsNeeded = attendantsNeeded;
     let nextImageUrl = imageUrl || null;
-    let nextVendorId = hasVendorIdInput ? requestedVendorId : null;
+    let nextVendorIds = hasVendorLinkInput ? requestedVendorIds : [];
     let nextReorderLevel = reorderLevel;
     let nextReorderQuantity = reorderQuantity;
 
-    if (hasVendorIdInput && Number.isNaN(requestedVendorId)) {
+    if (hasVendorLinkInput && hasInvalidVendorIds) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Vendor must be empty or a valid vendor id." }),
+        headers: getCorsHeaders(event),
+        body: JSON.stringify({ error: "Each vendor must be empty or a valid vendor id." }),
       };
     }
 
@@ -771,7 +809,7 @@ export async function handler(event = {}) {
       if (!authUser) {
         return {
           statusCode: 401,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "Unauthorized" }),
         };
       }
@@ -807,24 +845,29 @@ export async function handler(event = {}) {
       if (existing.rowCount === 0) {
         return {
           statusCode: 404,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: `Product with id ${parsedId} not found.` }),
         };
       }
 
       const currentProduct = existing.rows[0];
+      const currentVendorLinkMap = await getProductVendorIdsMap(client, {
+        organizationId,
+        productIds: [parsedId],
+      });
+      const currentVendorIds = currentVendorLinkMap.get(parsedId)
+        || (
+          Number.isFinite(Number(currentProduct.vendorId))
+            ? [Number(currentProduct.vendorId)]
+            : []
+        );
       sku = currentProduct.sku;
-      nextVendorId =
-        hasVendorIdInput
-          ? requestedVendorId
-          : Number.isFinite(Number(currentProduct.vendorId))
-            ? Number(currentProduct.vendorId)
-            : null;
+      nextVendorIds = hasVendorLinkInput ? requestedVendorIds : currentVendorIds;
 
       if (!canEditInventoryDirectly(actorRole) && !canRequestInventoryEdit(actorRole)) {
         return {
           statusCode: 403,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({ error: "You do not have permission to edit inventory items." }),
         };
       }
@@ -848,7 +891,7 @@ export async function handler(event = {}) {
         if (!changedFieldKeys.length) {
           return {
             statusCode: 400,
-            headers: corsHeaders,
+            headers: getCorsHeaders(event),
             body: JSON.stringify({ error: "No editable changes were submitted." }),
           };
         }
@@ -902,7 +945,7 @@ export async function handler(event = {}) {
 
         return {
           statusCode: 202,
-          headers: corsHeaders,
+          headers: getCorsHeaders(event),
           body: JSON.stringify({
             status: "pending_approval",
             message: "Changes sent for manager approval.",
@@ -924,9 +967,7 @@ export async function handler(event = {}) {
         nextSaleValue = currentProduct.saleValue;
         nextAttendantsNeeded = currentProduct.attendantsNeeded;
         nextImageUrl = currentProduct.imageUrl || null;
-        nextVendorId = Number.isFinite(Number(currentProduct.vendorId))
-          ? Number(currentProduct.vendorId)
-          : null;
+        nextVendorIds = currentVendorIds;
         nextReorderLevel = currentProduct.reorderLevel;
         nextReorderQuantity = currentProduct.reorderQuantity;
       }
@@ -934,6 +975,7 @@ export async function handler(event = {}) {
       sku = generateSku(name, safeSource);
     }
 
+    const nextVendorId = nextVendorIds[0] || null;
     const stockValue = nextPriceCents * nextStock;
 
     const insertQuery = `
@@ -1052,11 +1094,18 @@ export async function handler(event = {}) {
     ]);
 
     const created = result.rows[0];
+    const syncedVendorIds = await setProductVendorLinks(client, {
+      organizationId,
+      productId: created?.id,
+      vendorIds: nextVendorIds,
+    });
     return {
       statusCode: isUpdate ? 200 : 201,
-      headers: corsHeaders,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         ...created,
+        vendorId: syncedVendorIds[0] || null,
+        vendorIds: syncedVendorIds,
         lastUpdatedByName: actor.userName,
         lastUpdatedByEmail: actor.userEmail,
       }),
@@ -1068,7 +1117,7 @@ export async function handler(event = {}) {
     const detail = err?.detail || err?.message || null;
     return {
       statusCode: isUniqueViolation ? 409 : 500,
-      headers: corsHeaders,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         error: isUniqueViolation ? "A product with that SKU or barcode already exists." : "Failed to process request.",
         detail,

@@ -2,27 +2,28 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { resolveOrganizationId } from "./_shared/organization.js";
+import { buildResponseHeaders } from "./_shared/http.js";
 
-const corsHeaders = {
+const responseHeaders = (event) => ({
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
-};
+  ...buildResponseHeaders(event, {
+    methods: "GET,OPTIONS",
+  }),
+});
 
-const json = (statusCode, body) => ({
+const json = (event, statusCode, body) => ({
   statusCode,
-  headers: corsHeaders,
+  headers: responseHeaders(event),
   body: JSON.stringify(body),
 });
 
 export async function handler(event = {}) {
   const method = (event.httpMethod || "GET").toUpperCase();
   if (method === "OPTIONS") {
-    return { statusCode: 200, headers: corsHeaders, body: "" };
+    return { statusCode: 200, headers: responseHeaders(event), body: "" };
   }
   if (method !== "GET") {
-    return json(405, { error: "Method not allowed" });
+    return json(event, 405, { error: "Method not allowed" });
   }
 
   const client = new Client({
@@ -59,7 +60,7 @@ export async function handler(event = {}) {
       ),
     ]);
 
-    return json(200, {
+    return json(event, 200, {
       inventoryCount: Number(inventoryRes.rows[0]?.count || 0),
       bookingCount: Number(bookingsRes.rows[0]?.count || 0),
       orderCount: Number(ordersRes.rows[0]?.count || 0),
@@ -67,7 +68,7 @@ export async function handler(event = {}) {
     });
   } catch (err) {
     console.error("publicStats error", err);
-    return json(500, { error: "Failed to load public stats" });
+    return json(event, 500, { error: "Failed to load public stats" });
   } finally {
     await client.end().catch(() => {});
   }

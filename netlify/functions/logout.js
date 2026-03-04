@@ -1,27 +1,24 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import { isCrossSiteBrowserRequest, json } from "./_shared/http.js";
 import { getUserFromEvent } from "./_shared/userAuth.js";
 import { ensureUserSessionsTable, revokeUserSession } from "./_shared/userSessions.js";
 
-const json = (statusCode, body = {}) => ({
-  statusCode,
-  headers: {
-    "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  },
-  body: statusCode === 204 ? "" : JSON.stringify(body),
-});
+const respond = (event, statusCode, body = {}) =>
+  json(event, statusCode, body, { methods: "POST, OPTIONS" });
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
-    return json(204);
+    return respond(event, 204);
   }
 
   if (event.httpMethod !== "POST") {
-    return json(405, { error: "Method not allowed" });
+    return respond(event, 405, { error: "Method not allowed" });
+  }
+
+  if (isCrossSiteBrowserRequest(event)) {
+    return respond(event, 403, { error: "Cross-site requests are not allowed." });
   }
 
   const payload = getUserFromEvent(event);
@@ -29,7 +26,7 @@ export async function handler(event) {
     typeof payload?.sessionTokenId === "string" ? payload.sessionTokenId.trim() : "";
 
   if (!sessionTokenId) {
-    return json(200, { revoked: false });
+    return respond(event, 200, { revoked: false });
   }
 
   const client = new Client({
@@ -41,10 +38,10 @@ export async function handler(event) {
     await client.connect();
     await ensureUserSessionsTable(client);
     const revoked = await revokeUserSession(client, sessionTokenId);
-    return json(200, { revoked });
+    return respond(event, 200, { revoked });
   } catch (error) {
     console.error("Logout error", error);
-    return json(500, { error: "Failed to close session." });
+    return respond(event, 500, { error: "Failed to close session." });
   } finally {
     await client.end().catch(() => {});
   }

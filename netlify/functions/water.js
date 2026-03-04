@@ -1,10 +1,16 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import {
+  backfillProductVendorLinksFromProducts,
+  ensureProductVendorLinksTable,
+  getProductVendorIdsMap,
+} from "./_shared/productVendors.js";
 import { requireUser } from "./_shared/userAuth.js";
 
 const PRODUCT_NAME = "12pk Gwater";
 const PRODUCT_KEY = "gwater-12pk";
+const PRODUCT_NAME_ALIASES = [PRODUCT_NAME, PRODUCT_KEY.replace(/-/g, " "), "15pk Gwater"];
 const DEFAULT_PURCHASE_COST = 2200;
 const RETAIL_PRICE = 2700;
 const BULK_RETAIL_PRICE = 2600;
@@ -97,6 +103,13 @@ const tableStatements = [
   )`,
 ];
 
+const productLinkStatements = [
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "organizationId" INTEGER DEFAULT 1`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "vendorId" INTEGER`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isDeleted" BOOLEAN DEFAULT false`,
+  `ALTER TABLE "product" ADD COLUMN IF NOT EXISTS "isArchived" BOOLEAN DEFAULT false`,
+];
+
 const ensureTables = async (client) => {
   for (const statement of tableStatements) {
     await client.query(statement);
@@ -131,7 +144,25 @@ const ensureTables = async (client) => {
   );
 };
 
+const ensureProductLinkColumns = async (client) => {
+  for (const statement of productLinkStatements) {
+    try {
+      await client.query(statement);
+    } catch (error) {
+      console.warn("Water product link check failed:", error?.message || error);
+    }
+  }
+};
+
 const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeComparableText = (value) =>
+  cleanText(value)
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const parsePositiveInteger = (value) => {
   const parsed = Number(value);
@@ -371,6 +402,100 @@ const selectRows = async (client, queryRef, columns, organizationId) => {
   return result.rows || [];
 };
 
+const hasTable = async (client, tableName) => {
+  const result = await client.query(`SELECT to_regclass($1) AS table_ref`, [tableName]);
+  return Boolean(result.rows?.[0]?.table_ref);
+};
+
+const scoreWaterProductCandidate = (candidateName) => {
+  const normalizedCandidate = normalizeComparableText(candidateName);
+  if (!normalizedCandidate) return 0;
+
+  let bestScore = normalizedCandidate.includes("gwater") ? 300 : normalizedCandidate.includes("water") ? 100 : 0;
+
+  for (const alias of PRODUCT_NAME_ALIASES) {
+    const normalizedAlias = normalizeComparableText(alias);
+    if (!normalizedAlias) continue;
+
+    if (normalizedCandidate === normalizedAlias) {
+      bestScore = Math.max(bestScore, 1000 + normalizedAlias.length);
+      continue;
+    }
+
+    if (
+      normalizedCandidate.includes(normalizedAlias) ||
+      normalizedAlias.includes(normalizedCandidate)
+    ) {
+      bestScore = Math.max(
+        bestScore,
+        700 + Math.min(normalizedCandidate.length, normalizedAlias.length)
+      );
+      continue;
+    }
+
+    const candidateTokens = normalizedCandidate.split(" ");
+    const aliasTokens = normalizedAlias.split(" ");
+    const aliasTokenSet = new Set(aliasTokens);
+    const sharedTokens = candidateTokens.filter((token) => aliasTokenSet.has(token));
+    if (sharedTokens.length >= 2) {
+      bestScore = Math.max(bestScore, 400 + sharedTokens.length * 25);
+    }
+  }
+
+  return bestScore;
+};
+
+const resolveLinkedWaterVendors = async (client, organizationId) => {
+  const productTableExists = await hasTable(client, "product");
+  if (!productTableExists) {
+    return { inventoryProductId: null, linkedVendorIds: [] };
+  }
+
+  await ensureProductLinkColumns(client);
+  await ensureProductVendorLinksTable(client);
+  await backfillProductVendorLinksFromProducts(client, organizationId);
+
+  const productResult = await client.query(
+    `SELECT id, name
+     FROM "product"
+     WHERE "organizationId" = $1
+       AND COALESCE("isDeleted", false) = false
+       AND COALESCE("isArchived", false) = false
+       AND LOWER(COALESCE(name, '')) LIKE '%water%'
+     ORDER BY id ASC
+     LIMIT 100`,
+    [organizationId]
+  );
+
+  const candidates = Array.isArray(productResult.rows) ? productResult.rows : [];
+  let matchedProduct = null;
+  let matchedScore = 0;
+
+  for (const candidate of candidates) {
+    const score = scoreWaterProductCandidate(candidate?.name);
+    if (score <= 0) continue;
+    if (!matchedProduct || score > matchedScore) {
+      matchedProduct = candidate;
+      matchedScore = score;
+    }
+  }
+
+  if (!matchedProduct) {
+    return { inventoryProductId: null, linkedVendorIds: [] };
+  }
+
+  const vendorIdsByProduct = await getProductVendorIdsMap(client, {
+    organizationId,
+    productIds: [matchedProduct.id],
+  });
+  const linkedVendorIds = vendorIdsByProduct.get(Number(matchedProduct.id)) || [];
+
+  return {
+    inventoryProductId: Number(matchedProduct.id) || null,
+    linkedVendorIds,
+  };
+};
+
 const buildSummary = ({ restocks, sales, expenses, adjustments }) => {
   const unitsRestocked = restocks.reduce((sum, row) => sum + toAmount(row.quantity), 0);
   const unitsSold = sales.reduce((sum, row) => sum + toAmount(row.quantity), 0);
@@ -420,8 +545,9 @@ const buildSummary = ({ restocks, sales, expenses, adjustments }) => {
   };
 };
 
-const buildDashboard = async (client, organizationId) => {
-  const [restocks, sales, expenses, adjustments] = await Promise.all([
+const buildDashboard = async (client, organizationId, options = {}) => {
+  const includeLinkedProduct = options.includeLinkedProduct !== false;
+  const [restocks, sales, expenses, adjustments, linkedProduct] = await Promise.all([
     selectRows(
       client,
       `"waterRestock"`,
@@ -503,12 +629,17 @@ const buildDashboard = async (client, organizationId) => {
       ],
       organizationId
     ),
+    includeLinkedProduct
+      ? resolveLinkedWaterVendors(client, organizationId)
+      : Promise.resolve({ inventoryProductId: null, linkedVendorIds: [] }),
   ]);
 
   return {
     product: {
       key: PRODUCT_KEY,
       name: PRODUCT_NAME,
+      inventoryProductId: linkedProduct.inventoryProductId,
+      linkedVendorIds: linkedProduct.linkedVendorIds,
       purchaseCost: DEFAULT_PURCHASE_COST,
       pricing: {
         retailSingle: RETAIL_PRICE,
@@ -669,7 +800,9 @@ export async function handler(event = {}) {
         customerName = cleanText(resolvedCustomer?.name) || customerName;
       }
 
-      const dashboard = await buildDashboard(client, organizationId);
+      const dashboard = await buildDashboard(client, organizationId, {
+        includeLinkedProduct: false,
+      });
       if (quantity > dashboard.summary.stockOnHand) {
         return json(400, { error: "Not enough 12pk Gwater in stock for this sale." });
       }
@@ -787,7 +920,9 @@ export async function handler(event = {}) {
       if (!reason) return json(400, { error: "A reason is required for stock corrections." });
       if (!date) return json(400, { error: "A valid correction date is required." });
 
-      const dashboard = await buildDashboard(client, organizationId);
+      const dashboard = await buildDashboard(client, organizationId, {
+        includeLinkedProduct: false,
+      });
       if (quantityDelta < 0 && Math.abs(quantityDelta) > dashboard.summary.stockOnHand) {
         return json(400, { error: "Stock correction would push quantity below zero." });
       }

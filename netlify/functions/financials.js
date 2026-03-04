@@ -2,6 +2,7 @@
 import "dotenv/config";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { buildResponseHeaders, isCrossSiteBrowserRequest } from "./_shared/http.js";
 import { requireUser } from "./_shared/userAuth.js";
 import {
   EXPENSE_CATEGORIES,
@@ -11,16 +12,16 @@ import {
   resolveExpenseTable,
 } from "./_shared/expenseAccounting.js";
 
-const RESPONSE_HEADERS = {
+const responseHeaders = (event) => ({
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Organization-Id",
-  "Access-Control-Allow-Methods": "GET,OPTIONS",
-};
+  ...buildResponseHeaders(event, {
+    methods: "GET,OPTIONS",
+  }),
+});
 
-const json = (statusCode, body) => ({
+const json = (event, statusCode, body) => ({
   statusCode,
-  headers: RESPONSE_HEADERS,
+  headers: responseHeaders(event),
   body: JSON.stringify(body),
 });
 
@@ -214,7 +215,11 @@ const buildExpenseBreakdown = async ({ client, start, end, organizationId }) => 
 
 export async function handler(event = {}) {
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: RESPONSE_HEADERS, body: "" };
+    return { statusCode: 204, headers: responseHeaders(event), body: "" };
+  }
+
+  if (isCrossSiteBrowserRequest(event)) {
+    return json(event, 403, { error: "Cross-site requests are not allowed" });
   }
 
   const client = new Client({
@@ -230,7 +235,7 @@ export async function handler(event = {}) {
 
     const authUser = await requireUser(client, event);
     if (!authUser) {
-      return json(401, { error: "Unauthorized" });
+      return json(event, 401, { error: "Unauthorized" });
     }
 
     const organizationId = Number(authUser.organizationId);
@@ -502,7 +507,7 @@ export async function handler(event = {}) {
       };
     });
 
-    return json(200, {
+    return json(event, 200, {
       window: windowKey,
       windowLabel: label,
       startDate: startIso,
@@ -554,7 +559,7 @@ export async function handler(event = {}) {
     });
   } catch (err) {
     console.error("❌ Financial stats error:", err);
-    return json(500, { error: "Failed to load financial stats" });
+    return json(event, 500, { error: "Failed to load financial stats" });
   } finally {
     await client.end().catch(() => {});
   }

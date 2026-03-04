@@ -1,6 +1,13 @@
 /* eslint-disable no-undef */
 import "dotenv/config";
 import { Client } from "pg";
+import {
+  backfillProductVendorLinksFromProducts,
+  ensureProductVendorLinksTable,
+  getProductVendorIdsMap,
+  getVendorProductSummaries,
+  setProductVendorLinks,
+} from "./_shared/productVendors.js";
 import { requireUser } from "./_shared/userAuth.js";
 
 const json = (statusCode, body) => ({
@@ -163,30 +170,31 @@ const scoreProductMatch = (productName, suppliedItem) => {
   return 0;
 };
 
-const selectBestVendorMatch = (productName, vendors = []) => {
-  let best = null;
+const collectVendorMatches = (productName, vendors = []) => {
+  const matchesByVendor = new Map();
   for (const vendor of vendors) {
+    const vendorId = Number(vendor.id);
+    if (!Number.isFinite(vendorId) || vendorId <= 0) continue;
     const suppliedItems = Array.isArray(vendor.suppliedItems) ? vendor.suppliedItems : [];
     for (const suppliedItem of suppliedItems) {
       const score = scoreProductMatch(productName, suppliedItem);
       if (!score) continue;
-      if (!best || score > best.score) {
-        best = {
-          vendorId: Number(vendor.id),
+      const existingMatch = matchesByVendor.get(vendorId);
+      if (!existingMatch || score > existingMatch.score) {
+        matchesByVendor.set(vendorId, {
+          vendorId,
           vendorName: vendor.name || "Vendor",
           suppliedItem,
           score,
-          ambiguous: false,
-        };
-      } else if (score === best.score && Number(vendor.id) !== best.vendorId) {
-        best = { ...best, ambiguous: true };
+        });
       }
     }
   }
 
-  if (!best) return { status: "none" };
-  if (best.ambiguous) return { status: "ambiguous" };
-  return { status: "matched", ...best };
+  return Array.from(matchesByVendor.values()).sort((left, right) => {
+    if (right.score !== left.score) return right.score - left.score;
+    return left.vendorName.localeCompare(right.vendorName);
+  });
 };
 
 export async function handler(event = {}) {
@@ -216,15 +224,15 @@ export async function handler(event = {}) {
     const organizationId = authUser.organizationId;
     await ensureVendorTable(client);
     await ensureProductLinkColumns(client);
+    await ensureProductVendorLinksTable(client);
+    await backfillProductVendorLinksFromProducts(client, organizationId);
     const hasVendorOrganizationId = await hasColumn(client, "vendor", "organizationId");
     const hasProductOrganizationId = await hasColumn(client, "product", "organizationId");
-    const hasProductVendorId = await hasColumn(client, "product", "vendorId");
     const hasProductIsDeleted = await hasColumn(client, "product", "isDeleted");
     const hasProductIsArchived = await hasColumn(client, "product", "isArchived");
 
     if (event.httpMethod === "GET") {
-      const params =
-        hasVendorOrganizationId || hasProductOrganizationId ? [organizationId] : [];
+      const params = hasVendorOrganizationId ? [organizationId] : [];
       const whereClause = hasVendorOrganizationId ? `WHERE v."organizationId" = $1` : "";
       const result = await client.query(
         `SELECT
@@ -241,25 +249,26 @@ export async function handler(event = {}) {
           COALESCE(v."suppliedItems", '{}'::text[]) AS "suppliedItems",
           v.notes,
           v."createdAt",
-          v."updatedAt",
-          COALESCE(p.product_count, 0)::int AS products,
-          COALESCE(p.product_names, '{}'::text[]) AS "productNames"
+          v."updatedAt"
         FROM "vendor" v
-        LEFT JOIN (
-          SELECT
-            "vendorId",
-            COUNT(*) AS product_count,
-            ARRAY_AGG(DISTINCT name ORDER BY name) AS product_names
-          FROM "product"
-          WHERE "vendorId" IS NOT NULL
-            ${hasProductOrganizationId ? `AND "organizationId" = $1` : ""}
-          GROUP BY "vendorId"
-        ) p ON p."vendorId" = v.id
         ${whereClause}
         ORDER BY v.name ASC`,
         params
       );
-      return json(200, result.rows || []);
+      const vendorRows = Array.isArray(result.rows) ? result.rows : [];
+      const vendorSummaries = await getVendorProductSummaries(client, {
+        organizationId,
+        vendorIds: vendorRows.map((vendor) => vendor.id),
+      });
+
+      return json(200, vendorRows.map((vendor) => {
+        const summary = vendorSummaries.get(Number(vendor.id)) || {};
+        return {
+          ...vendor,
+          products: Number(summary.products || 0),
+          productNames: Array.isArray(summary.productNames) ? summary.productNames : [],
+        };
+      }));
     }
 
     if (event.httpMethod !== "POST" && event.httpMethod !== "PUT" && event.httpMethod !== "PATCH") {
@@ -316,12 +325,6 @@ export async function handler(event = {}) {
         });
       }
 
-      if (!hasProductVendorId) {
-        return json(500, {
-          error: "Product vendor links are not available in this local database yet.",
-        });
-      }
-
       const productParams = [];
       const productWhere = [`COALESCE(stock, 0) > 0`];
       if (hasProductOrganizationId) {
@@ -334,62 +337,74 @@ export async function handler(event = {}) {
       if (hasProductIsArchived) {
         productWhere.push(`COALESCE("isArchived", false) = false`);
       }
-      if (!(Number.isFinite(vendorIdFilter) && vendorIdFilter > 0) && hasProductVendorId) {
-        productWhere.push(`"vendorId" IS NULL`);
-      }
 
       const productRes = await client.query(
-        `SELECT id, name, stock, "vendorId"
+        `SELECT id, name, stock
          FROM "product"
          WHERE ${productWhere.join(" AND ")}
          ORDER BY id ASC`,
         productParams
       );
 
+      const productRows = Array.isArray(productRes.rows) ? productRes.rows : [];
+      const linkedVendorIdsByProduct = await getProductVendorIdsMap(client, {
+        organizationId,
+        productIds: productRows.map((product) => product.id),
+      });
+
       let linkedCount = 0;
+      let linkedProductCount = 0;
       let skippedCount = 0;
       let ambiguousCount = 0;
       const linkedItems = [];
 
-      for (const product of productRes.rows || []) {
-        const match = selectBestVendorMatch(product.name, vendors);
-        if (match.status === "ambiguous") {
-          ambiguousCount += 1;
-          continue;
-        }
-        if (match.status !== "matched") continue;
-
-        if (Number(product.vendorId) === match.vendorId) {
+      for (const product of productRows) {
+        const currentVendorIds = linkedVendorIdsByProduct.get(Number(product.id)) || [];
+        if (!(Number.isFinite(vendorIdFilter) && vendorIdFilter > 0) && currentVendorIds.length) {
           skippedCount += 1;
           continue;
         }
 
-        await client.query(
-          `UPDATE "product"
-           SET "vendorId" = $2
-           WHERE id = $1${hasProductOrganizationId ? ` AND "organizationId" = $3` : ""}`,
-          hasProductOrganizationId
-            ? [product.id, match.vendorId, organizationId]
-            : [product.id, match.vendorId]
-        );
+        const matches = collectVendorMatches(product.name, vendors);
+        if (!matches.length) continue;
 
-        linkedCount += 1;
+        const newMatches = matches.filter((match) => !currentVendorIds.includes(match.vendorId));
+        if (!newMatches.length) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const nextVendorIds = currentVendorIds.length
+          ? [...currentVendorIds, ...newMatches.map((match) => match.vendorId)]
+          : newMatches.map((match) => match.vendorId);
+        await setProductVendorLinks(client, {
+          organizationId,
+          productId: product.id,
+          vendorIds: nextVendorIds,
+        });
+        linkedVendorIdsByProduct.set(Number(product.id), nextVendorIds);
+
+        linkedCount += newMatches.length;
+        linkedProductCount += 1;
         linkedItems.push({
           productId: Number(product.id),
           productName: product.name || "Untitled product",
-          vendorId: match.vendorId,
-          vendorName: match.vendorName,
-          matchedOn: match.suppliedItem,
+          linkedVendors: newMatches.map((match) => ({
+            vendorId: match.vendorId,
+            vendorName: match.vendorName,
+            matchedOn: match.suppliedItem,
+          })),
         });
       }
 
       return json(200, {
         linkedCount,
+        linkedProductCount,
         skippedCount,
         ambiguousCount,
         items: linkedItems,
         message: linkedCount
-          ? `Linked ${linkedCount} product${linkedCount === 1 ? "" : "s"} to vendors.`
+          ? `Created ${linkedCount} vendor link${linkedCount === 1 ? "" : "s"} across ${linkedProductCount} product${linkedProductCount === 1 ? "" : "s"}.`
           : "No matching in-stock products were linked.",
       });
     }

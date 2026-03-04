@@ -260,15 +260,7 @@ function AdminVendors() {
       if (!res.ok) {
         throw new Error(data?.error || "Failed to auto-link products.");
       }
-      const linkedCount = toNumber(data?.linkedCount);
-      const ambiguousCount = toNumber(data?.ambiguousCount);
-      const scopeLabel =
-        vendorId && selectedVendor?.name
-          ? ` for ${selectedVendor.name}`
-          : "";
-      const message = linkedCount
-        ? `Linked ${linkedCount} product${linkedCount === 1 ? "" : "s"}${scopeLabel}.${ambiguousCount ? ` ${ambiguousCount} item${ambiguousCount === 1 ? "" : "s"} still need manual review.` : ""}`
-        : data?.message || `No matching in-stock products were linked${scopeLabel}.`;
+      const message = data?.message || "No matching in-stock products were linked.";
       setStatus(message);
       await fetchVendors();
     } catch (err) {
