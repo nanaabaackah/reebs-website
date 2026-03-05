@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import roleColors from "../utils/roleColors";
 
 const initialsFromName = (employee) => {
@@ -196,11 +197,12 @@ function AdminHR() {
           <div className="hr-toolbar">
             <label className="hr-search">
               Search
-              <input
-                type="text"
+              <SearchField
                 placeholder="Search by name, email, or title..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
+                onClear={() => setSearchTerm("")}
+                aria-label="Search employees"
               />
             </label>
             <label className="hr-filter">

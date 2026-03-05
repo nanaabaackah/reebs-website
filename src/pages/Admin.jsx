@@ -4,6 +4,7 @@ import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import { useCart } from "../components/CartContext";
+import SearchField from "../components/SearchField";
 
 const getQuantity = (item) => {
   const raw = item?.quantity ?? item?.stock ?? 0;
@@ -1722,11 +1723,12 @@ function Admin() {
             <div className="admin-control-group">
               <label className="admin-search">
                 Search
-                <input
-                  type="text"
+                <SearchField
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
+                  onClear={() => setSearch("")}
                   placeholder="Name, SKU, or barcode"
+                  aria-label="Search inventory"
                 />
               </label>
               <label className="admin-select">

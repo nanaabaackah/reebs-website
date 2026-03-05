@@ -9,6 +9,7 @@ import {
   faTruckFast,
   faWandMagicSparkles,
 } from "/src/icons/iconSet";
+import SearchField from "../components/SearchField";
 import { useCart } from "../components/CartContext";
 import SiteLoader from "/src/components/SiteLoader";
 import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
@@ -969,16 +970,16 @@ function Book() {
                 </p>
               </div>
               <div className="booking-rental-search">
-                <AppIcon icon={faMagnifyingGlass} aria-hidden="true" />
                 <label htmlFor="rentalSearch" className="sr-only">
                   Search rentals
                 </label>
-                <input
+                <SearchField
                   id="rentalSearch"
-                  type="search"
                   placeholder="Search bounce houses, decor, concessions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onClear={() => setSearchQuery("")}
+                  aria-label="Search rentals"
                 />
               </div>
               <div className="booking-selected" aria-live="polite">

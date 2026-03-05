@@ -22,6 +22,7 @@ import {
   saveOfflineQueue,
 } from "../utils/offlineQueue";
 import { ADMIN_QUICK_ACTIONS } from "../utils/adminQuickActions";
+import SearchField from "../components/SearchField";
 import "../styles/AdminWorkspace.css";
 import "../styles/admin.css";
 
@@ -1373,16 +1374,14 @@ function AdminWorkspace({ section = "home" }) {
     <section className="aw-section-grid">
       <div className="aw-panel">
         <div className="aw-toolbar">
-          <div className="aw-search">
-            <AppIcon icon={faMagnifyingGlass} />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search stock"
-              aria-label="Search stock"
-            />
-          </div>
+          <SearchField
+            className="aw-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onClear={() => setSearch("")}
+            placeholder="Search stock"
+            aria-label="Search stock"
+          />
           <div className="aw-qty-pills" role="tablist" aria-label="Stock filter">
             <button
               type="button"
@@ -1490,16 +1489,14 @@ function AdminWorkspace({ section = "home" }) {
           <h2>Quick Purchase</h2>
         </div>
         <div className="aw-toolbar">
-          <div className="aw-search">
-            <AppIcon icon={faMagnifyingGlass} />
-            <input
-              type="search"
-              value={customerSearch}
-              onChange={(event) => setCustomerSearch(event.target.value)}
-              placeholder="Find customer"
-              aria-label="Find customer"
-            />
-          </div>
+          <SearchField
+            className="aw-search"
+            value={customerSearch}
+            onChange={(event) => setCustomerSearch(event.target.value)}
+            onClear={() => setCustomerSearch("")}
+            placeholder="Find customer"
+            aria-label="Find customer"
+          />
           <select
             className="aw-select"
             value={selectedCustomerId}

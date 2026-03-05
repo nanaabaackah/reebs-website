@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
+import SearchField from "../components/SearchField";
 
 const formatCurrency = (amount, currency = "GHS") => {
   try {
@@ -641,11 +642,12 @@ function OrdersList() {
             </div>
             <label className="orders-search">
               Search
-              <input
-                type="text"
+              <SearchField
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onClear={() => setQuery("")}
                 placeholder="Order #, customer, status"
+                aria-label="Search orders"
               />
             </label>
           </div>

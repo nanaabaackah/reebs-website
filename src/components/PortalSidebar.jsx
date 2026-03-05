@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppIcon } from "/src/components/Icon";
 import {
@@ -759,55 +760,63 @@ function PortalSidebar({ apps = DEFAULT_APPS }) {
     </div>
   );
 
+  const mobileOverlay =
+    isMobile && overlayOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="portal-sidebar__overlay"
+            role="dialog"
+            aria-modal="true"
+            onClick={() => setOverlayOpen(false)}
+          >
+            <div className="portal-sidebar__overlay-content" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="portal-sidebar__overlay-close"
+                onClick={() => setOverlayOpen(false)}
+                aria-label="Close menu"
+              >
+                <AppIcon icon={faXmark} />
+              </button>
+              {renderUserSection("overlay")}
+              {renderNotifications("overlay")}
+              <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
-    <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
-      <div className="portal-sidebar__brand">
-        <span className="portal-sidebar__brand-short">R</span>
-        <span className="portal-sidebar__brand-full">Reebs ERP</span>
-      </div>
-      {!isMobile && renderUserSection()}
-      <div className="portal-sidebar__toggle">
-        <button
-          type="button"
-          onClick={() => {
-            if (isMobile) {
-              setOverlayOpen(true);
-              return;
-            }
-            setExpanded((prev) => !prev);
-          }}
-          className="portal-sidebar__toggle-btn"
-          aria-label={isMobile ? "Open menu" : "Toggle navigation"}
-        >
-          <AppIcon icon={expanded ? faChevronLeft : faBars} />
-          {!isMobile && <span>{expanded ? "Collapse" : "Explore"}</span>}
-        </button>
-      </div>
-      {!isMobile && renderNotifications()}
-      {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
-      {isMobile && overlayOpen && (
-        <div
-          className="portal-sidebar__overlay"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setOverlayOpen(false)}
-        >
-          <div className="portal-sidebar__overlay-content" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="portal-sidebar__overlay-close"
-              onClick={() => setOverlayOpen(false)}
-              aria-label="Close menu"
-            >
-              <AppIcon icon={faXmark} />
-            </button>
-            {renderUserSection("overlay")}
-            {renderNotifications("overlay")}
-            <nav aria-label="Portal apps">{renderLinks("overlay")}</nav>
-          </div>
+    <>
+      <aside className={`portal-sidebar ${expanded ? "is-expanded" : ""}`} aria-label="Portal navigation">
+        <div className="portal-sidebar__brand">
+          <span className="portal-sidebar__brand-short">R</span>
+          <span className="portal-sidebar__brand-full">Reebs ERP</span>
         </div>
-      )}
-    </aside>
+        {!isMobile && renderUserSection()}
+        <div className="portal-sidebar__toggle">
+          <button
+            type="button"
+            onClick={() => {
+              if (isMobile) {
+                setOverlayOpen(true);
+                return;
+              }
+              setExpanded((prev) => !prev);
+            }}
+            className="portal-sidebar__toggle-btn"
+            aria-label={isMobile ? "Open menu" : "Toggle navigation"}
+          >
+            <AppIcon icon={isMobile ? faBars : expanded ? faChevronLeft : faBars} />
+            {!isMobile && <span>{expanded ? "Collapse" : "Explore"}</span>}
+          </button>
+        </div>
+        {!isMobile && renderNotifications()}
+        {!isMobile && <nav className="portal-sidebar__nav" aria-label="Portal apps">{renderLinks()}</nav>}
+      </aside>
+      {mobileOverlay}
+    </>
   );
 }
 

@@ -16,6 +16,9 @@ const NAV_LINKS = [
   { label: 'Contact', path: '/Contact' }
 ];
 
+const PORTAL_HOSTNAME = 'portal.reebspartythemes.com';
+const PORTAL_LOGIN_URL = `https://${PORTAL_HOSTNAME}/login`;
+
 const SEARCH_SHORTCUTS = [
   {
     kind: 'page',
@@ -267,6 +270,19 @@ const getAiSearchGuide = (query) => {
   };
 };
 
+const getNavbarLoginTarget = () => {
+  if (!import.meta.env?.PROD || typeof window === 'undefined') {
+    return '/login';
+  }
+
+  const currentHost = window.location.hostname.toLowerCase();
+  if (currentHost === PORTAL_HOSTNAME) {
+    return '/login';
+  }
+
+  return PORTAL_LOGIN_URL;
+};
+
 const isPathActive = (pathname, path) => {
   if (path === '/') return pathname === '/';
   return pathname === path || pathname.startsWith(`${path}/`);
@@ -436,7 +452,9 @@ const Navbar = ({ scrollContainerRef }) => {
     navigate('/login', { replace: true, state: { signedOut: true } });
   };
 
-  const authPath = authReady && user ? '/admin' : '/login';
+  const isAuthenticated = Boolean(authReady && user);
+  const authPath = isAuthenticated ? '/admin' : getNavbarLoginTarget();
+  const useExternalAuthPath = !isAuthenticated && authPath.startsWith('http');
   const authLabel = authReady && user ? 'Dashboard' : 'Sign in';
   const authIcon = authReady && user ? faUser : faSignInAlt;
   const cartItemCount = cart.reduce(
@@ -533,6 +551,36 @@ const Navbar = ({ scrollContainerRef }) => {
     </select>
   );
 
+  const renderAuthAction = (onClick) => {
+    if (useExternalAuthPath) {
+      return (
+        <a
+          href={authPath}
+          className="navbar-signin navbar-icon-btn"
+          aria-label={authLabel}
+          title={authLabel}
+          onClick={onClick}
+        >
+          <AppIcon icon={authIcon} aria-hidden="true" />
+          <span className="sr-only">{authLabel}</span>
+        </a>
+      );
+    }
+
+    return (
+      <Link
+        to={authPath}
+        className="navbar-signin navbar-icon-btn"
+        aria-label={authLabel}
+        title={authLabel}
+        onClick={onClick}
+      >
+        <AppIcon icon={authIcon} aria-hidden="true" />
+        <span className="sr-only">{authLabel}</span>
+      </Link>
+    );
+  };
+
   return (
     <header className="site-header" onWheel={handleHeaderWheel}>
       <div className="navbar-top-rail" aria-hidden="true" />
@@ -590,15 +638,7 @@ const Navbar = ({ scrollContainerRef }) => {
               </span>
             ) : null}
           </button>
-          <Link
-            to={authPath}
-            className="navbar-signin navbar-icon-btn"
-            aria-label={authLabel}
-            title={authLabel}
-          >
-            <AppIcon icon={authIcon} aria-hidden="true" />
-            <span className="sr-only">{authLabel}</span>
-          </Link>
+          {renderAuthAction()}
           {authReady && user ? (
             <button type="button" className="navbar-signout" onClick={handleLogout}>
               Sign out
@@ -653,16 +693,7 @@ const Navbar = ({ scrollContainerRef }) => {
                 </span>
               ) : null}
             </button>
-            <Link
-              to={authPath}
-              className="navbar-signin navbar-icon-btn"
-              aria-label={authLabel}
-              title={authLabel}
-              onClick={() => setMobileOpen(false)}
-            >
-              <AppIcon icon={authIcon} aria-hidden="true" />
-              <span className="sr-only">{authLabel}</span>
-            </Link>
+            {renderAuthAction(() => setMobileOpen(false))}
             {authReady && user ? (
               <button type="button" className="navbar-signout" onClick={handleLogout}>
                 Sign out

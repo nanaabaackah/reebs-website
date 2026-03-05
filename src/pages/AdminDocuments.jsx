@@ -12,6 +12,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const COMPANY = {
@@ -575,15 +576,14 @@ function AdminDocuments() {
               Uploads
             </button>
           </div>
-          <div className="documents-search">
-            <AppIcon icon={faSearch} />
-            <input
-              type="text"
-              placeholder="Search by customer, reference, or file..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-          </div>
+          <SearchField
+            className="documents-search"
+            placeholder="Search by customer, reference, or file..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            onClear={() => setSearchTerm("")}
+            aria-label="Search documents"
+          />
           <p className="documents-toolbar-note">
             {documentsStats.receiptCount} receipts and {documentsStats.invoiceCount} invoices are available alongside
             uploaded contracts and proofs.

@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
+import SearchField from "../components/SearchField";
 
 const getUnitPrice = (item) => {
   if (typeof item?.price === "number") return item.price;
@@ -371,11 +372,12 @@ function OrderBuilder() {
               </div>
               <label className="order-field">
                 Search customer
-                <input
-                  type="text"
+                <SearchField
                   value={customerQuery}
                   onChange={(event) => setCustomerQuery(event.target.value)}
+                  onClear={() => setCustomerQuery("")}
                   placeholder="Search by name, email, phone"
+                  aria-label="Search customer"
                 />
               </label>
               <label className="order-field">
@@ -408,12 +410,13 @@ function OrderBuilder() {
               </div>
               <label className="order-field">
                 Search or scan products
-                <input
-                  type="text"
+                <SearchField
                   value={productQuery}
                   onChange={(event) => setProductQuery(event.target.value)}
+                  onClear={() => setProductQuery("")}
                   onKeyDown={handleProductScan}
                   placeholder="Search by name, SKU, or barcode"
+                  aria-label="Search or scan products"
                 />
               </label>
               {scanFeedback && (

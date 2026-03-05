@@ -6,6 +6,7 @@ import { faFilePdf, faPrint, faPaperPlane, faSearch, faFolderOpen } from "/src/i
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const formatCurrency = (amount) => {
@@ -711,6 +712,33 @@ function AdminInvoicing() {
   const activeUnpaidCount = Math.max(activeQueueCount - activePaidCount, 0);
   const activeModeLabel = viewType === "orders" ? "Shop receipt queue" : "Rental invoice queue";
   const selectedFocusValue = displayInvoice ? balanceDue : activeQueueTotal;
+  const collectionPct = activeQueueCount > 0 ? Math.round((activePaidCount / activeQueueCount) * 100) : 0;
+  const activeOutstandingTotal = (viewType === "orders" ? filteredOrders : filteredBookings).reduce(
+    (sum, item) => {
+      const rowKey = `${viewType}-${item.id}`;
+      const itemStatus = (invoiceMeta[rowKey]?.status || "unpaid").toLowerCase();
+      if (itemStatus === "paid") return sum;
+      const amount =
+        viewType === "orders" ? toNumber(item.total, 0) : toNumber(item.totalAmount, 0) / 100;
+      return sum + amount;
+    },
+    0
+  );
+  const selectionSummary = displayInvoice
+    ? displayInvoice.type === "booking"
+      ? `${formatShortDate(displayInvoice.event?.eventDate)}${
+          displayInvoice.event?.venueAddress ? ` • ${displayInvoice.event.venueAddress}` : ""
+        }`
+      : `${(displayInvoice.items || []).length} line item${
+          (displayInvoice.items || []).length === 1 ? "" : "s"
+        } ready to issue`
+    : `Choose a ${viewType === "orders" ? "receipt" : "rental invoice"} from the queue to preview, export, and track payment.`;
+  const selectionContact = displayInvoice
+    ? [displayInvoice.customer?.phone, displayInvoice.customer?.email].filter(Boolean).join(" • ") ||
+      "No customer contact saved"
+    : activeQueueCount > 0
+      ? `${activeQueueCount} document${activeQueueCount === 1 ? "" : "s"} waiting in this queue`
+      : "The queue is empty right now.";
 
   const createPdfDoc = async () => {
     if (!displayInvoice) return null;
@@ -1047,25 +1075,53 @@ function AdminInvoicing() {
         </header>
 
         <section className="invoicing-overview no-print" aria-label="Invoicing summary">
+          <article className="invoicing-feature-card">
+            <div className="invoicing-feature-copy">
+              <p className="invoicing-label">{viewType === "orders" ? "Retail workflow" : "Rental workflow"}</p>
+              <h2>
+                {displayInvoice
+                  ? `${displayInvoice.docLabel} #${displayInvoice.invoiceNumber}`
+                  : viewType === "orders"
+                    ? "Receipts desk"
+                    : "Invoices desk"}
+              </h2>
+              <p>{selectionSummary}</p>
+            </div>
+            <div className="invoicing-feature-meta">
+              <div className="invoicing-feature-stat">
+                <span className="invoicing-label">Customer</span>
+                <strong>{displayInvoice?.customer?.name || "No document selected"}</strong>
+                <p>{selectionContact}</p>
+              </div>
+              <div className="invoicing-feature-stat">
+                <span className="invoicing-label">Collection pace</span>
+                <strong>{collectionPct}% cleared</strong>
+                <div className="invoicing-feature-progress" aria-hidden="true">
+                  <span style={{ width: `${collectionPct}%` }} />
+                </div>
+                <p>{activePaidCount} of {activeQueueCount} marked paid</p>
+              </div>
+            </div>
+          </article>
           <article className="invoicing-metric">
             <p className="invoicing-label">Queue</p>
             <strong>{activeQueueCount}</strong>
             <span>{activeModeLabel}</span>
           </article>
           <article className="invoicing-metric">
-            <p className="invoicing-label">Unpaid</p>
-            <strong>{activeUnpaidCount}</strong>
-            <span>{activePaidCount} marked paid</span>
+            <p className="invoicing-label">Collected</p>
+            <strong>{activePaidCount}</strong>
+            <span>{collectionPct}% of visible queue</span>
           </article>
           <article className="invoicing-metric">
-            <p className="invoicing-label">Queue value</p>
-            <strong>{formatCurrency(activeQueueTotal)}</strong>
-            <span>Visible records only</span>
+            <p className="invoicing-label">Outstanding</p>
+            <strong>{formatCurrency(activeOutstandingTotal)}</strong>
+            <span>{activeUnpaidCount} awaiting payment</span>
           </article>
           <article className="invoicing-metric">
             <p className="invoicing-label">{displayInvoice ? "Selected due" : "Next action"}</p>
             <strong>{formatCurrency(selectedFocusValue)}</strong>
-            <span>{displayInvoice ? `#${displayInvoice.invoiceNumber}` : "Choose a document to continue"}</span>
+            <span>{displayInvoice ? `#${displayInvoice.invoiceNumber}` : "Pick a document to continue"}</span>
           </article>
         </section>
 
@@ -1079,12 +1135,12 @@ function AdminInvoicing() {
               <strong className="invoicing-sidebar-total">{formatCurrency(activeQueueTotal)}</strong>
             </div>
             <div className="invoicing-search">
-              <AppIcon icon={faSearch} />
-              <input
-                type="text"
+              <SearchField
                 placeholder={viewType === "bookings" ? "Search booking or customer" : "Search order or customer"}
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
+                onClear={() => setSearchTerm("")}
+                aria-label={viewType === "bookings" ? "Search bookings" : "Search orders"}
               />
             </div>
             {viewType === "orders" ? (
@@ -1116,8 +1172,9 @@ function AdminInvoicing() {
                           <p className="invoicing-list-item-sub">{order.customerName || "Unknown customer"}</p>
                           <div className="invoicing-list-item-meta">
                             <span>{formatShortDate(order.date || order.createdAt)}</span>
-                            <strong>{formatCurrency(order.total || 0)}</strong>
+                            <span>{orderStatus === "paid" ? "Ready to archive" : "Needs payment"}</span>
                           </div>
+                          <p className="invoicing-list-item-note">{formatCurrency(order.total || 0)}</p>
                         </div>
                       </button>
                     );
@@ -1152,8 +1209,11 @@ function AdminInvoicing() {
                         <p className="invoicing-list-item-sub">{booking.customerName || "Unknown customer"}</p>
                         <div className="invoicing-list-item-meta">
                           <span>{formatShortDate(booking.eventDate)}</span>
-                          <strong>{formatCurrency(toNumber(booking.totalAmount, 0) / 100)}</strong>
+                          <span>{bookingStatus === "paid" ? "Ready to archive" : "Deposit / balance open"}</span>
                         </div>
+                        <p className="invoicing-list-item-note">
+                          {formatCurrency(toNumber(booking.totalAmount, 0) / 100)}
+                        </p>
                       </div>
                     </button>
                   );
@@ -1169,7 +1229,12 @@ function AdminInvoicing() {
               <p className="invoicing-error">{invoiceError}</p>
             ) : !displayInvoice ? (
               <div className="invoicing-empty">
-                <p>Select an order to preview the invoice.</p>
+                <p className="invoicing-label">No document selected</p>
+                <h3>{viewType === "orders" ? "Select a receipt to preview" : "Select an invoice to preview"}</h3>
+                <p>
+                  Choose a row from the queue to review totals, update payment status, and export a
+                  branded PDF.
+                </p>
               </div>
             ) : (
               <>

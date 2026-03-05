@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import { faWrench, faPlus, faRotateRight } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const defaultForm = {
@@ -311,12 +312,13 @@ function AdminMaintenance() {
                 <span>{logs.length} entries</span>
               </div>
               <div className="maintenance-toolbar">
-                <input
-                  type="text"
-                  className="maintenance-search"
+                <SearchField
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
+                  onClear={() => setSearchTerm("")}
                   placeholder="Search assets or issues"
+                  aria-label="Search assets or issues"
+                  inputClassName="maintenance-search"
                 />
                 <div className="maintenance-filters">
                   {["all", "open", "resolved"].map((key) => (

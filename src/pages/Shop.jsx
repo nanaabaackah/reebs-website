@@ -13,6 +13,7 @@ import { useAuth } from "/src/components/AuthContext";
 import SideNav from "/src/components/SideNav";
 import SiteLoader from "/src/components/SiteLoader";
 import { useCart } from "/src/components/CartContext";
+import SearchField from "/src/components/SearchField";
 import {
   isOnlineShopItem,
   isTestCategoryItem,
@@ -650,34 +651,20 @@ function Shop() {
                 </div>
 
                 <div className="shop-controls">
-                  <div className="search-wrapper">
-                    <AppIcon
-                      icon={faMagnifyingGlass}
-                      className="search-icon"
-                      aria-hidden="true"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search balloons, decor, tableware..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="search-bar"
-                      aria-label="Search shop products"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        className="shop-search-clear"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setDebouncedQuery("");
-                        }}
-                        aria-label="Clear shop search"
-                      >
-                        <AppIcon icon={faTimes} />
-                      </button>
-                    )}
-                  </div>
+                  <SearchField
+                    className="search-wrapper"
+                    inputClassName="search-bar"
+                    clearClassName="shop-search-clear"
+                    placeholder="Search balloons, decor, tableware..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClear={() => {
+                      setSearchQuery("");
+                      setDebouncedQuery("");
+                    }}
+                    clearAriaLabel="Clear shop search"
+                    aria-label="Search shop products"
+                  />
                 </div>
 
                 <div className="filter-chips" role="list" aria-label="Shop category filters">

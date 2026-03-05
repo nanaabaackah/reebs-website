@@ -55,6 +55,22 @@ const toCents = (val) =>
 ### Data normalization at the API boundary
 Input parsing in inventory and order services sanitizes currency strings and prevents invalid values from entering the ledger.
 
+### Shared product-to-vendor linking
+Inventory items can now link to multiple vendors through a dedicated `productVendorLink` table. One primary vendor is still preserved for compatibility, but supplier relationships now support one-to-many links for inventory management, vendor auto-linking, and water restock suggestions.
+
+### Shared search input behavior
+Search fields across the admin and storefront now follow one shared interaction pattern:
+- Search icon inside the input
+- Clear/cancel button inside the input
+- Clear action restores focus to the field
+- Native browser search cancel controls are suppressed so only one clear action appears
+
+## UI Platform Conventions
+- Use `src/components/SearchField.jsx` for search inputs instead of building one-off search controls.
+- The mobile sidebar drawer is rendered as a body-level overlay from `src/components/PortalSidebar.jsx` so it opens above page content on mobile Safari.
+- The fixed admin bottom nav gets its clearance from `src/styles/components/PortalSidebar.css`; individual pages should not add duplicate bottom-nav padding.
+- Admin redesign work should follow the current frameless rule: avoid unnecessary background fills and borders unless a screen explicitly needs them.
+
 ## SaaS Business Model
 Example tiers for positioning and pricing.
 
@@ -74,7 +90,7 @@ Example tiers for positioning and pricing.
 
 ```bash
 git clone https://github.com/yourusername/reebs-website.git
-cd reebs-erp
+cd reebs-website
 npm install
 ```
 
@@ -120,6 +136,12 @@ npm run netlify
 
 ```bash
 npm run test:e2e
+```
+
+### Build check
+
+```bash
+npm run build
 ```
 
 ## Maps and Geocoding

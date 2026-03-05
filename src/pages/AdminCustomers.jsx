@@ -15,6 +15,7 @@ import {
 } from "/src/icons/iconSet";
 import { faWhatsapp } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 
 const formatMoney = (value, currency = "GHS") => {
   const amount = Number(value);
@@ -424,11 +425,12 @@ function AdminCustomers() {
           <div className="crm-control-panel">
             <label className="crm-search">
               <span>Search</span>
-              <input
-                type="text"
+              <SearchField
                 placeholder="Name, email, or phone"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onClear={() => setSearchTerm("")}
+                aria-label="Search customers"
               />
             </label>
             <div className="crm-filters">

@@ -38,7 +38,7 @@
 
 .aw-shell {
   min-height: 100vh;
-  padding: 1rem 1rem calc(6.2rem + env(safe-area-inset-bottom));
+  padding: 1rem 1rem 0;
   color: var(--aw-ink);
   font-family: "Inter", "Segoe UI", sans-serif;
 }
@@ -915,7 +915,7 @@
   .aw-shell {
     max-width: 1200px;
     margin: 0 auto;
-    padding-bottom: 7rem;
+    padding-bottom: 0;
   }
 
   .aw-panel {
@@ -977,7 +977,7 @@ body.admin-theme.aw-theme .portal-app-content {
 body.admin-theme.aw-theme .aw-shell {
   display: grid;
   gap: 1rem;
-  padding: 0 0 calc(6.4rem + env(safe-area-inset-bottom));
+  padding: 0;
 }
 
 body.admin-theme.aw-theme .aw-section-grid {
@@ -1224,7 +1224,7 @@ body.admin-theme.aw-theme .aw-nav-btn.is-active {
 
 @media (min-width: 900px) {
   body.admin-theme.aw-theme .aw-shell {
-    padding-bottom: 7rem;
+    padding-bottom: 0;
   }
 }
 

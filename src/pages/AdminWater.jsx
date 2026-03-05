@@ -12,6 +12,7 @@ import {
   faStore,
 } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const DEFAULT_PURCHASE_COST = 2200;
@@ -1214,11 +1215,12 @@ function AdminWater() {
                     </div>
                     {customers.length ? (
                       <>
-                        <input
-                          type="search"
+                        <SearchField
                           value={customerPickerQuery}
                           onChange={(event) => setCustomerPickerQuery(event.target.value)}
+                          onClear={() => setCustomerPickerQuery("")}
                           placeholder="Search REEBS customers"
+                          aria-label="Search REEBS customers"
                         />
                         <div className="water-module-customer-options" role="listbox" aria-label="REEBS customers">
                           <button

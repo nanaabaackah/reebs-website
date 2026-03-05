@@ -8,6 +8,7 @@ import AddToCartButton from "/src/components/AddToCartButton";
 import { useCart } from "/src/components/CartContext";
 import { AppIcon } from '/src/components/Icon';
 import { faMagnifyingGlass } from '/src/icons/iconSet';
+import SearchField from "/src/components/SearchField";
 import SiteLoader from '/src/components/SiteLoader';
 import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
 import { getRentalCartItem } from '/src/utils/cartItems';
@@ -629,17 +630,15 @@ function Rentals() {
                                     </div>
 
                                     <div className="rentals-controls">
-                                        <div className="search-wrapper rentals-search">
-                                            <AppIcon icon={faMagnifyingGlass} className="search-icon" aria-hidden="true" />
-                                            <input
-                                                type="text"
-                                                placeholder="Search bounce houses, decor, concessions..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="search-bar"
-                                                aria-label="Search rental items"
-                                            />
-                                        </div>
+                                        <SearchField
+                                            className="search-wrapper rentals-search"
+                                            inputClassName="search-bar"
+                                            placeholder="Search bounce houses, decor, concessions..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onClear={() => setSearchQuery("")}
+                                            aria-label="Search rental items"
+                                        />
                                     </div>
 
                                     <div className="filter-chips" role="list" aria-label="Quick category filters">

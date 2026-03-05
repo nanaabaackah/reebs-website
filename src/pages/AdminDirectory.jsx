@@ -3,6 +3,7 @@ import "../styles/admin.css";
 import { AppIcon } from "/src/components/Icon";
 import { faPlus, faRotateRight, faXmark, faPen, faEye } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import roleColors from "../utils/roleColors";
 
 const formatMoney = (value, currency = "GHS") => {
@@ -400,24 +401,14 @@ function AdminDirectory() {
             </div>
             <label className="customers-search">
               Search
-              <div className="customers-search-input">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={searchPlaceholder}
-                />
-                {query && (
-                  <button
-                    type="button"
-                    className="customers-search-clear"
-                    onClick={() => setQuery("")}
-                    aria-label="Clear search"
-                  >
-                    <AppIcon icon={faXmark} />
-                  </button>
-                )}
-              </div>
+              <SearchField
+                className="customers-search-input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onClear={() => setQuery("")}
+                placeholder={searchPlaceholder}
+                clearClassName="customers-search-clear"
+              />
             </label>
           </div>
 

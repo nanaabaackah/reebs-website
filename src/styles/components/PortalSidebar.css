@@ -1,6 +1,7 @@
 .portal-app-shell {
   --portal-sidebar-collapsed: 68px;
   --portal-sidebar-expanded: 250px;
+  --portal-bottom-nav-clearance: calc(6.6rem + env(safe-area-inset-bottom));
   position: relative;
   width: 100%;
   min-height: 100vh;
@@ -19,10 +20,11 @@
   --portal-modal-inline-offset: var(--portal-sidebar-collapsed);
   min-width: 0;
   min-height: 100vh;
-  padding: 8rem 2rem;
+  padding: 8rem 2rem var(--portal-bottom-nav-clearance);
   margin-left: var(--portal-sidebar-collapsed);
   background: var(--surface);
   box-sizing: border-box;
+  scroll-padding-bottom: var(--portal-bottom-nav-clearance);
   transition: margin-left 0.3s ease;
 }
 
@@ -715,7 +717,7 @@
 
 @media (max-width: 920px) {
   .portal-app-content {
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem var(--portal-bottom-nav-clearance);
   }
 }
 
@@ -723,11 +725,12 @@
   .portal-app-shell {
     --portal-sidebar-collapsed: 0px;
     --portal-sidebar-expanded: 0px;
+    --portal-bottom-nav-clearance: calc(6.9rem + env(safe-area-inset-bottom));
   }
 
   .portal-app-content {
     --portal-modal-inline-offset: 0px;
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem var(--portal-bottom-nav-clearance);
     margin-left: 0;
   }
 

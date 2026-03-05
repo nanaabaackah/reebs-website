@@ -10,6 +10,7 @@ import {
   faEnvelope,
 } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const emptyForm = {
@@ -325,14 +326,14 @@ function AdminVendors() {
               <p className="vendors-sub">{vendorStats.withContacts} vendors with contacts</p>
             </div>
           </div>
-          <div className="vendors-search">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search vendors by name, contact, email, or phone..."
-            />
-          </div>
+          <SearchField
+            className="vendors-search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            onClear={() => setSearchTerm("")}
+            placeholder="Search vendors by name, contact, email, or phone..."
+            aria-label="Search vendors"
+          />
         </section>
 
         {loading ? (

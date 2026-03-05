@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AppIcon } from "/src/components/Icon";
 import { faTruck, faRotateRight, faLocationDot } from "/src/icons/iconSet";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 import "../styles/admin.css";
 
 const STATUS_OPTIONS = [
@@ -328,15 +329,14 @@ function AdminDelivery() {
         </section>
 
         <div className="delivery-filters">
-          <div className="delivery-search">
-            <AppIcon icon={faLocationDot} />
-            <input
-              type="search"
-              placeholder="Search customer, address, driver..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+          <SearchField
+            className="delivery-search"
+            placeholder="Search customer, address, driver..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onClear={() => setSearch("")}
+            aria-label="Search customer, address, or driver"
+          />
           <div className="delivery-statuses">
             {["all", ...STATUS_OPTIONS.map((opt) => opt.value)].map((key) => (
               <button

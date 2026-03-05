@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../styles/admin.css";
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
+import SearchField from "../components/SearchField";
 
 import { GoogleMap, InfoWindowF, MarkerF, useJsApiLoader } from "@react-google-maps/api";
 import { AppIcon } from "/src/components/Icon";
@@ -1220,11 +1221,12 @@ function AdminScheduler() {
 
               <label>
                 Add items
-                <input
-                  type="text"
+                <SearchField
                   value={productQuery}
                   onChange={(event) => setProductQuery(event.target.value)}
+                  onClear={() => setProductQuery("")}
                   placeholder="Search rentals"
+                  aria-label="Search rentals"
                 />
               </label>
 

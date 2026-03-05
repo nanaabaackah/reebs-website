@@ -13,6 +13,7 @@ import {
 import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
+import SearchField from "../components/SearchField";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -880,11 +881,12 @@ function AdminBookings() {
               </label>
               <label className="bookings-search">
                 Search
-                <input
-                  type="text"
+                <SearchField
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  onClear={() => setQuery("")}
                   placeholder="Id, customer, status"
+                  aria-label="Search bookings"
                 />
               </label>
               <div className="bookings-view-actions">
@@ -1305,11 +1307,12 @@ function AdminBookings() {
 
               <label>
                 Add items
-                <input
-                  type="text"
+                <SearchField
                   value={productQuery}
                   onChange={(event) => setProductQuery(event.target.value)}
+                  onClear={() => setProductQuery("")}
                   placeholder="Search rentals"
+                  aria-label="Search rentals"
                 />
               </label>
 

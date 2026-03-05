@@ -4,6 +4,7 @@ import AdminBreadcrumb from "../components/AdminBreadcrumb";
 import { useAuth } from "../components/AuthContext";
 import { AppIcon } from "/src/components/Icon";
 import { faEllipsisVertical } from "/src/icons/iconSet";
+import SearchField from "../components/SearchField";
 import roleColors from "../utils/roleColors";
 
 const ROLE_OPTIONS = [
@@ -414,11 +415,12 @@ function AdminRoles() {
             <div className="roles-filters">
               <label className="roles-search">
                 <span>Search</span>
-                <input
-                  type="text"
+                <SearchField
                   placeholder="Name, email, role"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  onClear={() => setQuery("")}
+                  aria-label="Search team directory"
                 />
               </label>
               <label className="roles-filter">
