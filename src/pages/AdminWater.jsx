@@ -44,8 +44,8 @@ const ADJUSTMENT_REASON_OPTIONS = {
 
 const buildDefaultDashboard = () => ({
   product: {
-    key: "gwater-12pk",
-    name: "12pk Gwater",
+    key: "gwater-15pk",
+    name: "15pk Gwater",
     inventoryProductId: null,
     linkedVendorIds: [],
     purchaseCost: DEFAULT_PURCHASE_COST,
@@ -742,7 +742,7 @@ function AdminWater() {
         <section className="water-module-hero">
           <div className="water-module-hero-copy">
             <span className="water-module-pill">Fixed product</span>
-            <h2>{productName || "12pk Gwater"}</h2>
+            <h2>{productName || "15pk Gwater"}</h2>
             <p>
               Purchase cost is fixed at {formatCurrency(dashboard?.product?.purchaseCost)} per pack.
               Retail pricing uses a 10+ bulk rule so quantities of {pricing.bulkThreshold} or more
