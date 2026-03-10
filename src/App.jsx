@@ -1,60 +1,60 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { BrowserRouter as Router, Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import AuthProvider, { useAuth } from "./components/AuthContext";
-import { CartProvider } from "./components/CartContext";
+import AuthProvider, { useAuth } from "./components/AuthContext/AuthContext";
+import { CartProvider } from "./components/CartContext/CartContext";
 import { TemplateConfigProvider } from "./context/TemplateConfigContext";
-import BackToTop from "./components/BackToTop";
-import { AppIcon } from "./components/Icon";
-import SiteLoader from "./components/SiteLoader";
-import Navbar from "./components/Navbar";
-import CartOverlay from "./components/CartOverlay";
-import PartyConfetti from "./components/PartyConfetti";
+import BackToTop from "./components/BackToTop/BackToTop";
+import { AppIcon } from "./components/Icon/Icon";
+import SiteLoader from "./components/SiteLoader/SiteLoader";
+import Navbar from "./components/Navbar/Navbar";
+import CartOverlay from "./components/CartOverlay/CartOverlay";
+import PartyConfetti from "./components/PartyConfetti/PartyConfetti";
 import { faArrowRight } from "./icons/iconSet";
 import useScrollReveal from "./hooks/useScrollReveal";
 import { applySeo } from "./utils/seo";
 
-const Home = lazy(() => import("./pages/Home"));
-const Footer = lazy(() => import("./components/Footer"));
-const PortalSidebar = lazy(() => import("./components/PortalSidebar"));
-const AdminBottomNav = lazy(() => import("./components/AdminBottomNav"));
+const Home = lazy(() => import("./pages/Home/Home"));
+const Footer = lazy(() => import("./components/Footer/Footer"));
+const PortalSidebar = lazy(() => import("./components/PortalSidebar/PortalSidebar"));
+const AdminBottomNav = lazy(() => import("./components/AdminBottomNav/AdminBottomNav"));
 
-const Login = lazy(() => import("./pages/Login"));
-const Admin = lazy(() => import("./pages/Admin"));
-const AdminWorkspace = lazy(() => import("./pages/AdminWorkspace"));
-const OrdersList = lazy(() => import("./pages/OrdersList"));
-const OrderBuilder = lazy(() => import("./pages/OrderBuilder"));
-const AdminCustomers = lazy(() => import("./pages/AdminCustomers"));
-const About = lazy(() => import("./pages/About"));
-const Book = lazy(() => import("./pages/Book"));
-const Cart = lazy(() => import("./pages/Cart"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const Contact = lazy(() => import("./pages/Contact"));
-const DeliveryPolicy = lazy(() => import("./pages/delivery-policy"));
-const FAQ = lazy(() => import("./pages/faq"));
-const PrivacyPolicy = lazy(() => import("./pages/privacy-policy"));
-const RefundPolicy = lazy(() => import("./pages/refund-policy"));
-const Rentals = lazy(() => import("./pages/Rentals"));
-const RentalItem = lazy(() => import("./pages/RentalItem"));
-const TermsOfService = lazy(() => import("./pages/terms-of-service"));
-const Shop = lazy(() => import("./pages/Shop"));
-const WebsiteTemplateEditor = lazy(() => import("./pages/WebsiteTemplateEditor"));
+const Login = lazy(() => import("./pages/Login/Login"));
+const Admin = lazy(() => import("./pages/Admin/Admin"));
+const AdminWorkspace = lazy(() => import("./pages/AdminWorkspace/AdminWorkspace"));
+const OrdersList = lazy(() => import("./pages/OrdersList/OrdersList"));
+const OrderBuilder = lazy(() => import("./pages/OrderBuilder/OrderBuilder"));
+const AdminCustomers = lazy(() => import("./pages/AdminCustomers/AdminCustomers"));
+const About = lazy(() => import("./pages/About/About"));
+const Book = lazy(() => import("./pages/Book/Book"));
+const Cart = lazy(() => import("./pages/Cart/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout/Checkout"));
+const Contact = lazy(() => import("./pages/Contact/Contact"));
+const DeliveryPolicy = lazy(() => import("./pages/DeliveryPolicy/DeliveryPolicy"));
+const FAQ = lazy(() => import("./pages/FAQ/FAQ"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy/PrivacyPolicy"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy/RefundPolicy"));
+const Rentals = lazy(() => import("./pages/Rentals/Rentals"));
+const RentalItem = lazy(() => import("./pages/RentalItem/RentalItem"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService/TermsOfService"));
+const Shop = lazy(() => import("./pages/Shop/Shop"));
+const WebsiteTemplateEditor = lazy(() => import("./pages/WebsiteTemplateEditor/WebsiteTemplateEditor"));
 
-const AdminDirectory = lazy(() => import("./pages/AdminDirectory"));
-const AdminAccounting = lazy(() => import("./pages/AdminAccounting"));
-const AdminExpenses = lazy(() => import("./pages/AdminExpenses"));
-const AdminWater = lazy(() => import("./pages/AdminWater"));
-const AdminVendors = lazy(() => import("./pages/AdminVendors"));
-const AdminDelivery = lazy(() => import("./pages/AdminDelivery"));
-const AdminDocuments = lazy(() => import("./pages/AdminDocuments"));
-const AdminTimesheets = lazy(() => import("./pages/AdminTimesheets"));
-const AdminSettings = lazy(() => import("./pages/AdminSettings"));
-const AdminHR = lazy(() => import("./pages/AdminHR"));
-const AdminRoles = lazy(() => import("./pages/AdminRoles"));
-const AdminMaintenance = lazy(() => import("./pages/AdminMaintenance"));
-const AdminInvoicing = lazy(() => import("./pages/AdminInvoicing"));
-const AdminMarketing = lazy(() => import("./pages/AdminMarketing"));
-const AdminScheduler = lazy(() => import("./pages/AdminScheduler"));
-const AdminBookings = lazy(() => import("./pages/AdminBookings"));
+const AdminDirectory = lazy(() => import("./pages/AdminDirectory/AdminDirectory"));
+const AdminAccounting = lazy(() => import("./pages/AdminAccounting/AdminAccounting"));
+const AdminExpenses = lazy(() => import("./pages/AdminExpenses/AdminExpenses"));
+const AdminWater = lazy(() => import("./pages/AdminWater/AdminWater"));
+const AdminVendors = lazy(() => import("./pages/AdminVendors/AdminVendors"));
+const AdminDelivery = lazy(() => import("./pages/AdminDelivery/AdminDelivery"));
+const AdminDocuments = lazy(() => import("./pages/AdminDocuments/AdminDocuments"));
+const AdminTimesheets = lazy(() => import("./pages/AdminTimesheets/AdminTimesheets"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings/AdminSettings"));
+const AdminHR = lazy(() => import("./pages/AdminHR/AdminHR"));
+const AdminRoles = lazy(() => import("./pages/AdminRoles/AdminRoles"));
+const AdminMaintenance = lazy(() => import("./pages/AdminMaintenance/AdminMaintenance"));
+const AdminInvoicing = lazy(() => import("./pages/AdminInvoicing/AdminInvoicing"));
+const AdminMarketing = lazy(() => import("./pages/AdminMarketing/AdminMarketing"));
+const AdminScheduler = lazy(() => import("./pages/AdminScheduler/AdminScheduler"));
+const AdminBookings = lazy(() => import("./pages/AdminBookings/AdminBookings"));
 
 const normalizeRole = (role) => String(role || "").trim().toLowerCase();
 
@@ -466,14 +466,16 @@ function App() {
 
       const scrollHost = publicScrollRef.current;
       if (!scrollHost) return undefined;
-      const heroSection = isHomeRoute ? scrollHost.querySelector("#hero-section") : null;
-      const footerSection = isHomeRoute ? scrollHost.querySelector(".site-footer") : null;
+      let rafId = 0;
 
       const updateScrollProgress = () => {
         const maxScroll = scrollHost.scrollHeight - scrollHost.clientHeight;
         const progress = maxScroll > 0 ? scrollHost.scrollTop / maxScroll : 0;
         const bounded = Math.max(0, Math.min(1, progress));
         document.documentElement.style.setProperty("--scroll-progress", bounded.toFixed(4));
+
+        const heroSection = isHomeRoute ? scrollHost.querySelector("#hero-section") : null;
+        const footerSection = isHomeRoute ? scrollHost.querySelector(".site-footer") : null;
 
         if (!heroSection) {
           setShowShellCta(false);
@@ -490,7 +492,24 @@ function App() {
 
       updateScrollProgress();
       scrollHost.addEventListener("scroll", updateScrollProgress, { passive: true });
-      return () => scrollHost.removeEventListener("scroll", updateScrollProgress);
+      window.addEventListener("resize", updateScrollProgress);
+
+      const mutationObserver =
+        typeof MutationObserver === "function"
+          ? new MutationObserver(() => {
+              if (rafId) window.cancelAnimationFrame(rafId);
+              rafId = window.requestAnimationFrame(updateScrollProgress);
+            })
+          : null;
+
+      mutationObserver?.observe(scrollHost, { childList: true, subtree: true });
+
+      return () => {
+        scrollHost.removeEventListener("scroll", updateScrollProgress);
+        window.removeEventListener("resize", updateScrollProgress);
+        mutationObserver?.disconnect();
+        if (rafId) window.cancelAnimationFrame(rafId);
+      };
     }, [isAdminRoute, isHomeRoute, location.pathname]);
 
     if (isAdminRoute) {
@@ -523,7 +542,7 @@ function App() {
           <div className={`shell-bottom-cta ${showShellCta ? "is-visible" : ""}`} aria-hidden={!showShellCta}>
             <div className="shell-bottom-cta-corner shell-bottom-cta-corner-left" aria-hidden="true">
               <svg viewBox="0 0 44 44" focusable="false" role="presentation">
-                <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+                <path d="M0 0H44V44C34.7 -16 0 30.3 0 0Z" />
               </svg>
             </div>
             <div className="shell-bottom-cta-corner shell-bottom-cta-corner-right" aria-hidden="true">

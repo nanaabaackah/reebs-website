@@ -1,6 +1,6 @@
 const SITE_NAME = "REEBS Party Themes";
 const SITE_URL = "https://www.reebspartythemes.com";
-const DEFAULT_IMAGE = `${SITE_URL}/imgs/banner.jpg`;
+const DEFAULT_IMAGE = `${SITE_URL}/imgs/promos/banner.jpg`;
 const DEFAULT_DESCRIPTION =
   "REEBS Party Themes provides party rentals, decor setup, and party supplies across Ghana with fast delivery and friendly support.";
 const DEFAULT_KEYWORDS =
@@ -16,7 +16,7 @@ const ORGANIZATION_SCHEMA = {
   "@id": `${SITE_URL}#organization`,
   name: SITE_NAME,
   url: SITE_URL,
-  logo: `${SITE_URL}/imgs/reebs_logo2.png`,
+  logo: `${SITE_URL}/imgs/brand/reebs_logo2.png`,
   sameAs: [
     "https://www.instagram.com/reebspartythemes_/",
     "https://www.facebook.com/reebspartythemes",

@@ -231,7 +231,7 @@
 }
 
 .page-hero {
-  --page-hero-image: url("/imgs/banner.jpg");
+  --page-hero-image: url("/imgs/promos/banner.jpg");
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -246,7 +246,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--page-hero-image, url("/imgs/banner.jpg")) no-repeat center / cover;
+  background: var(--page-hero-image, url("/imgs/promos/banner.jpg")) no-repeat center / cover;
   filter: saturate(1.08) contrast(1.04) brightness(0.8);
   transform: scale(1.03);
   pointer-events: none;
@@ -685,16 +685,16 @@
   bottom: -32px;
   width: min(38vw, 300px);
   aspect-ratio: 1 / 1;
-  background: url('/imgs/bees4.svg') no-repeat center / contain;
+  background: url('/imgs/elements/bees4.svg') no-repeat center / contain;
   opacity: 0.24;
 }
 
 .bees-swoop.alt::after {
-  background-image: url('/imgs/bees6.svg');
+  background-image: url('/imgs/elements/bees6.svg');
 }
 
 .bees-swoop.alt2::after {
-  background-image: url('/imgs/bees1.svg');
+  background-image: url('/imgs/elements/bees1.svg');
 }
 
 .shop-page {

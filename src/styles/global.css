@@ -175,7 +175,7 @@ body::after {
 body::before {
   top: -64px;
   right: -56px;
-  background-image: url("/imgs/bees.svg");
+  background-image: url("/imgs/elements/bees.svg");
   transform: translate3d(0, calc(var(--scroll-progress) * -46px), 0)
     rotate(calc(var(--scroll-progress) * 10deg));
 }
@@ -183,7 +183,7 @@ body::before {
 body::after {
   left: -66px;
   bottom: -90px;
-  background-image: url("/imgs/bees1.svg");
+  background-image: url("/imgs/elements/bees1.svg");
   transform: translate3d(0, calc(var(--scroll-progress) * 46px), 0)
     rotate(calc(var(--scroll-progress) * -9deg));
 }
@@ -273,7 +273,7 @@ body.admin-readonly::after {
 
 .shell-bottom-cta-corner {
   position: absolute;
-  bottom: -1px;
+  bottom: 4.5px;
   width: 44px;
   height: 44px;
   color: var(--shell-cta-bg);
@@ -293,13 +293,13 @@ body.admin-readonly::after {
 }
 
 .shell-bottom-cta-corner-left {
-  left: -35px;
-  transform: rotate(90deg);
+  left: -33px;
+  transform: rotate(95deg);
 }
 
 .shell-bottom-cta-corner-right {
-  right: -35px;
-  transform: rotate(-175deg);
+  right: -36px;
+  transform: rotate(-168deg);
 }
 
 .shell-bottom-cta.is-visible {
@@ -616,12 +616,45 @@ hr {
 
 .reveal-pending {
   opacity: 0;
-  transform: translate3d(0, 26px, 0);
+  will-change: opacity, transform, filter;
+}
+
+.reveal-pending.reveal-text {
+  transform: translate3d(0, 16px, 0);
+  filter: blur(2px);
+}
+
+.reveal-pending.reveal-block {
+  transform: translate3d(0, 20px, 0) scale(0.985);
+  filter: blur(1.5px);
+}
+
+.reveal-pending.reveal-media {
+  transform: translate3d(0, 22px, 0) scale(0.985);
+  filter: blur(1px) saturate(0.96);
+}
+
+.reveal-pending.reveal-media[data-reveal-side="left"] {
+  transform: translate3d(-20px, 22px, 0) scale(0.985);
+}
+
+.reveal-pending.reveal-media[data-reveal-side="right"] {
+  transform: translate3d(20px, 22px, 0) scale(0.985);
 }
 
 .is-revealed {
   opacity: 1;
   transform: translate3d(0, 0, 0);
+  filter: none;
+  will-change: auto;
+}
+
+.reveal-pending,
+.is-revealed {
+  transition:
+    opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 680ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 680ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .back-to-top {
@@ -770,6 +803,8 @@ hr {
     transition: none !important;
     opacity: 1;
     transform: none;
+    filter: none;
+    will-change: auto;
   }
 }
 

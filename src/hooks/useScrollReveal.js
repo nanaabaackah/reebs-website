@@ -1,28 +1,75 @@
 import { useEffect } from "react";
 
-const REVEAL_SELECTORS = [
-  "main section",
-  "main article",
-  "main .site-footer",
-  "main .glass-card",
-  "main .rent-card",
-  "main .shop-card",
-  "main .gallery-card",
-  "main .contact-card",
-  "main .faq-item",
-  "main .policy-card",
-  "main .policy-detail",
-  "main .booking-rental-card",
-  "main .cart-line",
-  "main .checkout-card",
-];
+const REVEAL_SELECTORS = {
+  block: [
+    "main form",
+    "main .hero-proof-row",
+    "main .hero-ctas",
+    "main .cta-actions",
+    "main .featured-more",
+    "main [class*='metrics'] > *",
+    "main [class*='rates-row'] > *",
+    ".site-footer .footer-promo",
+    ".site-footer .footer-brand",
+    ".site-footer .footer-column",
+    ".site-footer .footer-contact-list",
+    ".site-footer .footer-rates",
+    ".site-footer .footer-bottom",
+  ],
+  text: [
+    "main h1",
+    "main h2",
+    "main h3",
+    "main h4",
+    "main h5",
+    "main h6",
+    "main p",
+    "main li",
+    "main blockquote",
+    "main figcaption",
+    "main .section-kicker",
+    "main .kicker",
+    "main .hero-proof-row span",
+    "main .about-pill",
+    "main .cta-chip",
+    "main .why-stat",
+    ".site-footer h3",
+    ".site-footer p",
+    ".site-footer li",
+    ".site-footer .footer-link",
+    ".site-footer .footer-rate-pill",
+    ".site-footer .footer-hours",
+  ],
+  media: [
+    "main img",
+    "main picture",
+    "main video",
+    "main figure",
+    "main .hero-video-container",
+    "main [class*='media']",
+    "main [class*='image']",
+    "main [class*='photo']",
+    ".site-footer img",
+  ],
+};
+
+const REVEAL_KIND_PRIORITY = {
+  text: 1,
+  block: 2,
+  media: 3,
+};
 
 const isPublicPath = (pathname = "") => {
   const normalized = pathname.toLowerCase();
-  return !normalized.startsWith("/admin") && !normalized.startsWith("/login");
+  return !normalized.startsWith("/admin");
 };
 
-const shouldSkipElement = (element) => {
+const hasMeaningfulText = (element) =>
+  String(element?.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim().length > 0;
+
+const shouldSkipElement = (element, kind) => {
   if (!(element instanceof HTMLElement)) return true;
   if (element.closest("[data-no-reveal='true']")) return true;
   if (element.closest(".loader, .site-loader, .shop-skeleton, .cookie-banner")) return true;
@@ -30,80 +77,82 @@ const shouldSkipElement = (element) => {
   if (element.classList.contains("shell-bottom-cta")) return true;
   if (element.classList.contains("back-to-top")) return true;
   if (element.classList.contains("party-confetti")) return true;
+  if (element.classList.contains("app-icon")) return true;
+  if (element.classList.contains("sr-only")) return true;
+  if (element.matches("input, select, textarea, option, source, svg, path, use")) return true;
+  if (element.closest(".search-field")) return true;
+  if (kind === "text" && !hasMeaningfulText(element)) return true;
+  if (
+    kind === "text" &&
+    element.matches("li") &&
+    element.querySelector("h1, h2, h3, h4, h5, h6, p, figure, img, video")
+  ) {
+    return true;
+  }
+  if (kind === "text" && element.closest("nav")) return true;
+  if (
+    kind === "media" &&
+    element.matches("figure, picture") &&
+    element.querySelector("img, picture, video")
+  ) {
+    return true;
+  }
+  if (
+    kind === "media" &&
+    element.matches("figure") &&
+    !element.querySelector("img, picture, video")
+  ) {
+    return true;
+  }
+  if (element.offsetParent === null && !element.matches("video, .hero-video-container")) return true;
   return false;
 };
 
-const runRevealAnimation = (element, keyframes, options) => {
-  if (typeof element.animate !== "function") return;
-  const animation = element.animate(keyframes, {
-    fill: "both",
-    ...options,
+const sortTargets = (a, b) => {
+  if (a.element === b.element) return 0;
+  const position = a.element.compareDocumentPosition(b.element);
+  if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+  if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+  return 0;
+};
+
+const collectRevealTargets = () => {
+  const registry = new Map();
+
+  Object.entries(REVEAL_SELECTORS).forEach(([kind, selectors]) => {
+    document.querySelectorAll(selectors.join(", ")).forEach((element) => {
+      if (shouldSkipElement(element, kind)) return;
+
+      const existing = registry.get(element);
+      if (
+        !existing ||
+        REVEAL_KIND_PRIORITY[kind] > REVEAL_KIND_PRIORITY[existing.kind]
+      ) {
+        registry.set(element, { element, kind });
+      }
+    });
   });
 
-  if (typeof animation.addEventListener === "function") {
-    animation.addEventListener(
-      "finish",
-      () => {
-        animation.cancel();
-      },
-      { once: true }
-    );
-  }
-};
-
-const animateIn = (element, direction = "down") => {
-  const fromY = direction === "up" ? -32 : 32;
-  element.classList.remove("reveal-pending");
-  element.classList.add("is-revealed");
-  element.dataset.revealState = "visible";
-  runRevealAnimation(
-    element,
-    [
-      {
-        opacity: 0,
-        transform: `translate3d(0, ${fromY}px, 0) scale(0.94)`,
-      },
-      {
-        opacity: 1,
-        transform: "translate3d(0, 0, 0) scale(1)",
-      },
-    ],
-    {
-    duration: 620,
-    delay: Number(element.dataset.revealDelay || 0),
-      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-    }
-  );
-};
-
-const animateOut = (element, direction = "down") => {
-  const toY = direction === "up" ? 28 : -28;
-  element.classList.add("reveal-pending");
-  element.classList.remove("is-revealed");
-  element.dataset.revealState = "hidden";
-  runRevealAnimation(
-    element,
-    [
-      {
-        opacity: 1,
-        transform: "translate3d(0, 0, 0) scale(1)",
-      },
-      {
-        opacity: 0,
-        transform: `translate3d(0, ${toY}px, 0) scale(0.96)`,
-      },
-    ],
-    {
-    duration: 340,
-      easing: "cubic-bezier(0.55, 0.055, 0.675, 0.19)",
-    }
-  );
+  return Array.from(registry.values()).sort(sortTargets);
 };
 
 const markVisible = (element) => {
   element.classList.remove("reveal-pending");
   element.classList.add("is-revealed");
+  element.classList.remove("reveal-text", "reveal-media", "reveal-block");
   element.dataset.revealState = "visible";
+};
+
+const setRevealState = (element, nextState) => {
+  if (!(element instanceof HTMLElement)) return;
+  if (nextState === "visible") {
+    element.classList.remove("reveal-pending");
+    element.classList.add("is-revealed");
+  } else {
+    element.classList.add("reveal-pending");
+    element.classList.remove("is-revealed");
+  }
+  element.dataset.revealState = nextState;
 };
 
 export default function useScrollReveal(pathname, scrollContainerRef) {
@@ -116,33 +165,9 @@ export default function useScrollReveal(pathname, scrollContainerRef) {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const reduceData = window.matchMedia("(prefers-reduced-data: reduce)").matches;
     const lowPowerDevice = (window.navigator?.hardwareConcurrency || 8) <= 4;
-
-    const selector = REVEAL_SELECTORS.join(", ");
-    const targets = Array.from(document.querySelectorAll(selector)).filter(
-      (element) => !shouldSkipElement(element)
-    );
-
-    if (!targets.length) return undefined;
-
-    if (reduceMotion || reduceData || lowPowerDevice) {
-      targets.forEach(markVisible);
-      return undefined;
-    }
-
-    let scrollDirection = "down";
-    const readScrollTop = () =>
-      scrollHost === window
-        ? window.scrollY || window.pageYOffset || 0
-        : scrollHost.scrollTop;
-    let lastScrollTop = readScrollTop();
-    const updateDirection = () => {
-      const next = readScrollTop();
-      if (next > lastScrollTop) scrollDirection = "down";
-      else if (next < lastScrollTop) scrollDirection = "up";
-      lastScrollTop = next;
-    };
-
-    scrollHost.addEventListener("scroll", updateDirection, { passive: true });
+    const disableAnimatedReveal = reduceMotion || reduceData || lowPowerDevice;
+    const observedTargets = new WeakSet();
+    let mutationFrame = 0;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -150,38 +175,75 @@ export default function useScrollReveal(pathname, scrollContainerRef) {
           const target = entry.target;
           if (entry.isIntersecting) {
             if (target.dataset.revealState !== "visible") {
-              animateIn(target, scrollDirection);
+              setRevealState(target, "visible");
             }
             return;
           }
 
           if (target.dataset.revealState !== "hidden") {
-            animateOut(target, scrollDirection);
+            setRevealState(target, "hidden");
           }
         });
       },
       {
-        threshold: 0.16,
+        threshold: 0.12,
         root: observerRoot,
-        rootMargin: "-8% 0px -8% 0px",
+        rootMargin: "-4% 0px -12% 0px",
       }
     );
 
-    targets.forEach((element, index) => {
-      element.classList.add("reveal-pending");
-      element.classList.remove("is-revealed");
-      element.dataset.revealState = "hidden";
-      element.dataset.revealDelay = String((index % 8) * 22);
-      observer.observe(element);
+    const registerTargets = () => {
+      const targets = collectRevealTargets();
+      if (!targets.length) return;
+
+      targets.forEach(({ element, kind }) => {
+        if (observedTargets.has(element)) return;
+        observedTargets.add(element);
+
+        if (disableAnimatedReveal) {
+          markVisible(element);
+          return;
+        }
+
+        element.classList.remove("is-revealed");
+        element.classList.add("reveal-pending", `reveal-${kind}`);
+        element.dataset.revealKind = kind;
+        element.dataset.revealState = "hidden";
+        if (kind === "media") {
+          const rect = element.getBoundingClientRect();
+          const midpoint = window.innerWidth / 2;
+          element.dataset.revealSide =
+            rect.left + rect.width / 2 < midpoint ? "left" : "right";
+        }
+        observer.observe(element);
+      });
+    };
+
+    registerTargets();
+
+    if (disableAnimatedReveal) {
+      return () => {
+        observer.disconnect();
+      };
+    }
+
+    const mutationObserver =
+      typeof MutationObserver === "function"
+        ? new MutationObserver(() => {
+            if (mutationFrame) window.cancelAnimationFrame(mutationFrame);
+            mutationFrame = window.requestAnimationFrame(registerTargets);
+          })
+        : null;
+
+    mutationObserver?.observe(scrollHost === window ? document.body : scrollHost, {
+      childList: true,
+      subtree: true,
     });
 
     return () => {
       observer.disconnect();
-      scrollHost.removeEventListener("scroll", updateDirection);
-      targets.forEach((element) => {
-        delete element.dataset.revealDelay;
-        delete element.dataset.revealState;
-      });
+      mutationObserver?.disconnect();
+      if (mutationFrame) window.cancelAnimationFrame(mutationFrame);
     };
   }, [pathname, scrollContainerRef]);
 }

@@ -1,0 +1,116 @@
+@import "../../styles/public.css";
+
+.cart-hero {
+  --page-hero-image: url("/imgs/photos/IMG_5109.JPG");
+}
+
+.cart-shell > section:not(.page-hero) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.cart-shell > section:not(.page-hero)::before {
+  content: none;
+}
+
+
+.cart-shell .cart-hero {
+  border: 0;
+  box-shadow: none;
+  align-items: end;
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
+
+.cart-shell .cart-hero::after {
+  background:
+    radial-gradient(
+      92% 78% at 50% 86%,
+      rgba(var(--ink-rgb), 0.14) 0%,
+      rgba(var(--ink-rgb), 0.46) 62%,
+      rgba(var(--ink-rgb), 0.6) 100%
+    ),
+    linear-gradient(180deg, rgba(var(--ink-rgb), 0.12) 0%, rgba(var(--ink-rgb), 0.44) 90%);
+}
+
+.cart-shell .cart-hero-copy {
+  max-width: 40rem;
+  justify-items: start;
+  text-align: left;
+  margin-inline: 0;
+}
+
+.cart-shell .cart-hero-pills {
+  justify-content: flex-start;
+  gap: 0.8rem 1rem;
+}
+
+.cart-shell .cart-hero-kicker,
+.cart-shell .cart-hero-card .kicker {
+  color: rgba(var(--white-rgb), 0.8);
+}
+
+.cart-shell .cart-hero-pills .pill,
+.cart-shell .hero-card-perks span {
+  color: rgba(var(--white-rgb), 0.9);
+  text-shadow: 0 12px 24px rgba(var(--ink-rgb), 0.32);
+}
+
+.cart-shell .cart-hero-card strong {
+  color: var(--white);
+}
+
+.cart-shell .cart-hero-card,
+.cart-shell .cart-hero-pills .pill,
+.cart-shell .hero-card-perks span,
+.cart-shell .cart-empty-card,
+.cart-shell .cart-main,
+.cart-shell .cart-summary-card,
+.cart-shell .cart-line {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cart-shell .cart-hero-pills .pill {
+  padding: 0;
+  border-radius: 0;
+}
+
+.cart-shell .hero-card-perks {
+  align-items: start;
+}
+
+.cart-shell .hero-card-perks span {
+  padding: 0;
+  min-width: 0;
+}
+
+.cart-shell .cart-empty-card p,
+.cart-shell .summary-head .muted,
+.cart-shell .summary-row span,
+.cart-shell .label,
+.cart-shell .cart-line-stock,
+.cart-shell .cart-price-each {
+  color: rgba(var(--ink-rgb), 0.74);
+}
+
+.cart-shell .summary-continue {
+  color: rgba(var(--ink-rgb), 0.88);
+}
+
+
+@media (max-width: 760px) {
+  .cart-shell .cart-hero-copy {
+    justify-items: center;
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  .cart-shell .cart-hero-pills {
+    justify-content: center;
+  }
+}

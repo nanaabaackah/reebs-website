@@ -73,7 +73,7 @@ export const getCatalogItemImage = (item = {}) =>
   item.imageUrl ||
   item.image_url ||
   item.productImage ||
-  "/imgs/placeholder.png";
+  "/imgs/ui/placeholder.png";
 
 const getShopCategoryKey = (item = {}) => {
   const key = normalizeCategoryKey(getItemCategory(item));
