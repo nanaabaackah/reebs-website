@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import "./CartOverlay.css";
 import { Link, useLocation } from "react-router-dom";
 import { AppIcon } from "/src/components/Icon/Icon";
@@ -6,11 +6,32 @@ import { faMinus, faPlus, faShoppingCart, faTimes, faTrash } from "/src/icons/ic
 import { useCart } from "../CartContext/CartContext";
 import {
   getCatalogItemBackgroundStyle,
+  getCatalogItemDisplayName,
   getCatalogItemImage,
 } from "/src/utils/itemMediaBackgrounds";
+import {
+  getCartItemBillingQuantity,
+  getCartItemCategory,
+  getCartItemKey,
+  getCartItemLineTotal,
+  getCartItemMaxSelectableQuantity,
+  getCartItemPrice,
+  getCartItemQuantity,
+  getCartItemRateLabel,
+  isCartItemStockTracked,
+  splitCartItems,
+} from "/src/utils/cart";
 
-const getCartItemKey = (item = {}) =>
-  String(item.id ?? item.productId ?? item.slug ?? item.name ?? "").trim();
+const CART_SECTION_CONFIG = {
+  rentals: {
+    title: "Rental items",
+    note: "Rental timing and availability are confirmed with your booking.",
+  },
+  shop: {
+    title: "Shop items",
+    note: "Shop items stay separate from rentals for pickup and packing.",
+  },
+};
 
 function CartOverlay({ open, onClose }) {
   const location = useLocation();
@@ -27,17 +48,20 @@ function CartOverlay({ open, onClose }) {
   } = useCart();
   const isOpen = typeof open === "boolean" ? open : cartOpen;
   const handleClose = onClose || closeCart;
-  const getItemPrice = (item) =>
-    item.price ?? (typeof item.priceCents === "number" ? item.priceCents / 100 : 0);
-  const itemCount = cart.reduce((acc, item) => acc + item.cartQuantity, 0);
-  const subtotal = cart.reduce(
-    (acc, item) => acc + convertPrice(getItemPrice(item)) * item.cartQuantity,
-    0
+  const cartGroups = useMemo(() => splitCartItems(cart), [cart]);
+  const cartSections = useMemo(
+    () =>
+      [
+        { key: "rentals", items: cartGroups.rentals },
+        { key: "shop", items: cartGroups.shop },
+      ].filter((section) => section.items.length),
+    [cartGroups]
   );
-  const getItemQuantity = (item) => item.quantity ?? item.stock ?? 0;
-  const getItemCategory = (item) =>
-    item.specificCategory || item.specificcategory || item.type || null;
-  const subtotalLabel = formatCurrency(subtotal);
+  const itemCount = cart.reduce((acc, item) => acc + getCartItemBillingQuantity(item), 0);
+  const rentalCount = cartGroups.rentals.reduce((acc, item) => acc + getCartItemBillingQuantity(item), 0);
+  const shopCount = cartGroups.shop.reduce((acc, item) => acc + getCartItemBillingQuantity(item), 0);
+  const subtotal = cart.reduce((acc, item) => acc + getCartItemLineTotal(item), 0);
+  const subtotalLabel = formatCurrency(convertPrice(subtotal));
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -116,77 +140,106 @@ function CartOverlay({ open, onClose }) {
         ) : (
           <>
             <div className="cart-items">
-              {cart.map((item) => {
-                const available = getItemQuantity(item) - item.cartQuantity;
-                const itemKey = getCartItemKey(item);
-                const itemCategory = getItemCategory(item);
+              {cartSections.map((section) => {
+                const sectionConfig = CART_SECTION_CONFIG[section.key];
+                const sectionCount = section.items.reduce(
+                  (acc, item) => acc + getCartItemBillingQuantity(item),
+                  0
+                );
                 return (
-                  <div key={itemKey} className="cart-item">
-                    <div
-                      className="cart-item-media category-image-bg"
-                      style={getCatalogItemBackgroundStyle(item)}
-                    >
-                      <img
-                        className="cart-image"
-                        src={getCatalogItemImage(item)}
-                        alt={item.name}
-                      />
+                  <section className="cart-section" key={section.key} aria-labelledby={`cart-section-${section.key}`}>
+                    <div className="cart-section-head">
+                      <h3 id={`cart-section-${section.key}`}>{sectionConfig.title}</h3>
+                      <p className="cart-section-meta">
+                        {sectionCount} {sectionCount === 1 ? "item" : "items"}
+                      </p>
                     </div>
-                    <div className="cart-item-body">
-                      <div className="cart-item-top">
-                        <div>
-                          <p className="cart-item-name">{item.name}</p>
-                          {itemCategory && (
-                            <span className="cart-item-type">{itemCategory}</span>
-                          )}
-                        </div>
-                        <button
-                          className="cart-remove"
-                          type="button"
-                          onClick={() => removeFromCart(item)}
-                          aria-label="Remove item"
-                        >
-                          <AppIcon icon={faTrash} />
-                        </button>
-                      </div>
+                    <p className="cart-section-note">{sectionConfig.note}</p>
+                    <div className="cart-section-list">
+                      {section.items.map((item) => {
+                        const available = isCartItemStockTracked(item)
+                          ? getCartItemQuantity(item) - item.cartQuantity
+                          : null;
+                        const maxSelectable = getCartItemMaxSelectableQuantity(item);
+                        const itemKey = getCartItemKey(item);
+                        const itemCategory = getCartItemCategory(item);
+                        const itemDisplayName = getCatalogItemDisplayName(item, "item");
+                        const itemRateLabel = getCartItemRateLabel(item);
+                        return (
+                          <div key={itemKey} className="cart-item">
+                            <div
+                              className="cart-item-media category-image-bg"
+                              style={getCatalogItemBackgroundStyle(item)}
+                            >
+                              <img
+                                className="cart-image"
+                                src={getCatalogItemImage(item)}
+                                alt={itemDisplayName}
+                              />
+                            </div>
+                            <div className="cart-item-body">
+                              <div className="cart-item-top">
+                                <div>
+                                  <p className="cart-item-name">{itemDisplayName}</p>
+                                  {itemCategory ? (
+                                    <span className="cart-item-type">{itemCategory}</span>
+                                  ) : null}
+                                </div>
+                                <button
+                                  className="cart-remove"
+                                  type="button"
+                                  onClick={() => removeFromCart(item)}
+                                  aria-label={`Remove ${itemDisplayName}`}
+                                >
+                                  <AppIcon icon={faTrash} />
+                                </button>
+                              </div>
 
-                      <div className="cart-item-meta">
-                        <div className="cart-qty-controls">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              item.cartQuantity <= 1
-                                ? removeFromCart(item)
-                                : updateQuantity(item, -1)
-                            }
-                            aria-label="Decrease quantity"
-                          >
-                            <AppIcon icon={faMinus} />
-                          </button>
-                          <span>{item.cartQuantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item, 1)}
-                            disabled={item.cartQuantity >= getItemQuantity(item)}
-                            aria-label="Increase quantity"
-                          >
-                            <AppIcon icon={faPlus} />
-                          </button>
-                          <p className="cart-stock">
-                            {available > 0 ? `${available} left` : "Max stock"}
-                          </p>
-                        </div>
-                        <div className="cart-price">
-                          <span className="cart-price-each">
-                            {formatCurrency(convertPrice(getItemPrice(item)))} ea
-                          </span>
-                          <span className="cart-price-total">
-                            {formatCurrency(convertPrice(getItemPrice(item) * item.cartQuantity))}
-                          </span>
-                        </div>
-                      </div>
+                              <div className="cart-item-meta">
+                                <div className="cart-qty-controls">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      item.cartQuantity <= 1
+                                        ? removeFromCart(item)
+                                        : updateQuantity(item, -1)
+                                    }
+                                    aria-label={`Decrease ${itemDisplayName} quantity`}
+                                  >
+                                    <AppIcon icon={faMinus} />
+                                  </button>
+                                  <span>{item.cartQuantity}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateQuantity(item, 1)}
+                                    disabled={item.cartQuantity >= maxSelectable}
+                                    aria-label={`Increase ${itemDisplayName} quantity`}
+                                  >
+                                    <AppIcon icon={faPlus} />
+                                  </button>
+                                  <p className="cart-stock">
+                                    {available === null
+                                      ? "Guest count entered"
+                                      : available > 0
+                                        ? `${available} available`
+                                        : "Max reserved"}
+                                  </p>
+                                </div>
+                                <div className="cart-price">
+                                  <span className="cart-price-each">
+                                    {formatCurrency(convertPrice(getCartItemPrice(item)))} {itemRateLabel}
+                                  </span>
+                                  <span className="cart-price-total">
+                                    {formatCurrency(convertPrice(getCartItemLineTotal(item)))}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  </section>
                 );
               })}
             </div>
@@ -203,6 +256,22 @@ function CartOverlay({ open, onClose }) {
                   <strong>{subtotalLabel}</strong>
                 </div>
               </div>
+              {rentalCount > 0 || shopCount > 0 ? (
+                <div className="cart-footer-breakdown" aria-label="Cart breakdown">
+                  {rentalCount > 0 ? (
+                    <div className="cart-footer-row">
+                      <span>Rentals</span>
+                      <strong>{rentalCount}</strong>
+                    </div>
+                  ) : null}
+                  {shopCount > 0 ? (
+                    <div className="cart-footer-row">
+                      <span>Shop items</span>
+                      <strong>{shopCount}</strong>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <p className="cart-note">Taxes, pickup, and delivery timing are confirmed at checkout.</p>
               <Link to="/cart" className="checkout-btn cart-primary-action" onClick={handleClose}>
                 Go to cart

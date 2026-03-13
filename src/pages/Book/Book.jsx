@@ -14,8 +14,14 @@ import SiteLoader from "/src/components/SiteLoader/SiteLoader";
 import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
 import {
   getCatalogItemBackgroundStyle,
+  getCatalogItemDisplayName,
   getCatalogItemImage,
 } from "/src/utils/itemMediaBackgrounds";
+import {
+  clearExpiringDraft,
+  loadExpiringDraft,
+  saveExpiringDraft,
+} from "/src/utils/formDrafts";
 // Bouncy castles are loaded from the database
 
 const slugify = (value = "") =>
@@ -142,6 +148,7 @@ const formatDateShort = (value) => {
 
 const BUNDLE_MIN_ITEMS = 3;
 const BUNDLE_DISCOUNT_RATE = 0.1;
+const BOOKING_DRAFT_KEY = "bookingDraft";
 const EVENT_WINDOW_OPTIONS = [
   { value: "Morning setup (7am - 11am)", label: "Morning setup (7am – 11am)", endMinutes: 11 * 60 },
   { value: "Midday setup (11am - 2pm)", label: "Midday setup (11am – 2pm)", endMinutes: 14 * 60 },
@@ -188,34 +195,28 @@ function Book() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem("bookingDraft");
-    if (!raw) {
+    const draft = loadExpiringDraft(BOOKING_DRAFT_KEY);
+    if (!draft) {
       draftLoadedRef.current = true;
       return;
     }
-    try {
-      const draft = JSON.parse(raw);
-      if (draft?.formValues) {
-        setFormValues((prev) => ({ ...prev, ...draft.formValues }));
-      }
-      if (Array.isArray(draft?.selectedIds)) {
-        setSelectedIds(draft.selectedIds);
-      }
-      if (typeof draft?.itemsNote === "string") {
-        setItemsNote(draft.itemsNote);
-      }
-      if (typeof draft?.noteTouched === "boolean") {
-        setNoteTouched(draft.noteTouched);
-      }
-      if (Array.isArray(draft?.selectedIndoorGameIds)) {
-        setSelectedIndoorGameIds(draft.selectedIndoorGameIds);
-      }
-    } catch {
-      // ignore corrupted drafts
-    } finally {
-      draftLoadedRef.current = true;
+
+    if (draft?.formValues) {
+      setFormValues((prev) => ({ ...prev, ...draft.formValues }));
     }
+    if (Array.isArray(draft?.selectedIds)) {
+      setSelectedIds(draft.selectedIds);
+    }
+    if (typeof draft?.itemsNote === "string") {
+      setItemsNote(draft.itemsNote);
+    }
+    if (typeof draft?.noteTouched === "boolean") {
+      setNoteTouched(draft.noteTouched);
+    }
+    if (Array.isArray(draft?.selectedIndoorGameIds)) {
+      setSelectedIndoorGameIds(draft.selectedIndoorGameIds);
+    }
+    draftLoadedRef.current = true;
   }, []);
 
   useEffect(() => {
@@ -391,13 +392,12 @@ function Book() {
 
   useEffect(() => {
     if (!noteTouched) {
-      setItemsNote(selectedRentals.map((item) => item.name).join(", "));
+      setItemsNote(selectedRentals.map((item) => getCatalogItemDisplayName(item, "Rental item")).join(", "));
     }
   }, [selectedRentals, noteTouched]);
 
   useEffect(() => {
     if (!draftLoadedRef.current) return;
-    if (typeof window === "undefined") return;
     const draft = {
       formValues,
       selectedIds,
@@ -405,7 +405,7 @@ function Book() {
       noteTouched,
       selectedIndoorGameIds,
     };
-    window.localStorage.setItem("bookingDraft", JSON.stringify(draft));
+    saveExpiringDraft(BOOKING_DRAFT_KEY, draft);
   }, [formValues, selectedIds, itemsNote, noteTouched, selectedIndoorGameIds]);
 
   const toggleRental = (id) => {
@@ -452,10 +452,13 @@ function Book() {
 
   const itemsSummaryValue = [
     ...selectedRentals.map(
-      (item) => `${item.name} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`
+      (item) =>
+        `${getCatalogItemDisplayName(item, "Rental item")} (${item.specificCategory || item.specificcategory || item.category || "Rental"})`
     ),
     bundleSelected && selectedIndoorGames.length
-      ? `Board game bundle picks: ${selectedIndoorGames.map((item) => item.name).join(", ")}`
+      ? `Board game bundle picks: ${selectedIndoorGames
+          .map((item) => getCatalogItemDisplayName(item, "Rental item"))
+          .join(", ")}`
       : "",
   ]
     .filter(Boolean)
@@ -623,9 +626,7 @@ function Book() {
       setItemsNote("");
       setNoteTouched(false);
       setFormValues(defaultFormValues);
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("bookingDraft");
-      }
+      clearExpiringDraft(BOOKING_DRAFT_KEY);
       form.reset();
     } catch (err) {
       setSubmitError(err.message || "Unable to submit booking right now.");
@@ -990,7 +991,7 @@ function Book() {
                     <div className="booking-selected-chips">
                       {selectedRentals.map((item) => (
                         <span key={item.id} className="booking-chip">
-                          {item.name}
+                          {getCatalogItemDisplayName(item, "Rental item")}
                         </span>
                       ))}
                     </div>
@@ -1011,7 +1012,7 @@ function Book() {
                                     checked={checked}
                                     onChange={() => toggleIndoorGame(item.id)}
                                   />
-                                  <span>{item.name}</span>
+                                  <span>{getCatalogItemDisplayName(item, "Rental item")}</span>
                                 </label>
                               );
                             })}
@@ -1048,6 +1049,7 @@ function Book() {
                 {filteredRentals.map((item) => {
                   const selected = selectedIds.includes(item.id);
                   const detailSlug = item.detailSlug || rentalSlug(item);
+                  const itemDisplayName = getCatalogItemDisplayName(item, "Rental item");
                   return (
                     <div
                       key={item.id}
@@ -1057,12 +1059,12 @@ function Book() {
                         className="booking-rental-media category-image-bg"
                         style={getCatalogItemBackgroundStyle(item)}
                       >
-                        <img src={getCatalogItemImage(item)} alt={item.name} />
+                        <img src={getCatalogItemImage(item)} alt={itemDisplayName} />
                         <span className="rent-tag">{item.specificCategory || item.category}</span>
                       </div>
                       <div className="booking-rental-body">
                         <div className="booking-rental-head">
-                          <h4>{item.name}</h4>
+                          <h4>{itemDisplayName}</h4>
                         <p className="price">
                           {item.displayPrice || formatRentalPrice(item, convertPrice, formatCurrency, guestCountValue)}
                         </p>

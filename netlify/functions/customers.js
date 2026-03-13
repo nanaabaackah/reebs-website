@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 // Filename: customers.js
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 import { buildResponseHeaders, isCrossSiteBrowserRequest } from "./_shared/http.js";
@@ -33,7 +33,7 @@ export async function handler(event) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

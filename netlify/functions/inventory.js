@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 // Filename: inventory.js (Now serving ALL Products from the unified 'product' table)
 
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import {
   ensureAuditColumns,
@@ -19,6 +19,7 @@ import {
   parseVendorIdsInput,
   setProductVendorLinks,
 } from "./_shared/productVendors.js";
+import { resolveOrganizationId } from "./_shared/organization.js";
 import { requireUser } from "./_shared/userAuth.js";
 
 const getCorsHeaders = (event) => ({
@@ -237,7 +238,7 @@ export async function handler(event = {}) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL, // Railway Postgres URL
-    ssl: { rejectUnauthorized: false }, // needed for Railway
+    ssl: resolvePgSslConfig(),
   });
 
   try {
@@ -255,6 +256,56 @@ export async function handler(event = {}) {
       }
     }
     const authenticatedUser = await requireUser(client, event);
+    const requestedView = (event.queryStringParameters?.view || "").toLowerCase();
+
+    if (method === "GET" && !authenticatedUser) {
+      if (requestedView && requestedView !== "default") {
+        return {
+          statusCode: 403,
+          headers: getCorsHeaders(event),
+          body: JSON.stringify({ error: "Authentication is required for that inventory view." }),
+        };
+      }
+
+      const organizationId = await resolveOrganizationId(client, event, null);
+      const result = await client.query(
+        `SELECT
+           p.id,
+           p.sku,
+           p.name,
+           p.description,
+           p."sourceCategoryCode" AS "sourceCategoryCode",
+           p."specificCategory" AS "specificCategory",
+           p.rate,
+           p.page,
+           p.age,
+           (p."price"::numeric / 100) AS price,
+           p.stock AS quantity,
+           p."imageUrl" AS image,
+           p."imageUrl" AS "imageUrl",
+           p."isActive" AS status,
+           CASE
+             WHEN COALESCE(p."isActive", true) = false THEN 'Unavailable'
+             WHEN p.stock IS NOT NULL AND p.stock <= 0 THEN 'Unavailable'
+             ELSE 'Available'
+           END AS availability,
+           p."attendantsNeeded" AS "attendantsNeeded",
+           p.currency
+         FROM "product" p
+         WHERE p."organizationId" = $1
+           AND COALESCE(p."isDeleted", false) = false
+           AND COALESCE(p."isArchived", false) = false
+         ORDER BY p.id ASC`,
+        [organizationId]
+      );
+
+      return {
+        statusCode: 200,
+        headers: getCorsHeaders(event),
+        body: JSON.stringify(Array.isArray(result.rows) ? result.rows : []),
+      };
+    }
+
     if (!authenticatedUser) {
       return {
         statusCode: 401,
@@ -278,7 +329,7 @@ export async function handler(event = {}) {
     }
 
     if (method === "GET") {
-      const view = (event.queryStringParameters?.view || "").toLowerCase();
+      const view = requestedView;
       if (view === "edit-requests") {
         const authUser = authenticatedUser;
         if (!authUser || !canApproveInventoryEditRequests(authUser.role)) {

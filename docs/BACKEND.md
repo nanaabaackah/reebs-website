@@ -14,7 +14,7 @@ Key responsibilities:
 ## Runtime and Data Access
 - Functions live in `netlify/functions/*.js`.
 - Production base URL: `https://portal.reebspartythemes.com/.netlify/functions/*`.
-- Each function creates a `pg` Client with `DATABASE_URL` and `ssl: { rejectUnauthorized: false }`.
+- Each function now loads the shared runtime env helper, resolves `DATABASE_URL` from the active app environment, and uses `resolvePgSslConfig()` so local Postgres can run with `DATABASE_SSL_MODE="disable"` while hosted Postgres keeps SSL enabled.
 - `prisma/schema.prisma` is the source of truth for table definitions.
 - `prismaClient.js` configures Prisma with the Postgres adapter (used by scripts).
 

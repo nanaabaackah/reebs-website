@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import { getManagerFromEvent } from "./_shared/managerAuth.js";
 import { ensureManagerDeviceTable } from "./_shared/managerPush.js";
@@ -51,7 +51,7 @@ export async function handler(event = {}) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import "../../runtimeEnv.js";
 import { verifyPassword } from "../../utils/passwords.js";
 import { signManagerToken } from "./_shared/managerAuth.js";
 

@@ -3,6 +3,10 @@ import {
   getHomeRentalBackground,
   getHomeRentalImage,
 } from "/src/components/home/homeCatalog";
+import {
+  createCatalogCssImageStyle,
+  getCatalogItemDisplayName,
+} from "/src/utils/itemMediaBackgrounds";
 
 function HomeFeaturedRentalsSection({
   suggestedRentals,
@@ -22,6 +26,7 @@ function HomeFeaturedRentalsSection({
         <div className="featured-rental-panels" role="list" aria-label="Most booked rentals">
           {suggestedRentals.map((rental, index) => {
             const isActive = index === activeFeaturedRentalIndex;
+            const rentalDisplayName = getCatalogItemDisplayName(rental, "Popular rental");
             const rentalCategory =
               rental.specificCategory ||
               rental.specificcategory ||
@@ -38,15 +43,18 @@ function HomeFeaturedRentalsSection({
                 onFocus={() => setActiveFeaturedRentalIndex(index)}
                 onTouchStart={() => setActiveFeaturedRentalIndex(index)}
                 onClick={() => setActiveFeaturedRentalIndex(index)}
-                aria-label={`${rental.name}. ${rentalCategory}. View rental details.`}
+                aria-label={`${rentalDisplayName}. ${rentalCategory}. View rental details.`}
               >
                 <div
                   className="featured-rental-media-shell"
-                  style={{ "--rent-category-bg": `url("${getHomeRentalBackground(rental)}")` }}
+                  style={createCatalogCssImageStyle(
+                    getHomeRentalBackground(rental),
+                    "--rent-category-bg"
+                  )}
                 >
                   <img
                     src={getHomeRentalImage(rental)}
-                    alt={rental.name}
+                    alt={rentalDisplayName}
                     className="featured-rental-media"
                     loading="lazy"
                     decoding="async"
@@ -55,7 +63,7 @@ function HomeFeaturedRentalsSection({
                 <span className="featured-rental-overlay" aria-hidden="true" />
                 <div className="featured-rental-copy">
                   <p>{rentalCategory}</p>
-                  <h3>{rental.name}</h3>
+                  <h3>{rentalDisplayName}</h3>
                   <span className="featured-rental-cta">View rental →</span>
                 </div>
               </Link>

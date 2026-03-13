@@ -18,15 +18,17 @@ import {
   isOnlineShopItem,
   isTestCategoryItem,
 } from "/src/utils/frontendInventoryFilters";
-import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
+import { fetchInventoryWithCache, readInventoryCache } from "/src/utils/inventoryCache";
 import {
+  createCatalogCssImageStyle,
   getCatalogItemBackground,
+  getCatalogItemDisplayName,
   getCatalogItemImage,
 } from "/src/utils/itemMediaBackgrounds";
 
-const SHOP_CACHE_KEY = "reebs_shop_inventory_v2";
-const SHOP_CACHE_TTL = 5 * 60 * 1000;
 const SHOP_CATEGORY_PAGE_SIZE = 15;
+const MAX_SHOP_QUERY_LENGTH = 80;
+const SEARCH_DIACRITICS = /[\u0300-\u036f]/g;
 const slugify = (value = "") =>
   value
     .toString()
@@ -51,6 +53,21 @@ const normalizeCategoryKey = (value = "") =>
 
 const toTitleCase = (value = "") =>
   value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+const clampShopQuery = (value = "") =>
+  value
+    .toString()
+    .slice(0, MAX_SHOP_QUERY_LENGTH);
+
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFKD")
+    .replace(SEARCH_DIACRITICS, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 
 const normalizeShopCategoryLabel = (value = "") => {
   const key = normalizeCategoryKey(value);
@@ -82,33 +99,6 @@ const normalizeShopCategoryLabel = (value = "") => {
 
   return toTitleCase(key);
 };
-
-const readShopCache = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(SHOP_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.items || !parsed?.ts) return null;
-    if (Date.now() - parsed.ts > SHOP_CACHE_TTL) return null;
-    return parsed.items;
-  } catch {
-    return null;
-  }
-};
-
-const writeShopCache = (items) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(
-      SHOP_CACHE_KEY,
-      JSON.stringify({ ts: Date.now(), items })
-    );
-  } catch {
-    // ignore cache write failures
-  }
-};
-
 const getCategoryPageState = (items, currentPage = 0) => {
   const pageCount = Math.max(1, Math.ceil(items.length / SHOP_CATEGORY_PAGE_SIZE));
   const safePage = Math.min(currentPage, pageCount - 1);
@@ -134,12 +124,13 @@ function Shop() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [showSideNav, setShowSideNav] = useState(false);
   const [categoryPages, setCategoryPages] = useState({});
+  const [pendingScrollTarget, setPendingScrollTarget] = useState("");
   const gridRef = useRef(null);
   const [searchParams] = useSearchParams();
 
   const { isAuthenticated, authReady } = useAuth();
   const { convertPrice, formatCurrency, openCart } = useCart();
-  const routeSearchQuery = (searchParams.get("q") || "").trim();
+  const routeSearchQuery = clampShopQuery(searchParams.get("q") || "");
 
   const getPrice = useCallback(
     (item) =>
@@ -180,7 +171,7 @@ function Shop() {
 
   useEffect(() => {
     let isMounted = true;
-    const cached = readShopCache();
+    const cached = readInventoryCache();
     const hasCached = Array.isArray(cached);
     if (hasCached) {
       setInventory(cached.filter(isOnlineShopItem));
@@ -195,7 +186,6 @@ function Shop() {
         );
         if (!isMounted) return;
         setInventory(visibleProducts);
-        writeShopCache(visibleProducts);
         setLoading(false);
       })
       .catch((err) => {
@@ -225,7 +215,7 @@ function Shop() {
   }, [routeSearchQuery]);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    const id = setTimeout(() => setDebouncedQuery(clampShopQuery(searchQuery)), 200);
     return () => clearTimeout(id);
   }, [searchQuery]);
 
@@ -234,10 +224,34 @@ function Shop() {
     return inventory.filter((item) => !isTestCategoryItem(item));
   }, [inventory, isAuthenticated]);
 
+  const inventorySearchIndex = useMemo(
+    () =>
+      visibleInventory.map((item) => {
+        const categoryLabel = getCategoryLabel(item);
+        return {
+          item,
+          categoryLabel,
+          searchText: normalizeSearchText(
+            [
+              item?.name,
+              item?.description,
+              categoryLabel,
+              item?.sku,
+              item?.specificCategory,
+              item?.specificcategory,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          ),
+        };
+      }),
+    [visibleInventory, getCategoryLabel]
+  );
+
   const categories = useMemo(() => {
-    const uniq = new Set(visibleInventory.map((item) => getCategoryLabel(item)));
+    const uniq = new Set(inventorySearchIndex.map(({ categoryLabel }) => categoryLabel));
     return Array.from(uniq).sort((a, b) => a.localeCompare(b));
-  }, [visibleInventory, getCategoryLabel]);
+  }, [inventorySearchIndex]);
 
   useEffect(() => {
     if (categoryFilter !== "All" && !categories.includes(categoryFilter)) {
@@ -246,27 +260,16 @@ function Shop() {
   }, [categories, categoryFilter]);
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = debouncedQuery.trim().toLowerCase();
+    const normalizedQuery = normalizeSearchText(debouncedQuery);
 
-    const matchesQuery = (item) => {
-      if (!normalizedQuery) return true;
-      const name = (item?.name || "").toString().toLowerCase();
-      const description = (item?.description || "").toString().toLowerCase();
-      const category = getCategoryLabel(item).toString().toLowerCase();
-      return (
-        name.includes(normalizedQuery) ||
-        description.includes(normalizedQuery) ||
-        category.includes(normalizedQuery)
-      );
-    };
-
-    return [...visibleInventory]
+    return inventorySearchIndex
       .filter(
-        (item) =>
-          (categoryFilter === "All" || getCategoryLabel(item) === categoryFilter) &&
-          matchesQuery(item) &&
+        ({ item, categoryLabel, searchText }) =>
+          (categoryFilter === "All" || categoryLabel === categoryFilter) &&
+          (!normalizedQuery || searchText.includes(normalizedQuery)) &&
           (!inStockOnly || !isSoldOutItem(item))
       )
+      .map(({ item }) => item)
       .sort((a, b) => {
         const aHasImage = hasRealImage(a);
         const bHasImage = hasRealImage(b);
@@ -281,10 +284,9 @@ function Shop() {
   }, [
     categoryFilter,
     debouncedQuery,
-    getCategoryLabel,
     hasRealImage,
+    inventorySearchIndex,
     inStockOnly,
-    visibleInventory,
     isSoldOutItem,
   ]);
 
@@ -314,6 +316,7 @@ function Shop() {
     trimmedSearchQuery || categoryFilter !== "All" || inStockOnly
   );
   const noShopMatches = groupedProducts.length === 0;
+  const showCategoryNav = visibleNavItems.length > 0 && !noShopMatches;
   const emptyStateTitle =
     visibleInventory.length === 0
       ? "No shop items are available right now"
@@ -322,6 +325,28 @@ function Shop() {
     visibleInventory.length === 0
       ? "The catalog is temporarily empty. Check back soon or browse rentals while inventory updates."
       : "Try a broader keyword, switch categories, or clear your filters to bring items back.";
+  const emptyStateTips = hasActiveFilters
+    ? [
+        "Try a shorter or broader search term.",
+        categoryFilter !== "All"
+          ? "Switch back to All categories to widen the results."
+          : "Browse a different category to uncover more items.",
+        inStockOnly
+          ? 'Turn off "In stock only" to include upcoming restocks.'
+          : "Use the category filters to narrow the catalog more intentionally.",
+      ]
+    : [
+        "New shop items will appear here as soon as they are live.",
+        "Rentals stay available while the retail catalog is updating.",
+        "Contact us if you need a specific party or household item sourced quickly.",
+      ];
+
+  const resetShopFilters = useCallback(() => {
+    setSearchQuery("");
+    setDebouncedQuery("");
+    setCategoryFilter("All");
+    setInStockOnly(false);
+  }, []);
 
   useEffect(() => {
     setCategoryPages((prev) => {
@@ -406,12 +431,22 @@ function Shop() {
       const category = getCategoryLabel(item);
       const sectionId = slugify(category);
       setCategoryFilter(category);
-      window.setTimeout(() => {
-        handleSideNavItemClick(sectionId);
-      }, 80);
+      setPendingScrollTarget(sectionId);
     },
-    [getCategoryLabel, handleSideNavItemClick]
+    [getCategoryLabel]
   );
+
+  useEffect(() => {
+    if (!pendingScrollTarget) return undefined;
+    if (!groupedProducts.some(({ id }) => id === pendingScrollTarget)) return undefined;
+
+    const rafId = window.requestAnimationFrame(() => {
+      handleSideNavItemClick(pendingScrollTarget);
+      setPendingScrollTarget("");
+    });
+
+    return () => window.cancelAnimationFrame(rafId);
+  }, [groupedProducts, handleSideNavItemClick, pendingScrollTarget]);
 
   useEffect(() => {
     const scrollHost = document.querySelector(".main");
@@ -474,9 +509,10 @@ function Shop() {
 
   useEffect(() => {
     const gridEl = gridRef.current;
+    if (pendingScrollTarget) return;
     if (!gridEl || typeof gridEl.scrollIntoView !== "function") return;
     gridEl.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [categoryFilter]);
+  }, [categoryFilter, pendingScrollTarget]);
 
   if (loading || !authReady) {
     return (
@@ -524,26 +560,27 @@ function Shop() {
                 const imageSrc = getImage(item);
                 const hasImage = !isUnavailableImageSource(imageSrc);
                 const categoryBg = getShopCategoryBackground(item);
+                const itemDisplayName = getCatalogItemDisplayName(item, "Popular shop item");
                 return (
                   <button
                     type="button"
                     key={item.id || item.productId || `${item.name}-${index}`}
                     className={`shop-hero-panel ${isActive ? "is-active" : ""} ${hasImage ? "" : "is-missing-image"}`}
                     role="listitem"
-                    style={{ "--shop-panel-bg": `url("${categoryBg}")` }}
+                    style={createCatalogCssImageStyle(categoryBg, "--shop-panel-bg")}
                     onMouseEnter={() => setActiveHeroPanelIndex(index)}
                     onFocus={() => setActiveHeroPanelIndex(index)}
                     onClick={() => handleHeroPanelClick(item)}
                   >
                     <ShopImageAsset
                       src={imageSrc}
-                      alt={item.name || "Popular shop item"}
+                      alt={itemDisplayName}
                       fallbackClassName="shop-hero-image-fallback"
                     />
                     <span className="shop-hero-panel-overlay" aria-hidden="true" />
                     <div className="shop-hero-panel-copy">
                       <p>{getCategoryLabel(item)}</p>
-                      <h3>{item.name}</h3>
+                      <h3>{itemDisplayName}</h3>
                       <span className="shop-hero-panel-cta">Browse this category →</span>
                     </div>
                   </button>
@@ -554,14 +591,16 @@ function Shop() {
         </section>
 
         <section id="shop-catalog" className="shop-catalog-section">
-          <div className="shop-catalog-main">
-            <SideNav
-              items={visibleNavItems}
-              activeId={activeCategory}
-              label="Shop categories"
-              className={`glass-card shop-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
-              onItemClick={handleSideNavItemClick}
-            />
+          <div className={`shop-catalog-main ${showCategoryNav ? "" : "is-empty"}`}>
+            {showCategoryNav ? (
+              <SideNav
+                items={visibleNavItems}
+                activeId={activeCategory}
+                label="Shop categories"
+                className={`glass-card shop-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
+                onItemClick={handleSideNavItemClick}
+              />
+            ) : null}
 
             <div className="shop-catalog-content" ref={gridRef}>
               <div className="shop-toolbar glass-card">
@@ -592,13 +631,14 @@ function Shop() {
                     clearClassName="shop-search-clear"
                     placeholder="Search balloons, decor, tableware..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => setSearchQuery(clampShopQuery(e.target.value))}
                     onClear={() => {
                       setSearchQuery("");
                       setDebouncedQuery("");
                     }}
                     clearAriaLabel="Clear shop search"
                     aria-label="Search shop products"
+                    maxLength={MAX_SHOP_QUERY_LENGTH}
                   />
                 </div>
 
@@ -635,51 +675,94 @@ function Shop() {
 
               {noShopMatches && (
                 <div className="shop-empty glass-card" role="status" aria-live="polite">
-                  <div className="shop-empty-icon" aria-hidden="true">
-                    <AppIcon icon={faMagnifyingGlass} />
-                  </div>
-                  <div className="shop-empty-copy">
-                    <p className="shop-empty-kicker">
-                      {hasActiveFilters ? "No matches found" : "Inventory unavailable"}
-                    </p>
-                    <h2>{emptyStateTitle}</h2>
-                    <p>{emptyStateMessage}</p>
-                  </div>
-
-                  {hasActiveFilters ? (
-                    <div className="shop-empty-chips" aria-label="Active filters">
-                      {trimmedSearchQuery ? (
-                        <span className="shop-empty-chip">Search: {trimmedSearchQuery}</span>
-                      ) : null}
-                      {categoryFilter !== "All" ? (
-                        <span className="shop-empty-chip">Category: {categoryFilter}</span>
-                      ) : null}
-                      {inStockOnly ? (
-                        <span className="shop-empty-chip">In stock only</span>
-                      ) : null}
+                  <div className="shop-empty-hero">
+                    <div className="shop-empty-visual" aria-hidden="true">
+                      <span className="shop-empty-badge">
+                        {hasActiveFilters ? "0 matches" : "0 live items"}
+                      </span>
+                      <div className="shop-empty-icon">
+                        <AppIcon icon={faMagnifyingGlass} />
+                      </div>
+                      <p className="shop-empty-visual-copy">
+                        {hasActiveFilters
+                          ? "Nothing lines up with the current search and filter combination."
+                          : "The storefront is between product updates at the moment."}
+                      </p>
                     </div>
-                  ) : null}
 
-                  <div className="shop-empty-actions">
+                    <div className="shop-empty-copy">
+                      <p className="shop-empty-kicker">
+                        {hasActiveFilters ? "No matches found" : "Inventory unavailable"}
+                      </p>
+                      <h2>{emptyStateTitle}</h2>
+                      <p>{emptyStateMessage}</p>
+
+                      {hasActiveFilters ? (
+                        <div className="shop-empty-chips" aria-label="Active filters">
+                          {trimmedSearchQuery ? (
+                            <span className="shop-empty-chip">Search: {trimmedSearchQuery}</span>
+                          ) : null}
+                          {categoryFilter !== "All" ? (
+                            <span className="shop-empty-chip">Category: {categoryFilter}</span>
+                          ) : null}
+                          {inStockOnly ? (
+                            <span className="shop-empty-chip">In stock only</span>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <div className="shop-empty-actions">
+                        {hasActiveFilters ? (
+                          <button
+                            className="hero-btn hero-btn-primary"
+                            type="button"
+                            onClick={resetShopFilters}
+                          >
+                            Reset filters
+                          </button>
+                        ) : null}
+                        <Link
+                          className={`hero-btn ${hasActiveFilters ? "hero-btn-ghost" : "hero-btn-primary"}`}
+                          to="/rentals"
+                        >
+                          Browse rentals
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="shop-empty-next">
+                    <div className="shop-empty-panel">
+                      <p className="shop-empty-panel-label">Try next</p>
+                      <ul className="shop-empty-tips">
+                        {emptyStateTips.map((tip) => (
+                          <li key={tip}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+
                     {hasActiveFilters ? (
                       <button
-                        className="hero-btn hero-btn-primary"
                         type="button"
-                        onClick={() => {
-                          setSearchQuery("");
-                          setDebouncedQuery("");
-                          setCategoryFilter("All");
-                          setInStockOnly(false);
-                        }}
+                        className="shop-empty-card"
+                        onClick={resetShopFilters}
                       >
-                        Reset filters
+                        <span className="shop-empty-card-kicker">Quick reset</span>
+                        <strong>Show the full catalog again</strong>
+                        <span>Clear search, category, and stock filters in one step.</span>
                       </button>
-                    ) : null}
-                    <Link
-                      className={`hero-btn ${hasActiveFilters ? "hero-btn-ghost" : "hero-btn-primary"}`}
-                      to="/rentals"
-                    >
-                      Browse rentals
+                    ) : (
+                      <Link className="shop-empty-card" to="/rentals">
+                        <span className="shop-empty-card-kicker">Available now</span>
+                        <strong>Browse popular rentals</strong>
+                        <span>Keep planning with castles, games, tents, and event essentials.</span>
+                      </Link>
+                    )}
+
+                    <Link className="shop-empty-card" to="/contact">
+                      <span className="shop-empty-card-kicker">Need something specific?</span>
+                      <strong>Talk to us directly</strong>
+                      <span>We can help you source the right item or suggest a close match.</span>
                     </Link>
                   </div>
                 </div>
@@ -706,6 +789,7 @@ function Shop() {
                         const imageSrc = getImage(item);
                         const canPreviewImage = !isUnavailableImageSource(imageSrc);
                         const categoryBg = getShopCategoryBackground(item);
+                        const itemDisplayName = getCatalogItemDisplayName(item, "Shop item");
                         return (
                           <article
                             key={item.id || item.productId || `${item.name}-${category}`}
@@ -719,20 +803,20 @@ function Shop() {
                                 setLightboxImage({
                                   image: imageSrc,
                                   background: categoryBg,
-                                  name: item.name || "Shop item",
+                                  name: itemDisplayName,
                                 });
                               }}
                               aria-label={
                                 canPreviewImage
-                                  ? `Open image for ${item.name}`
-                                  : `Image not available for ${item.name}`
+                                  ? `Open image for ${itemDisplayName}`
+                                  : `Image not available for ${itemDisplayName}`
                               }
-                              style={{ "--shop-item-bg": `url("${categoryBg}")` }}
+                              style={createCatalogCssImageStyle(categoryBg, "--shop-item-bg")}
                               disabled={!canPreviewImage}
                             >
                               <ShopImageAsset
                                 src={imageSrc}
-                                alt={item.name}
+                                alt={itemDisplayName}
                                 fallbackClassName="shop-card-image-fallback"
                               />
                               {isSoldOut && <span className="shop-out-banner">Out of stock</span>}
@@ -745,7 +829,7 @@ function Shop() {
 
                             <div className="shop-details">
                               <span className="shop-pill">{getCategoryLabel(item)}</span>
-                              <h3>{item.name}</h3>
+                              <h3>{itemDisplayName}</h3>
                               <p className="price">
                                 {formatCurrency(convertPrice(getPrice(item) || 0))}
                               </p>
@@ -758,13 +842,13 @@ function Shop() {
                                 item={{ ...item, quantity: getQuantity(item) }}
                                 onCartChange={(action) => {
                                   if (action === "removed") {
-                                    setAnnounce(`${item.name} removed from cart`);
+                                    setAnnounce(`${itemDisplayName} removed from cart`);
                                   } else if (action === "decremented") {
-                                    setAnnounce(`${item.name} quantity reduced`);
+                                    setAnnounce(`${itemDisplayName} quantity reduced`);
                                   } else if (action === "incremented") {
-                                    setAnnounce(`${item.name} quantity increased`);
+                                    setAnnounce(`${itemDisplayName} quantity increased`);
                                   } else {
-                                    setAnnounce(`${item.name} added to cart`);
+                                    setAnnounce(`${itemDisplayName} added to cart`);
                                   }
                                   openCart();
                                 }}
@@ -823,26 +907,22 @@ function Shop() {
         <div
           className="lightbox shop-lightbox"
           onClick={() => setLightboxImage(null)}
-          style={{ "--shop-lightbox-bg": `url("${lightboxImage.background || lightboxImage.image}")` }}
+          style={createCatalogCssImageStyle(
+            lightboxImage.background || lightboxImage.image,
+            "--shop-lightbox-bg"
+          )}
         >
-          <span
+          <button
+            type="button"
             className="lightbox-close"
-            role="button"
-            tabIndex={0}
             aria-label="Close image preview"
             onClick={(event) => {
               event.stopPropagation();
               setLightboxImage(null);
             }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setLightboxImage(null);
-              }
-            }}
           >
             <AppIcon icon={faTimes} />
-          </span>
+          </button>
           <img
             src={lightboxImage.image}
             alt={`${lightboxImage.name} enlarged`}

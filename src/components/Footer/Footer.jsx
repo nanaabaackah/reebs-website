@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import "./Footer.css";
 import { Link, useNavigate } from 'react-router-dom';
 import { Call, Location, Sms } from 'iconsax-react';
@@ -11,6 +11,11 @@ import {
   IoLogoWhatsapp,
   IoArrowForward,
 } from 'react-icons/io5';
+import {
+  clearExpiringDraft,
+  loadExpiringDraft,
+  saveExpiringDraft,
+} from '/src/utils/formDrafts';
 
 const MENU_LINKS = [
   { to: '/', label: 'Home' },
@@ -36,10 +41,28 @@ const COMPANY_LINKS = [
   { to: '/terms-of-service', label: 'Terms of service' },
 ];
 
+const FOOTER_PROMO_DRAFT_KEY = "footerPromoDraft";
+
 function Footer() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const { currency, rates } = useCart();
+
+  useEffect(() => {
+    const savedDraft = loadExpiringDraft(FOOTER_PROMO_DRAFT_KEY);
+    if (typeof savedDraft === "string") {
+      setEmail(savedDraft);
+    }
+  }, []);
+
+  useEffect(() => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      clearExpiringDraft(FOOTER_PROMO_DRAFT_KEY);
+      return;
+    }
+    saveExpiringDraft(FOOTER_PROMO_DRAFT_KEY, normalizedEmail);
+  }, [email]);
 
   const rateFormatter = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
@@ -57,6 +80,7 @@ function Footer() {
   const handlePromoSubmit = (event) => {
     event.preventDefault();
     const leadEmail = email.trim();
+    clearExpiringDraft(FOOTER_PROMO_DRAFT_KEY);
     navigate('/contact', {
       state: leadEmail ? { leadEmail } : undefined,
     });
@@ -66,7 +90,11 @@ function Footer() {
     <footer className="site-footer" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">Site footer</h2>
 
-      <section className="footer-promo" aria-label="Plan your party with REEBS">
+      <section
+        className="footer-promo"
+        aria-label="Plan your party with REEBS"
+        data-no-reveal="true"
+      >
         <div className="footer-promo-content">
           <p className="footer-promo-kicker">Plan your next celebration</p>
           <h3>Bring your party vision to life with REEBS.</h3>

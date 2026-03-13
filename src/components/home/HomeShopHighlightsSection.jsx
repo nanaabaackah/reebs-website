@@ -6,6 +6,10 @@ import {
   getHomeShopPrice,
   hasHomeShopImage,
 } from "/src/components/home/homeCatalog";
+import {
+  createCatalogCssImageStyle,
+  getCatalogItemDisplayName,
+} from "/src/utils/itemMediaBackgrounds";
 
 function HomeShopHighlightsSection({
   popularShopItems,
@@ -31,6 +35,7 @@ function HomeShopHighlightsSection({
             const itemKey = item.id || item.productId || item.slug || `${item.name}-${index}`;
             const itemPrice = getHomeShopPrice(item);
             const itemCategory = getHomeShopCategory(item);
+            const itemDisplayName = getCatalogItemDisplayName(item, itemCategory || "Shop item");
             const hasImage = hasHomeShopImage(item);
             const isActive = index === activeShopPanelIndex;
 
@@ -40,17 +45,20 @@ function HomeShopHighlightsSection({
                 to={`/shop?q=${encodeURIComponent(item.name || itemCategory)}`}
                 className={`home-shop-panel ${isActive ? "is-active" : ""} ${hasImage ? "" : "is-missing-image"}`}
                 role="listitem"
-                style={{ "--home-shop-panel-bg": `url("${getHomeShopBackground(item)}")` }}
+                style={createCatalogCssImageStyle(
+                  getHomeShopBackground(item),
+                  "--home-shop-panel-bg"
+                )}
                 onMouseEnter={() => setActiveShopPanelIndex(index)}
                 onFocus={() => setActiveShopPanelIndex(index)}
                 onTouchStart={() => setActiveShopPanelIndex(index)}
                 onClick={() => setActiveShopPanelIndex(index)}
-                aria-label={`${item.name}. ${itemCategory}. View in shop.`}
+                aria-label={`${itemDisplayName}. ${itemCategory}. View in shop.`}
               >
                 {hasImage ? (
                   <img
                     src={getHomeShopImage(item)}
-                    alt={item.name}
+                    alt={itemDisplayName}
                     className="home-shop-panel-media"
                     loading="lazy"
                     decoding="async"
@@ -59,7 +67,7 @@ function HomeShopHighlightsSection({
                   <div
                     className="home-shop-image-fallback"
                     role="img"
-                    aria-label={`${item.name || itemCategory} image not available`}
+                    aria-label={`${itemDisplayName} image not available`}
                   >
                     <span>Image not available</span>
                   </div>
@@ -67,7 +75,7 @@ function HomeShopHighlightsSection({
                 <span className="home-shop-panel-overlay" aria-hidden="true" />
                 <div className="home-shop-panel-copy">
                   <p>{itemCategory}</p>
-                  <h3>{item.name}</h3>
+                  <h3>{itemDisplayName}</h3>
                   <span className="home-shop-panel-price">
                     {itemPrice ? formatCurrency(convertPrice(itemPrice)) : "Browse in shop"}
                   </span>

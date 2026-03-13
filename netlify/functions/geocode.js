@@ -2,7 +2,7 @@
 // Filename: geocode.js
 // Server-side geocoding proxy for map pins (avoids browser CORS issues).
 
-import "dotenv/config";
+import "../../runtimeEnv.js";
 import https from "https";
 
 const json = (statusCode, body, extraHeaders = {}) => ({

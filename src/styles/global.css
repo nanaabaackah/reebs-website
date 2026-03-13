@@ -5,6 +5,7 @@
 
 :root {
   color-scheme: light;
+  --app-vh: 100vh;
 
   /* Core palette */
   --back: #fe7733;
@@ -47,6 +48,7 @@
   --bg-surface: rgba(255, 255, 255, 0.8);
   --border: rgba(58, 63, 69, 0.18);
 
+  --glass-bg: rgba(255, 255, 255, 0.38);
   --glass-bg: color-mix(in srgb, white 38%, transparent);
   --glass-border: rgba(255, 255, 255, 0.86);
   --glass-blur: 14px;
@@ -100,6 +102,18 @@
   --z-fixed: 2500;
 }
 
+@supports (height: 100svh) {
+  :root {
+    --app-vh: 100svh;
+  }
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-vh: 100dvh;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --surface: rgba(248, 249, 251, 0.82);
@@ -107,6 +121,7 @@
     --bg-base: #eef1f5;
     --bg-surface: rgba(243, 245, 248, 0.82);
     --border: rgba(58, 63, 69, 0.22);
+    --glass-bg: rgba(243, 245, 248, 0.44);
     --glass-bg: color-mix(in srgb, #f3f5f8 44%, transparent);
     --glass-border: rgba(255, 255, 255, 0.72);
     --hero-gradient: linear-gradient(
@@ -201,7 +216,7 @@ body.admin-readonly::after {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: var(--app-vh);
 }
 
 .site-shell {
@@ -219,6 +234,7 @@ body.admin-readonly::after {
   inset: 0;
   border-radius: inherit;
   overflow-y: auto;
+  overflow-x: hidden;
   overflow-x: clip;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
@@ -249,9 +265,10 @@ body.admin-readonly::after {
 .shell-bottom-cta {
   --shell-cta-bg: #ffffff;
   --shell-cta-border: rgba(58, 63, 69, 0.18);
+  --shell-cta-corner-size: 42px;
   position: absolute;
   left: 50%;
-  bottom: -1%;
+  bottom: 0;
   transform: translate(-50%, 14px);
   display: inline-flex;
   align-items: center;
@@ -273,9 +290,9 @@ body.admin-readonly::after {
 
 .shell-bottom-cta-corner {
   position: absolute;
-  bottom: 4.5px;
-  width: 44px;
-  height: 44px;
+  bottom: 0;
+  width: var(--shell-cta-corner-size);
+  height: var(--shell-cta-corner-size);
   color: var(--shell-cta-bg);
   pointer-events: none;
   border: none;
@@ -293,13 +310,15 @@ body.admin-readonly::after {
 }
 
 .shell-bottom-cta-corner-left {
-  left: -33px;
-  transform: rotate(95deg);
+  left: calc(var(--shell-cta-corner-size) * -1 + 1px);
+  transform: scaleY(-1);
+  transform-origin: center;
 }
 
 .shell-bottom-cta-corner-right {
-  right: -36px;
-  transform: rotate(-168deg);
+  right: calc(var(--shell-cta-corner-size) * -1 + 1px);
+  transform: scale(-1, -1);
+  transform-origin: center;
 }
 
 .shell-bottom-cta.is-visible {
@@ -599,7 +618,7 @@ hr {
 }
 
 .loader {
-  min-height: 100vh;
+  min-height: var(--app-vh);
   display: grid;
   place-items: center;
 }

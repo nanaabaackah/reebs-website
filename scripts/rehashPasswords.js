@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import { resolvePgSslConfig } from "../runtimeEnv.js";
 import { Client } from "pg";
 import { hashPassword } from "../utils/passwords.js";
 
@@ -13,7 +13,7 @@ const shouldRehash = (password) => {
 const main = async () => {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

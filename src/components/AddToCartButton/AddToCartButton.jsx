@@ -3,11 +3,16 @@ import "./AddToCartButton.css";
 import { AppIcon } from "/src/components/Icon/Icon";
 import { faMinus, faPlus, faShoppingCart, faTrash } from "/src/icons/iconSet";
 import { useCart } from "/src/components/CartContext/CartContext";
+import { getCartItemKey, getCartItemMaxSelectableQuantity } from "/src/utils/cart";
+import { getCatalogItemDisplayName } from "/src/utils/itemMediaBackgrounds";
 
-const getCartItemKey = (entry = {}) =>
-  String(entry.id ?? entry.productId ?? entry.slug ?? entry.name ?? "").trim();
-
-function AddToCartButton({ item, onCartChange }) {
+function AddToCartButton({
+  item,
+  onCartChange,
+  variant = "default",
+  addLabel,
+  unavailableLabel,
+}) {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const itemKey = getCartItemKey(item);
   const inCart = cart.find((entry) => getCartItemKey(entry) === itemKey);
@@ -19,8 +24,13 @@ function AddToCartButton({ item, onCartChange }) {
         : "";
   const quantity = Number(item.quantity ?? item.stock ?? 0) || 0;
   const isUnavailable = statusValue === "unavailable";
-  const maxedOut = inCart && inCart.cartQuantity >= quantity;
+  const maxSelectable = getCartItemMaxSelectableQuantity(inCart || item);
+  const maxedOut = inCart && (maxSelectable <= 0 || inCart.cartQuantity >= maxSelectable);
   const canAdd = quantity > 0 && !isUnavailable;
+  const itemDisplayName = getCatalogItemDisplayName(item, "item");
+  const buttonLabel = canAdd
+    ? addLabel || "Add to cart"
+    : unavailableLabel || "Out of stock";
 
   const handleAdd = () => {
     if (canAdd) {
@@ -51,8 +61,9 @@ function AddToCartButton({ item, onCartChange }) {
   return inCart ? (
     <div
       className="shop-cart-controls"
+      data-variant={variant}
       data-maxed={maxedOut || undefined}
-      aria-label={`Update quantity for ${item.name || "item"}`}
+      aria-label={`Update quantity for ${itemDisplayName}`}
     >
       <button
         type="button"
@@ -81,13 +92,14 @@ function AddToCartButton({ item, onCartChange }) {
     <button
       type="button"
       className="shop-add-to-cart"
+      data-variant={variant}
       onClick={handleAdd}
       disabled={!canAdd}
       aria-live="polite"
       aria-label={canAdd ? "Add to cart" : "Out of stock"}
     >
       <AppIcon icon={faShoppingCart} />
-      <span>{canAdd ? "Add to cart" : "Out of stock"}</span>
+      <span>{buttonLabel}</span>
     </button>
   );
 }

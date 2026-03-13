@@ -8,6 +8,7 @@ import { AppIcon } from "/src/components/Icon/Icon";
 import { faMagnifyingGlass, faShoppingCart, faSignInAlt, faTimes, faUser } from "/src/icons/iconSet";
 import { fetchInventoryWithCache, splitInventory } from '/src/utils/inventoryCache';
 import { isOnlineShopItem, isTestCategoryItem } from '/src/utils/frontendInventoryFilters';
+import { getCatalogItemDisplayName } from '/src/utils/itemMediaBackgrounds';
 
 const NAV_LINKS = [
   { label: 'Home', path: '/' },
@@ -127,11 +128,12 @@ const buildInventorySearchEntries = (items = []) => {
     .map((item) => ({
       kind: 'rental',
       label: 'Rental',
-      title: item.name || 'Rental item',
+      title: getCatalogItemDisplayName(item, 'Rental item'),
       description: `Rental · ${getSearchItemCategory(item)}`,
       path: `/rentals?q=${encodeURIComponent(item.name || '')}`,
       keywords: [
         item.name,
+        getCatalogItemDisplayName(item, ''),
         item.description,
         item.specificCategory,
         item.specificcategory,
@@ -149,11 +151,12 @@ const buildInventorySearchEntries = (items = []) => {
     .map((item) => ({
       kind: 'shop',
       label: 'Shop Item',
-      title: item.name || 'Shop item',
+      title: getCatalogItemDisplayName(item, 'Shop item'),
       description: `Shop · ${getSearchItemCategory(item)}`,
       path: `/shop?q=${encodeURIComponent(item.name || '')}`,
       keywords: [
         item.name,
+        getCatalogItemDisplayName(item, ''),
         item.description,
         item.specificCategory,
         item.specificcategory,
@@ -595,12 +598,12 @@ const Navbar = ({ scrollContainerRef }) => {
       <nav className={`navbar navbar-desktop ${scrolled ? 'is-scrolled' : ''}`} aria-label="Main navigation">
         <div className="navbar-corner navbar-corner-left" aria-hidden="true">
           <svg viewBox="0 0 44 44" focusable="false" role="presentation">
-            <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+            <path d="M0 0H44V44C44 19.7 40 0 0 0Z" />
           </svg>
         </div>
         <div className="navbar-corner navbar-corner-right" aria-hidden="true">
           <svg viewBox="0 0 44 44" focusable="false" role="presentation">
-            <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+            <path d="M0 0H44V44C44 19.7 40 0 0 0Z" />
           </svg>
         </div>
 

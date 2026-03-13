@@ -19,7 +19,7 @@
 
 .home-hero {
   position: relative;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   width: 100%;
   display: grid;
   place-items: center;
@@ -270,7 +270,7 @@
 }
 
 .why-stats-shell {
-  padding-top: clamp(1.9rem, 3vw, 1.45rem);
+  padding-top: clamp(1.45rem, 3vw, 1.9rem);
   width: min(860px, 100%);
   overflow: hidden;
   animation: homeRise 1s ease 0.26s both;
@@ -420,8 +420,23 @@
   font-size: 0.92rem;
 }
 
+.home-flow--process .container{
+  padding: 0 2rem 5rem;
+}
+
+.home-services-stack {
+  --services-swirl-size: clamp(22rem, 22vw, 25rem);
+  --services-swirl-top-x: 0;
+  --services-swirl-top-y: -100%;
+  --services-swirl-bottom-x: 0;
+  --services-swirl-bottom-y: 5%;
+  position: relative;
+  isolation: isolate;
+  padding-bottom: calc(var(--services-swirl-size) * 0.22);
+}
+
 .home section.home-flow--services {
-  min-height: 100vh;
+  min-height: var(--app-vh);
   padding: 4rem;
   display: grid;
   align-items: center;
@@ -432,13 +447,19 @@
 .home section.home-flow--services::before {
   content: "";
   position: absolute;
-  top: clamp(-33.95rem, -15vw, -29.95rem);
-  right: 0;
-  width: clamp(12rem, 32vw, 30rem);
+  width: var(--services-swirl-size);
   aspect-ratio: 1 / 1;
   pointer-events: none;
   z-index: 0;
-  opacity: 1;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.home section.home-flow--services::before {
+  top: 0;
+  right: 0;
+  transform: translate(var(--services-swirl-top-x), var(--services-swirl-top-y));
   background: url("/imgs/elements/swirl_1.svg") center / contain no-repeat;
 }
 
@@ -447,15 +468,18 @@
   overflow: visible;
 }
 
-.home-flow--services .container::after {
-  content: "";
+.home-services-swirl-tail {
   position: absolute;
-  left: clamp(-7rem, -3.5vw, -2rem);
-  bottom: -38rem;
-  width: clamp(12rem, 32vw, 30rem);
+  left: 0;
+  bottom: -28%;
+  width: var(--services-swirl-size);
   aspect-ratio: 1 / 1;
   pointer-events: none;
-  z-index: -1;
+  z-index: 0;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  transform: translate(var(--services-swirl-bottom-x), var(--services-swirl-bottom-y));
   background: url("/imgs/elements/swirl_2.svg") center / contain no-repeat;
 }
 
@@ -1011,7 +1035,13 @@
 
   .hero-content {
     min-height: auto;
+    gap: 0.72rem;
     padding-bottom: clamp(4.1rem, 13vw, 6.1rem);
+  }
+
+  .hero-proof-row {
+    gap: 0.75rem 1.15rem;
+    font-size: clamp(0.78rem, 1.9vw, 1rem);
   }
 
   .why-list {
@@ -1031,18 +1061,8 @@
     grid-template-columns: 1fr;
   }
 
-  .home section.home-flow--services::before {
-    top: clamp(-10rem, -14vw, -6rem);
-    right: -1.5rem;
-    width: clamp(9rem, 24vw, 14rem);
-    opacity: 0.88;
-  }
-
-  .home-flow--services .container::after {
-    left: -1.8rem;
-    bottom: clamp(-8rem, -10vw, -4rem);
-    width: clamp(9rem, 24vw, 15rem);
-    opacity: 0.84;
+  .home-services-stack {
+    --services-swirl-size: clamp(8.5rem, 16vw, 13rem);
   }
 
   .service-row {
@@ -1115,18 +1135,13 @@
     border-radius: 16px;
   }
 
-  .home section.home-flow--services::before {
-    top: -4.2rem;
-    right: -1rem;
-    width: clamp(7.5rem, 30vw, 10rem);
-    opacity: 0.78;
+  .hero-content {
+    gap: 0.8rem;
+    padding-bottom: 1rem;
   }
 
-  .home-flow--services .container::after {
-    left: -0.9rem;
-    bottom: -3.4rem;
-    width: clamp(7rem, 30vw, 10rem);
-    opacity: 0.72;
+  .home-services-stack {
+    --services-swirl-size: clamp(7rem, 24vw, 9.5rem);
   }
 
   .hero-kicker {
@@ -1136,6 +1151,11 @@
 
   .hero-subtitle {
     font-size: 0.98rem;
+  }
+
+  .hero-title {
+    font-size: clamp(3rem, 13vw, 4rem);
+    line-height: 1;
   }
 
   .hero-lead-form {
@@ -1153,6 +1173,7 @@
   }
 
   .why-stats-shell {
+    padding-top: 0.95rem;
     border-radius: 16px;
   }
 
@@ -1187,6 +1208,34 @@
 
   .featured-rental-panel.is-active {
     grid-column: auto;
+  }
+
+  .home-shop-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .home-shop-panel,
+  .home-shop-panel.is-active {
+    min-height: clamp(220px, 58vw, 320px);
+  }
+
+  .home-shop-panel.is-active {
+    grid-column: auto;
+  }
+
+  .hero-proof-row {
+    position: static;
+    margin-top: 0.35rem;
+    width: 100%;
+    padding-inline: 0;
+    gap: 0.55rem 0.95rem;
+    font-size: 0.74rem;
+    justify-content: center;
+  }
+
+  .hero-proof-row span {
+    white-space: normal;
+    text-align: center;
   }
 
   .cta-actions {

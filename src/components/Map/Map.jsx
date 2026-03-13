@@ -11,6 +11,8 @@ const reebsLocation = {
   lng: -0.06104706927628969
 };
 
+const USER_MARKER_ICON_URL = "https://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+
 // White & Black Map Style
 const whiteBlackMapStyle = [
   {
@@ -70,30 +72,48 @@ function MapComponent() {
     []
   );
 
-  const getUserLocation = useCallback(() => {
-    if (navigator.geolocation) {
+  const focusLocation = useCallback(
+    (position, zoom = 14) => {
+      if (!position || !mapInstance) return;
+      mapInstance.panTo(position);
+      mapInstance.setZoom(zoom);
+    },
+    [mapInstance]
+  );
+
+  const getUserLocation = useCallback(
+    (focusOnSuccess = false) => {
+      if (!navigator.geolocation) {
+        setGeoStatus("unsupported");
+        return;
+      }
+
       setGeoStatus("requesting");
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setUserLocation({
+          const nextLocation = {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude
-          });
+          };
+          setUserLocation(nextLocation);
           setGeoStatus("granted");
+          if (focusOnSuccess) {
+            focusLocation(nextLocation);
+          }
         },
         (err) => {
           setGeoStatus("denied");
           console.warn("Geolocation error:", err.message);
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000
         }
       );
-    } else {
-      setGeoStatus("unsupported");
-    }
-  }, []);
-
-  useEffect(() => {
-    getUserLocation();
-  }, [getUserLocation]);
+    },
+    [focusLocation]
+  );
 
   useEffect(() => {
     const computeOpenStatus = () => {
@@ -112,25 +132,29 @@ function MapComponent() {
 
   const focusShop = () => {
     if (mapInstance) {
-      mapInstance.panTo(reebsLocation);
-      mapInstance.setZoom(14);
+      focusLocation(reebsLocation);
       setSelected({ name: "REEBS Party Themes", position: reebsLocation });
     }
   };
 
   const focusUser = () => {
-    if (userLocation && mapInstance) {
-      mapInstance.panTo(userLocation);
-      mapInstance.setZoom(14);
+    if (userLocation) {
+      focusLocation(userLocation);
+      return;
     }
+    getUserLocation(true);
   };
 
   const handleDirections = () => {
     const originParam = userLocation ? `&origin=${userLocation.lat},${userLocation.lng}` : "";
-    window.open(
+    const nextWindow = window.open(
       `https://www.google.com/maps/dir/?api=1${originParam}&destination=${reebsLocation.lat},${reebsLocation.lng}`,
-      "_blank"
+      "_blank",
+      "noopener,noreferrer"
     );
+    if (nextWindow) {
+      nextWindow.opener = null;
+    }
   };
 
   if (!apiKey) {
@@ -149,7 +173,7 @@ function MapComponent() {
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${reebsLocation.lat},${reebsLocation.lng}`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             Open in Google Maps
           </a>
@@ -174,7 +198,7 @@ function MapComponent() {
             <Marker
               position={userLocation}
               icon={{
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                url: USER_MARKER_ICON_URL
               }}
             />
           )}
@@ -215,7 +239,7 @@ function MapComponent() {
                   </button>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <a href="tel:+233244238419" style={secondaryActionButtonStyle}>Call</a>
-                    <a href="https://wa.me/233244238419" target="_blank" rel="noreferrer" style={secondaryActionButtonStyle}>WhatsApp</a>
+                    <a href="https://wa.me/233244238419" target="_blank" rel="noopener noreferrer" style={secondaryActionButtonStyle}>WhatsApp</a>
                   </div>
                 </div>
               </div>
@@ -242,14 +266,11 @@ function MapComponent() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                getUserLocation();
-                focusUser();
-              }}
-              disabled={geoStatus === "requesting"}
+              onClick={focusUser}
+              disabled={geoStatus === "requesting" || geoStatus === "unsupported"}
               style={controlButtonStyle}
             >
-              {geoStatus === "requesting" ? "Locating…" : "Use my location"}
+              {geoStatus === "requesting" ? "Locating..." : "Use my location"}
             </button>
           </div>
         </GoogleMap>

@@ -6,15 +6,19 @@ import SideNav from '/src/components/SideNav/SideNav';
 import AddToCartButton from "/src/components/AddToCartButton/AddToCartButton";
 import { useCart } from "/src/components/CartContext/CartContext";
 import { AppIcon } from '/src/components/Icon/Icon';
-import { faMagnifyingGlass } from '/src/icons/iconSet';
 import SearchField from "/src/components/SearchField/SearchField";
 import SiteLoader from '/src/components/SiteLoader/SiteLoader';
 import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
 import { getRentalCartItem } from '/src/utils/cartItems';
 import {
+    createCatalogCssImageStyle,
     getCatalogItemBackground,
+    getCatalogItemDisplayName,
     getCatalogItemImage,
 } from '/src/utils/itemMediaBackgrounds';
+
+const MAX_RENTALS_QUERY_LENGTH = 80;
+const SEARCH_DIACRITICS = /[\u0300-\u036f]/g;
 
 const slugify = (value = "") =>
     value
@@ -84,6 +88,21 @@ const rentalPath = (item) => {
     const pageSlug = slugify(item?.page?.split("/").filter(Boolean).pop() || "");
     return `/Rentals/${idSlug || nameSlug || pageSlug || ""}`;
 };
+
+const clampRentalsQuery = (value = "") =>
+    value
+        .toString()
+        .slice(0, MAX_RENTALS_QUERY_LENGTH);
+
+const normalizeSearchText = (value = "") =>
+    value
+        .toString()
+        .normalize("NFKD")
+        .replace(SEARCH_DIACRITICS, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
 
 const normalizeCategory = (value) => {
     const raw = (value || "").toString().trim();
@@ -187,15 +206,30 @@ const getPopularityScore = (item = {}) => {
     return score;
 };
 
+const getRentalIdentityKey = (item = {}) =>
+    item.productId || item.id || `${slugify(item.name)}-${getCategory(item)}`;
+
 const uniqueByKey = (items = []) => {
     const unique = new Map();
     for (const item of items) {
-        const key = item.productId || item.id || `${slugify(item.name)}-${getCategory(item)}`;
+        const key = getRentalIdentityKey(item);
         if (!unique.has(key)) {
             unique.set(key, item);
         }
     }
     return Array.from(unique.values());
+};
+
+const mergeRentalCollections = (...collections) => {
+    const merged = new Map();
+    for (const collection of collections) {
+        for (const item of collection || []) {
+            const key = getRentalIdentityKey(item);
+            const existing = merged.get(key);
+            merged.set(key, existing ? { ...existing, ...item } : item);
+        }
+    }
+    return Array.from(merged.values());
 };
 
 function Rentals() {
@@ -208,7 +242,7 @@ function Rentals() {
     const [activeHeroPanelIndex, setActiveHeroPanelIndex] = useState(0);
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const routeSearchQuery = (searchParams.get("q") || "").trim();
+    const routeSearchQuery = clampRentalsQuery(searchParams.get("q") || "");
 
     useEffect(() => {
         let isMounted = true;
@@ -301,9 +335,12 @@ function Rentals() {
                     price: typeof item.price === "number" ? item.price / 100 : item.price,
                 }));
 
-                const combined = [...rentalItems, ...machineItems, ...indoorItems, ...bouncyItems]
-                    .filter((item) => !isCategoryStub(item) && !shouldExcludeFromRentals(item));
-                const merged = uniqueByKey(combined);
+                const merged = mergeRentalCollections(
+                    rentalItems,
+                    machineItems,
+                    indoorItems,
+                    bouncyItems
+                ).filter((item) => !isCategoryStub(item) && !shouldExcludeFromRentals(item));
 
                 if (isMounted) {
                     setRentals(merged);
@@ -337,16 +374,53 @@ function Rentals() {
         }
     }, [routeSearchQuery]);
 
+    const rentalsSearchIndex = useMemo(
+        () =>
+            rentals.map((item) => {
+                const category = getCategory(item);
+                const featureText = Array.isArray(item?.features)
+                    ? item.features.filter(Boolean).join(" ")
+                    : item?.features;
+
+                return {
+                    item,
+                    category,
+                    searchText: normalizeSearchText(
+                        [
+                            item?.name,
+                            item?.description,
+                            item?.specificCategory,
+                            item?.specificcategory,
+                            item?.category,
+                            item?.bestFor,
+                            featureText,
+                            item?.recommendedAge,
+                            item?.recommendedage,
+                            item?.age,
+                            item?.rate,
+                            item?.notes,
+                            item?.output,
+                            item?.footprint,
+                            category,
+                        ]
+                            .filter(Boolean)
+                            .join(" ")
+                    ),
+                };
+            }),
+        [rentals]
+    );
+
     const filteredRentals = useMemo(() => {
-        const normalizedQuery = searchQuery.trim().toLowerCase();
-        return rentals.filter((item) => {
-            const category = getCategory(item);
-            const name = (item?.name || "").toString().toLowerCase();
-            const matchesSearch = !normalizedQuery || name.includes(normalizedQuery);
-            const matchesCategory = categoryFilter === "All" || category === categoryFilter;
-            return matchesSearch && matchesCategory;
-        });
-    }, [rentals, searchQuery, categoryFilter]);
+        const normalizedQuery = normalizeSearchText(searchQuery);
+        return rentalsSearchIndex
+            .filter(({ category, searchText }) => {
+                const matchesSearch = !normalizedQuery || searchText.includes(normalizedQuery);
+                const matchesCategory = categoryFilter === "All" || category === categoryFilter;
+                return matchesSearch && matchesCategory;
+            })
+            .map(({ item }) => item);
+    }, [rentalsSearchIndex, searchQuery, categoryFilter]);
 
     const groupedRentals = useMemo(() => {
         const grouped = new Map();
@@ -368,6 +442,11 @@ function Rentals() {
         () => groupedRentals.map(({ category, id }) => ({ id, label: category })),
         [groupedRentals]
     );
+    const showCategoryNav = visibleNavItems.length > 0;
+    const resetRentalFilters = useCallback(() => {
+        setSearchQuery("");
+        setCategoryFilter("All");
+    }, []);
 
     // Track active section
     const [activeCategory, setActiveCategory] = useState(null);
@@ -572,26 +651,30 @@ function Rentals() {
                             <div className="rentals-popular-panels" role="list" aria-label="Most popular rentals">
                                 {popularHeroRentals.map((item, index) => {
                                     const isActive = index === activeHeroPanelIndex;
+                                    const itemDisplayName = getCatalogItemDisplayName(item, "Popular rental item");
                                     return (
                                         <Link
                                             key={item.productId || item.id || `${item.name}-${index}`}
                                             className={`rentals-popular-panel ${isActive ? "is-active" : ""}`}
                                             to={rentalPath(item)}
                                             role="listitem"
-                                            style={{ "--rent-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                                            style={createCatalogCssImageStyle(
+                                                getRentalCategoryBackground(item),
+                                                "--rent-category-bg"
+                                            )}
                                             onMouseEnter={() => setActiveHeroPanelIndex(index)}
                                             onFocus={() => setActiveHeroPanelIndex(index)}
                                         >
                                             <img
                                                 src={getRentalImage(item)}
-                                                alt={item.name || "Popular rental item"}
+                                                alt={itemDisplayName}
                                                 loading="lazy"
                                                 decoding="async"
                                             />
                                             <span className="rentals-popular-overlay" aria-hidden="true" />
                                             <div className="rentals-popular-copy">
                                                 <p>{getCategory(item)}</p>
-                                                <h3>{item.name}</h3>
+                                                <h3>{itemDisplayName}</h3>
                                                 <span className="rentals-popular-cta">View rental →</span>
                                             </div>
                                         </Link>
@@ -602,14 +685,16 @@ function Rentals() {
                     </section>
 
                     <section id='rentals-grid' className="rentals-section">
-                        <div className="rentals-main">
-                            <SideNav
-                                items={visibleNavItems}
-                                activeId={activeCategory}
-                                label="Rental categories"
-                                className={`glass-card rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
-                                onItemClick={handleSideNavItemClick}
-                            />
+                        <div className={`rentals-main ${showCategoryNav ? "" : "is-empty"}`}>
+                            {showCategoryNav ? (
+                                <SideNav
+                                    items={visibleNavItems}
+                                    activeId={activeCategory}
+                                    label="Rental categories"
+                                    className={`glass-card rentals-side-menu ${showSideNav ? "is-visible" : "is-hidden"}`}
+                                    onItemClick={handleSideNavItemClick}
+                                />
+                            ) : null}
 
                                 <div className="rentals-main-content">
                                     <div className="rentals-toolbar glass-card">
@@ -629,9 +714,10 @@ function Rentals() {
                                             inputClassName="search-bar"
                                             placeholder="Search bounce houses, decor, concessions..."
                                             value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onChange={(e) => setSearchQuery(clampRentalsQuery(e.target.value))}
                                             onClear={() => setSearchQuery("")}
                                             aria-label="Search rental items"
+                                            maxLength={MAX_RENTALS_QUERY_LENGTH}
                                         />
                                     </div>
 
@@ -651,12 +737,9 @@ function Rentals() {
                                 </div>
 
                                 {groupedRentals.length === 0 && (
-                                    <div className="rentals-empty glass-card">
+                                    <div className="rentals-empty glass-card" role="status" aria-live="polite">
                                         <p>No rentals match that search. Try a different keyword or reset filters.</p>
-                                        <button className="hero-btn hero-btn-link" type="button" onClick={() => {
-                                            setSearchQuery("");
-                                            setCategoryFilter("All");
-                                        }}>
+                                        <button className="hero-btn hero-btn-link" type="button" onClick={resetRentalFilters}>
                                             Reset filters
                                         </button>
                                     </div>
@@ -673,6 +756,7 @@ function Rentals() {
                                         <div className='rent-grid'>
                                             {items.map((item) => {
                                                 const cartItem = getRentalCartItem(item);
+                                                const itemDisplayName = getCatalogItemDisplayName(item, "Rental item");
 
                                                 return (
                                                 <div
@@ -680,7 +764,7 @@ function Rentals() {
                                                     className={`rent-card ${getCategory(item) === "Indoor Games" ? "rent-card-indoor" : ""}`}
                                                     role="button"
                                                     tabIndex={0}
-                                                    aria-label={`View ${item.name}`}
+                                                    aria-label={`View ${itemDisplayName}`}
                                                     onClick={() => navigate(rentalPath(item))}
                                                     onKeyDown={(e) => {
                                                         if (e.key === "Enter" || e.key === " ") {
@@ -691,20 +775,23 @@ function Rentals() {
                                                 >
                                                     <div
                                                         className={`rent-image rent-card-bg ${getCategory(item) === "Indoor Games" ? "rent-image-indoor" : ""}`}
-                                                        style={{ "--rent-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                                                        style={createCatalogCssImageStyle(
+                                                            getRentalCategoryBackground(item),
+                                                            "--rent-category-bg"
+                                                        )}
                                                     >
                                                         <img
                                                             src={getRentalImage(item)}
-                                                            alt={item.name}
+                                                            alt={itemDisplayName}
                                                             loading="lazy"
                                                             decoding="async"
                                                         />
-                                                        <span className="rent-tag">{item.specificCategory || item.specificcategory || item.category}</span>
+                                                        <span className="rent-tag">{getCategory(item)}</span>
                                                     </div>
                                                     <span className="rent-card-arrow" aria-hidden="true">→</span>
                                                     <div className="rent-details">
                                                         <div className="rent-title-row">
-                                                            <h3>{item.name}</h3>
+                                                            <h3>{itemDisplayName}</h3>
                                                         </div>
                                                         <div className="rent-card-meta">
                                                             <p className="price">{getRentalPriceLabel(item)}</p>
@@ -722,7 +809,12 @@ function Rentals() {
                                                                     onClick={(event) => event.stopPropagation()}
                                                                     onKeyDown={(event) => event.stopPropagation()}
                                                                 >
-                                                                    <AddToCartButton item={cartItem} />
+                                                                    <AddToCartButton
+                                                                        item={cartItem}
+                                                                        variant="compact"
+                                                                        addLabel="Add"
+                                                                        unavailableLabel="Unavailable"
+                                                                    />
                                                                 </div>
                                                             ) : null}
                                                         </div>

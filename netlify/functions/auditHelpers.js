@@ -1,6 +1,6 @@
 // Shared helpers for tagging records with a user and keeping audit columns in sync.
 // These run lightweight defensive DDL so existing databases can be backfilled in-place.
-import "dotenv/config";
+import "../../runtimeEnv.js";
 
 const addColumnStatements = [
   `ALTER TABLE "order" ADD COLUMN IF NOT EXISTS "assignedUserId" INTEGER`,

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import "./Contact.css";
 import CookieBanner from '/src/components/CookieBanner/CookieBanner';
 import Map from '/src/components/Map/Map';
@@ -7,7 +7,6 @@ import ContactForm from '/src/components/ContactForm/ContactForm';
 import { AppIcon } from '/src/components/Icon/Icon';
 import { faEnvelope, faPhone, faLocationDot, faClock } from '/src/icons/iconSet';
 import { faWhatsapp, faFacebook, faInstagram, faTiktok } from '/src/icons/iconSet';
-import { fetchInventoryWithCache } from '/src/utils/inventoryCache';
 
 const CONTACT_PHONE_LABEL = '+233 24 423 8419';
 const CONTACT_PHONE_HREF = 'tel:+233244238419';
@@ -50,16 +49,6 @@ const CONTACT_SOCIAL_LINKS = [
 ];
 
 function Contact() {
-    useEffect(() => {
-        const controller = new AbortController();
-        fetchInventoryWithCache({ signal: controller.signal }).catch((err) => {
-            if (err?.name !== "AbortError") {
-                console.error("Error warming inventory cache:", err);
-            }
-        });
-        return () => controller.abort();
-    }, []);
-
     return (
         <div className="contact-page">
             <a href="#main" className="skip-link">Skip to main content</a>
@@ -87,7 +76,7 @@ function Contact() {
                                     className="hero-btn hero-btn-ghost"
                                     href={CONTACT_WHATSAPP_URL}
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                 >
                                     <AppIcon icon={faWhatsapp} /> WhatsApp
                                 </a>
@@ -115,7 +104,7 @@ function Contact() {
                                 Stop by in person, grab balloons, or chat through ideas with our team.
                             </p>
                             <div className="contact-card-actions">
-                                <a href={CONTACT_MAP_URL} target="_blank" rel="noreferrer" className="hero-btn hero-btn-ghost">
+                                <a href={CONTACT_MAP_URL} target="_blank" rel="noopener noreferrer" className="hero-btn hero-btn-ghost">
                                     Open in Maps
                                 </a>
                                 <a href={`mailto:${CONTACT_EMAIL}`} className="hero-btn hero-btn-link">
@@ -141,12 +130,12 @@ function Contact() {
                     <article className="contact-card">
                         <div className="contact-card-header">
                             <AppIcon icon={faPhone} />
-                            <h3>Talk to a someone</h3>
+                            <h3>Talk to someone</h3>
                         </div>
                         <p>Need quick answers on availability or pricing? Call or text and we’ll confirm details right away.</p>
                         <div className="contact-links">
                             <a href={CONTACT_PHONE_HREF}>{CONTACT_PHONE_LABEL}</a>
-                            <a href={CONTACT_WHATSAPP_URL} target="_blank" rel="noreferrer">Message on WhatsApp</a>
+                            <a href={CONTACT_WHATSAPP_URL} target="_blank" rel="noopener noreferrer">Message on WhatsApp</a>
                         </div>
                     </article>
                     <article className="contact-card">
@@ -172,7 +161,7 @@ function Contact() {
                                     href={item.href}
                                     key={item.label}
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                     aria-label={item.label}
                                 >
                                     <AppIcon icon={item.icon} />

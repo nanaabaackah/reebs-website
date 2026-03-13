@@ -16,6 +16,11 @@ import {
   DEFAULT_TEMPLATE_CONFIG,
   useTemplateConfig,
 } from "../../context/TemplateConfigContext";
+import {
+  clearExpiringDraft,
+  loadExpiringDraft,
+  saveExpiringDraft,
+} from "../../utils/formDrafts";
 import HomeFeaturedRentalsSection from "../../components/home/HomeFeaturedRentalsSection";
 import HomeHeroSection from "../../components/home/HomeHeroSection";
 import HomeMomentsSection from "../../components/home/HomeMomentsSection";
@@ -31,6 +36,8 @@ import {
   isHomeShopSoldOut,
 } from "../../components/home/homeCatalog";
 import { SERVICE_START_YEAR } from "../../components/home/homeContent";
+
+const HOME_HERO_DRAFT_KEY = "homeHeroLeadDraft";
 
 function Home() {
   const navigate = useNavigate();
@@ -49,6 +56,13 @@ function Home() {
   const templateSettings = { ...DEFAULT_TEMPLATE_CONFIG, ...config };
   const yearsServing = Math.max(0, new Date().getFullYear() - SERVICE_START_YEAR);
   const yearsServingBadge = Math.floor(yearsServing / 5) * 5;
+
+  useEffect(() => {
+    const savedDraft = loadExpiringDraft(HOME_HERO_DRAFT_KEY);
+    if (typeof savedDraft === "string") {
+      setHeroEmail(savedDraft);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,9 +183,20 @@ function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    const normalizedEmail = heroEmail.trim();
+    if (!normalizedEmail) {
+      clearExpiringDraft(HOME_HERO_DRAFT_KEY);
+      return;
+    }
+    saveExpiringDraft(HOME_HERO_DRAFT_KEY, normalizedEmail);
+  }, [heroEmail]);
+
   const handleHeroLeadSubmit = (event) => {
     event.preventDefault();
-    navigate("/Contact", { state: { leadEmail: heroEmail.trim() } });
+    const leadEmail = heroEmail.trim();
+    clearExpiringDraft(HOME_HERO_DRAFT_KEY);
+    navigate("/contact", { state: leadEmail ? { leadEmail } : undefined });
   };
 
   return (

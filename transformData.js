@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import "./runtimeEnv.js";
 // Import the configured client from your local file
 import { prisma } from "./prismaClient.js"; 
 

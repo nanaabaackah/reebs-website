@@ -2,21 +2,21 @@
 
 .login-page {
   width: 100%;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   display: block;
 }
 
 .login-shell {
   width: 100%;
   margin-inline: auto;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   display: grid;
   align-items: stretch;
 }
 
 .login-stage {
   --page-hero-image: var(--login-stage-image);
-  min-height: 100vh;
+  min-height: var(--app-vh);
 }
 
 .staff-login-page .login-stage::before {
@@ -30,7 +30,7 @@
 .login-stage-inner {
   width: min(1120px, 100%);
   margin-inline: auto;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   padding: clamp(2rem, 4vw, 4.5rem);
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 440px);

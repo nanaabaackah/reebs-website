@@ -17,7 +17,9 @@ import { applySeo } from "/src/utils/seo";
 import { fetchInventoryWithCache } from "/src/utils/inventoryCache";
 import { getRentalCartItem } from "/src/utils/cartItems";
 import {
+  createCatalogCssImageStyle,
   getCatalogItemBackground,
+  getCatalogItemDisplayName,
   getCatalogItemImage,
 } from "/src/utils/itemMediaBackgrounds";
 // Bouncy castle variants are fetched from the database
@@ -260,6 +262,10 @@ useEffect(() => {
     () => (displayRental ? getRentalCategoryBackground(displayRental) : ""),
     [displayRental]
   );
+  const displayRentalName = useMemo(
+    () => getCatalogItemDisplayName(displayRental, "Rental item"),
+    [displayRental]
+  );
   const requiresBouncySelection = isBouncyCastleRental(rental) && !selectedBouncyType;
   const cartReadyRental = useMemo(
     () => (displayRental && !requiresBouncySelection ? getRentalCartItem(displayRental) : null),
@@ -350,12 +356,12 @@ useEffect(() => {
         "@context": "https://schema.org",
         "@type": "Product",
         "@id": `${canonicalUrl}#product`,
-        name: displayRental.name,
+        name: displayRentalName,
         image:
           displayRental.image ||
           displayRental.imageUrl ||
           "https://www.reebspartythemes.com/imgs/ui/placeholder.png",
-        description: `Book ${displayRental.name} from REEBS Party Themes with setup and delivery options in Ghana.`,
+        description: `Book ${displayRentalName} from REEBS Party Themes with setup and delivery options in Ghana.`,
         brand: {
           "@type": "Brand",
           name: "REEBS Party Themes",
@@ -370,8 +376,8 @@ useEffect(() => {
 
       applySeo({
         pathname: normalizedPath,
-        title: `${displayRental.name} Rental | REEBS Party Themes`,
-        description: `View details, pricing, and booking options for ${displayRental.name} at REEBS Party Themes.`,
+        title: `${displayRentalName} Rental | REEBS Party Themes`,
+        description: `View details, pricing, and booking options for ${displayRentalName} at REEBS Party Themes.`,
         type: "product",
         schema: [productSchema],
       });
@@ -466,7 +472,7 @@ useEffect(() => {
       <div
         className="rental-detail rentals-page rental-item-page"
         id="main"
-        style={{ "--rental-detail-bg": `url("${rentalBackgroundImage}")` }}
+        style={createCatalogCssImageStyle(rentalBackgroundImage, "--rental-detail-bg")}
       >
         <main className="rental-detail-shell rental-item-shell page-shell">
           <nav className="rental-breadcrumb rental-item-breadcrumb">
@@ -479,19 +485,19 @@ useEffect(() => {
             </button>
             <Link to="/Rentals">Rentals</Link>
             <AppIcon icon={faArrowRightLong} aria-hidden="true" />
-            <span>{displayRental.name}</span>
+            <span>{displayRentalName}</span>
           </nav>
 
           <section className="rental-hero-card glass-card rental-item-hero page-hero">
             <div
               className="rental-hero-media category-image-bg"
-              style={{ "--item-category-bg": `url("${rentalBackgroundImage}")` }}
+              style={createCatalogCssImageStyle(rentalBackgroundImage, "--item-category-bg")}
             >
-              <img src={getCatalogItemImage(displayRental)} alt={displayRental.name} />
+              <img src={getCatalogItemImage(displayRental)} alt={displayRentalName} />
               <span className="rent-tag">{displayRental.specificCategory || displayRental.specificcategory || displayRental.category}</span>
             </div>
             <div className="rental-hero-copy page-hero-copy">
-              <h1 className="page-hero-title">{displayRental.name}</h1>
+              <h1 className="page-hero-title">{displayRentalName}</h1>
               <p className="rental-sub">
                 Styled the REEBS way — delivered, set up, and ready for fun.
               </p>
@@ -610,27 +616,33 @@ useEffect(() => {
                 <p className="rent-meta">We’ll suggest add-ons when more rentals are available.</p>
               )}
               <div className="rental-similar-grid">
-                {similar.map((item) => (
-                  <Link
-                    key={getRentalIdentity(item)}
-                    to={rentalPath(item)}
-                    className="rental-similar-card glass-card"
-                  >
-                    <div
-                      className="rental-similar-media category-image-bg"
-                      style={{ "--item-category-bg": `url("${getRentalCategoryBackground(item)}")` }}
+                {similar.map((item) => {
+                  const itemDisplayName = getCatalogItemDisplayName(item, "Rental item");
+                  return (
+                    <Link
+                      key={getRentalIdentity(item)}
+                      to={rentalPath(item)}
+                      className="rental-similar-card glass-card"
                     >
-                      <img src={getCatalogItemImage(item)} alt={item.name} />
-                    </div>
-                    <div>
-                      <span className="rent-meta">{item.specificCategory || item.specificcategory || item.category}</span>
-                      <h3>{item.name}</h3>
-                      <p className="price">
-                        {formatRentalPrice(item, convertPrice, formatCurrency)}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
+                      <div
+                        className="rental-similar-media category-image-bg"
+                        style={createCatalogCssImageStyle(
+                          getRentalCategoryBackground(item),
+                          "--item-category-bg"
+                        )}
+                      >
+                        <img src={getCatalogItemImage(item)} alt={itemDisplayName} />
+                      </div>
+                      <div>
+                        <span className="rent-meta">{item.specificCategory || item.specificcategory || item.category}</span>
+                        <h3>{itemDisplayName}</h3>
+                        <p className="price">
+                          {formatRentalPrice(item, convertPrice, formatCurrency)}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </section>

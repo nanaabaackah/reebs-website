@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 // Filename: orderStats.js
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
 
@@ -24,7 +24,7 @@ const ensureProductStatusColumns = async (client) => {
 export async function handler() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

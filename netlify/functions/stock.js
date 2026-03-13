@@ -3,7 +3,7 @@
 // Filename: stock.js
 // Netlify Function to manage stock movements (Stock In/Out) and update Product stock.
 
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import {
   ensureAuditColumns,
@@ -81,7 +81,7 @@ export async function handler(event) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

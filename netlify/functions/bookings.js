@@ -2,7 +2,7 @@
 // Filename: bookings.js
 // Booking API for admin bookings page (Booking + BookingItem)
 
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import {
   ensureAuditColumns,
@@ -14,6 +14,15 @@ import { notifyManager } from "./_shared/managerPush.js";
 import { sendManagerWhatsApp } from "./_shared/whatsapp.js";
 import { resolveOrganizationId } from "./_shared/organization.js";
 import { requireUser } from "./_shared/userAuth.js";
+import {
+  getNotificationCatchallEmail,
+  sendNotificationEmail,
+} from "./_shared/email.js";
+import { sanitizePaymentPreference } from "./_shared/paymentInstructions.js";
+import {
+  buildCustomerBookingEmailText,
+  buildInternalBookingEmailText,
+} from "./_shared/transactionEmailTemplates.js";
 
 const formatAmount = (value) => {
   const parsed = Number(value);
@@ -166,7 +175,7 @@ export async function handler(event) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {
@@ -266,6 +275,7 @@ export async function handler(event) {
     const assignedUserIdRaw = data.assignedUserId;
     const hasAssignedUser = Object.prototype.hasOwnProperty.call(data, "assignedUserId");
     const items = Array.isArray(data.items) ? data.items : [];
+    const paymentPreference = sanitizePaymentPreference(data.paymentPreference);
     let discountValue = Number.isFinite(Number(data.discount)) ? Math.max(0, Number(data.discount)) : 0;
     const applyBundleDiscount = data.applyBundleDiscount === true;
 
@@ -528,6 +538,8 @@ export async function handler(event) {
            b.id,
            b."customerId",
            c.name AS "customerName",
+           c.email AS "customerEmail",
+           c.phone AS "customerPhone",
            b."eventDate",
            b."startTime",
            b."endTime",
@@ -582,6 +594,33 @@ export async function handler(event) {
         } catch (err) {
           console.warn("Manager push failed:", err?.message || err);
         }
+        const createdBooking = {
+          ...payload.rows[0],
+          paymentPreference,
+        };
+        const emailResults = await Promise.allSettled(
+          [
+            sendNotificationEmail({
+              to: getNotificationCatchallEmail(),
+              subject: `New booking #${createdBooking?.id || ""}`.trim(),
+              text: buildInternalBookingEmailText(createdBooking),
+            }),
+            createdBooking?.customerEmail
+              ? sendNotificationEmail({
+                  to: createdBooking.customerEmail,
+                  subject: `We received your booking #${createdBooking?.id || ""}`.trim(),
+                  text: buildCustomerBookingEmailText(createdBooking, {
+                    supportEmail: getNotificationCatchallEmail(),
+                  }),
+                })
+              : null,
+          ].filter(Boolean)
+        );
+        emailResults.forEach((result) => {
+          if (result.status === "rejected") {
+            console.warn("Booking email failed:", result.reason?.message || result.reason);
+          }
+        });
       }
 
       return json(event.httpMethod === "POST" ? 201 : 200, payload.rows[0]);

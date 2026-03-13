@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import { resolvePgSslConfig } from "./runtimeEnv.js";
 import fs from "fs";
 import Papa from "papaparse";
 import { Client } from "pg";
@@ -65,7 +65,7 @@ const toDate = (value) => {
 async function importTimesheets() {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import "dotenv/config";
+import { resolvePgSslConfig } from "../runtimeEnv.js";
 import { Client } from "pg";
 
 const quoteIdent = (value) => `"${String(value).replace(/"/g, '""')}"`;
@@ -7,7 +7,7 @@ const quoteIdent = (value) => `"${String(value).replace(/"/g, '""')}"`;
 const main = async () => {
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {

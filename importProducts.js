@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 // Filename: importProducts.js
-import 'dotenv/config';
+import "./runtimeEnv.js";
 import { prisma } from "./prismaClient.js"; 
 import fs from 'fs';
 import path from 'path';

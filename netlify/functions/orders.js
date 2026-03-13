@@ -1,11 +1,11 @@
 /* eslint-disable no-undef */
 // Filename: orders.js
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import { ensureAuditColumns, backfillAuditDefaults } from "./auditHelpers.js";
 import { getDeliveryFeeDetails } from "./_shared/deliveryFee.js";
+import { sanitizeOrderLogisticsDetails } from "./_shared/orderDetails.js";
 import { requireUser } from "./_shared/userAuth.js";
-import { normalizeOrdersToPickup } from "./_shared/normalizeOrders.js";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -23,7 +23,14 @@ const normalizeStatus = (status) =>
 const isCancelledStatus = (status) =>
   ["cancelled", "canceled"].includes(normalizeStatus(status));
 
-const safeJson = (value) => (value && typeof value === "object" ? value : null);
+const normalizeDeliveryMethod = (value) => {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return "";
+  if (normalized.includes("delivery")) return "delivery";
+  if (normalized.includes("pickup")) return "pickup";
+  return "";
+};
 
 const withDeliveryTotals = (order) => {
   const baseTotal = Number(order?.total || 0);
@@ -71,7 +78,7 @@ export async function handler(event = {}) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {
@@ -91,7 +98,6 @@ export async function handler(event = {}) {
       }
     }
     const organizationId = authUser.organizationId;
-    await normalizeOrdersToPickup(client, organizationId);
     await backfillAuditDefaults(client, authUser.id, organizationId);
 
     if (event.httpMethod === "GET") {
@@ -160,22 +166,36 @@ export async function handler(event = {}) {
     const hasStatusField = Object.prototype.hasOwnProperty.call(payload, "status");
     const nextStatus = normalizeStatus(payload.status);
     const wantsStatusUpdate = hasStatusField && Boolean(nextStatus);
-    const hasPickupField =
-      Object.prototype.hasOwnProperty.call(payload, "pickupDetails") ||
-      Object.prototype.hasOwnProperty.call(payload, "deliveryDetails");
-    const normalizedPickup = safeJson(payload.pickupDetails ?? payload.deliveryDetails);
+    const hasPickupField = Object.prototype.hasOwnProperty.call(payload, "pickupDetails");
+    const hasDeliveryField = Object.prototype.hasOwnProperty.call(payload, "deliveryDetails");
+    const hasMethodField = Object.prototype.hasOwnProperty.call(payload, "deliveryMethod");
+    const hasLogisticsField = hasPickupField || hasDeliveryField || hasMethodField;
+    const normalizedPickup = sanitizeOrderLogisticsDetails(payload.pickupDetails);
+    const normalizedDelivery = sanitizeOrderLogisticsDetails(payload.deliveryDetails);
+    const normalizedMethod = hasMethodField ? normalizeDeliveryMethod(payload.deliveryMethod) : "";
     if (!Number.isFinite(orderId)) {
       return json(400, { error: "Order id is required." });
     }
     if (hasStatusField && !nextStatus) {
       return json(400, { error: "Status is required." });
     }
-    if (!wantsStatusUpdate && !hasPickupField) {
+    if (!wantsStatusUpdate && !hasLogisticsField) {
       return json(400, { error: "No updates provided." });
+    }
+    if (hasMethodField && !normalizedMethod) {
+      return json(400, { error: "Invalid delivery method." });
+    }
+    if (hasPickupField && payload.pickupDetails && !normalizedPickup) {
+      return json(400, { error: "Invalid pickup details." });
+    }
+    if (hasDeliveryField && payload.deliveryDetails && !normalizedDelivery) {
+      return json(400, { error: "Invalid delivery details." });
     }
 
     const orderRes = await client.query(
-      `SELECT id, status, "orderNumber" FROM "order" WHERE id = $1 AND "organizationId" = $2`,
+      `SELECT id, status, "orderNumber", "deliveryMethod", "deliveryDetails", "pickupDetails"
+       FROM "order"
+       WHERE id = $1 AND "organizationId" = $2`,
       [orderId, organizationId]
     );
     if (orderRes.rowCount === 0) {
@@ -184,11 +204,26 @@ export async function handler(event = {}) {
 
     const currentStatus = normalizeStatus(orderRes.rows[0].status);
     const orderNumber = orderRes.rows[0].orderNumber;
+    const currentMethod =
+      normalizeDeliveryMethod(orderRes.rows[0].deliveryMethod) || "pickup";
+    const effectiveMethod = normalizedMethod || currentMethod;
+    const nextPickupDetails = hasPickupField
+      ? normalizedPickup
+      : orderRes.rows[0].pickupDetails;
+    const nextDeliveryDetails = hasDeliveryField
+      ? normalizedDelivery
+      : orderRes.rows[0].deliveryDetails;
     const cancelling = wantsStatusUpdate ? isCancelledStatus(nextStatus) : false;
     const alreadyCancelled = isCancelledStatus(currentStatus);
 
     if (wantsStatusUpdate && alreadyCancelled && !cancelling) {
       return json(400, { error: "Cannot reopen a cancelled order. Create a new order instead." });
+    }
+    if (hasLogisticsField && effectiveMethod === "pickup" && !nextPickupDetails) {
+      return json(400, { error: "Pickup details are required for pickup orders." });
+    }
+    if (hasLogisticsField && effectiveMethod === "delivery" && !nextDeliveryDetails) {
+      return json(400, { error: "Delivery details are required for delivery orders." });
     }
 
     const actor = {
@@ -205,11 +240,18 @@ export async function handler(event = {}) {
         params.push(nextStatus);
         updateParts.push(`status = $${params.length}`);
       }
-      if (hasPickupField) {
-        params.push(normalizedPickup);
-        updateParts.push(`"deliveryMethod" = 'pickup'`);
-        updateParts.push(`"pickupDetails" = $${params.length}`);
-        updateParts.push(`"deliveryDetails" = NULL`);
+      if (hasLogisticsField) {
+        params.push(effectiveMethod);
+        updateParts.push(`"deliveryMethod" = $${params.length}`);
+        if (effectiveMethod === "delivery") {
+          params.push(nextDeliveryDetails);
+          updateParts.push(`"deliveryDetails" = $${params.length}`);
+          updateParts.push(`"pickupDetails" = NULL`);
+        } else {
+          params.push(nextPickupDetails);
+          updateParts.push(`"pickupDetails" = $${params.length}`);
+          updateParts.push(`"deliveryDetails" = NULL`);
+        }
       }
       params.push(actor.userId);
       updateParts.push(`"updatedByUserId" = $${params.length}`);

@@ -22,7 +22,6 @@ function HomeHeroSection({
           autoPlay
           loop
           muted
-          defaultMuted
           playsInline
           preload="auto"
           disablePictureInPicture

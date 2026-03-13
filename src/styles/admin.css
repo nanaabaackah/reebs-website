@@ -50,7 +50,7 @@ h1{
 }
 
 .admin-page {
-  min-height: 100vh;
+  min-height: var(--app-vh);
   padding: 32px 16px 56px;
   font-family: "Inter", "Segoe UI", sans-serif;
 }
@@ -2341,6 +2341,7 @@ button.admin-kpi-card {
     radial-gradient(circle at 78% 12%, rgba(255, 122, 89, 0.22), transparent 42%),
     rgba(6, 10, 18, 0.82);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .admin-new-item-panel {

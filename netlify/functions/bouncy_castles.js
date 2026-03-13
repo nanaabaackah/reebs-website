@@ -1,10 +1,31 @@
 /* eslint-disable no-undef */
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
+import { buildResponseHeaders, json } from "./_shared/http.js";
 
-export async function handler() {
+const responseHeaders = (event) => ({
+  "Content-Type": "application/json",
+  ...buildResponseHeaders(event, {
+    methods: "GET,OPTIONS",
+  }),
+});
+
+export async function handler(event) {
+  if (event?.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: responseHeaders(event),
+      body: "",
+    };
+  }
+
+  if (event?.httpMethod && event.httpMethod !== "GET") {
+    return json(event, 405, { error: "Method not allowed" }, { methods: "GET,OPTIONS" });
+  }
+
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {
@@ -36,25 +57,22 @@ export async function handler() {
         b.images
       FROM "bouncy_castles" b
       LEFT JOIN "product" p ON p.id = b."productId"
+      ORDER BY b.id ASC
     `);
-
-    await client.end();
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: responseHeaders(event),
       body: JSON.stringify(result.rows),
     };
   } catch (err) {
     console.error("❌ Database error:", err);
-
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Failed to fetch bouncy castles" }),
-    };
+    return json(event, 500, { error: "Failed to fetch bouncy castles" }, { methods: "GET,OPTIONS" });
+  } finally {
+    try {
+      await client.end();
+    } catch {
+      // ignore close errors
+    }
   }
 }

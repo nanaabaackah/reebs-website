@@ -3,7 +3,8 @@
   z-index: 2200;
   isolation: isolate;
   --navbar-rail-height: clamp(0.95rem, 2.2vw, 0.35rem);
-  --navbar-offset-top: 1.5%;
+  --navbar-offset-top: clamp(0.65rem, 1.2vw, 1rem);
+  --navbar-corner-size: 42px;
 }
 
 .navbar {
@@ -49,9 +50,9 @@
 
 .navbar-corner {
   position: absolute;
-  top: -1px;
-  width: 44px;
-  height: 44px;
+  top: 4px;
+  width: var(--navbar-corner-size);
+  height: var(--navbar-corner-size);
   color: var(--navbar-bg);
   pointer-events: none;
   border: none;
@@ -69,14 +70,14 @@
 }
 
 .navbar-corner-left {
-  left: -37px;
-  top: -4px;
-  transform: rotate(369deg);
+  left: calc(var(--navbar-corner-size) * -1 + 1px);
+  transform: none;
 }
 
 .navbar-corner-right {
-  right: -36px;
-  transform: rotate(276deg);
+  right: calc(var(--navbar-corner-size) * -1 + 1px);
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 .navbar-col {

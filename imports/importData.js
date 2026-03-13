@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 // Filename: importData.js (FINAL VERSION with 'specificCategory' column)
 
-import 'dotenv/config';
+import "../runtimeEnv.js";
 import { prisma } from "../prismaClient.js"; 
 import fs from 'fs';
 import path from 'path';

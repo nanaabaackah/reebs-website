@@ -192,23 +192,65 @@
   justify-content: flex-end;
 }
 
+@media (max-width: 620px) {
+  .cookie-banner {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    width: auto;
+  }
 
-
-
-
-
-
-@media (max-width: 560px) {
   .cookie-shell {
+    max-height: min(52vh, 360px);
+    overflow-y: auto;
     border-radius: 18px;
-    padding: 0.82rem;
+    padding: 0.78rem;
+    gap: 0.6rem;
   }
 
   .cookie-title {
-    font-size: 1.34rem;
+    font-size: 1.18rem;
   }
 
   .cookie-sub {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.34;
+  }
+
+  .cookie-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cookie-accept {
+    grid-column: 1 / -1;
+  }
+
+  .cookie-btn {
+    min-height: 2.2rem;
+    font-size: 0.86rem;
+    padding-inline: 0.5rem;
+  }
+
+  .cookie-preference-card {
+    padding: 0.52rem 0.56rem;
+  }
+
+  .cookie-preference-card small {
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cookie-shell {
+    max-height: min(48vh, 330px);
+    padding: 0.72rem;
+  }
+
+  .cookie-title {
+    font-size: 1.08rem;
+  }
+
+  .cookie-sub {
+    font-size: 0.85rem;
   }
 }

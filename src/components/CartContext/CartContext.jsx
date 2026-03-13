@@ -1,21 +1,40 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { FALLBACK_RATES } from "../CurrencyContext/CurrencyContext";
+import {
+  getCartItemKey,
+  getCartItemMaxSelectableQuantity,
+  getCartItemQuantity,
+  isRentalCartItem,
+  normalizeCartKey,
+} from "/src/utils/cart";
 
 const CartContext = createContext();
-const normalizeCartKey = (value) => String(value ?? "").trim();
-const getCartItemKey = (item = {}) =>
-  normalizeCartKey(item.id ?? item.productId ?? item.slug ?? item.name);
+const readStoredJson = (key, fallback) => {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const readStoredCart = () => {
+  const stored = readStoredJson("cart", []);
+  return Array.isArray(stored) ? stored : [];
+};
+const readStoredCurrency = () => {
+  if (typeof window === "undefined") return "GHS";
+  const stored = window.localStorage.getItem("currency");
+  return typeof stored === "string" && stored.trim() ? stored : "GHS";
+};
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState(() => {
-    const storedCart = localStorage.getItem("cart");
-    return storedCart ? JSON.parse(storedCart) : [];
-  });
+  const [cart, setCart] = useState(readStoredCart);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const [currency, setCurrency] = useState(
-    () => localStorage.getItem("currency") || "GHS"
-  );
+  const [currency, setCurrency] = useState(readStoredCurrency);
 
   const [rates, setRates] = useState(FALLBACK_RATES);
   const apiKey = import.meta.env.VITE_CURRENCY_API_KEY;
@@ -23,22 +42,25 @@ export const CartProvider = ({ children }) => {
   const RATES_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
+    try {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    } catch {
+      // ignore storage write failures
+    }
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem("currency", currency);
+    try {
+      localStorage.setItem("currency", currency);
+    } catch {
+      // ignore storage write failures
+    }
   }, [currency]);
 
   // fetch exchange rates
   useEffect(() => {
     const cached = (() => {
-      try {
-        const raw = localStorage.getItem(RATES_CACHE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
-      }
+      return readStoredJson(RATES_CACHE_KEY, null);
     })();
 
     if (cached?.rates) {
@@ -59,10 +81,14 @@ export const CartProvider = ({ children }) => {
         if (data.result === "success") {
           const nextRates = { ...FALLBACK_RATES, ...data.conversion_rates };
           setRates(nextRates);
-          localStorage.setItem(
-            RATES_CACHE_KEY,
-            JSON.stringify({ rates: nextRates, timestamp: Date.now() })
-          );
+          try {
+            localStorage.setItem(
+              RATES_CACHE_KEY,
+              JSON.stringify({ rates: nextRates, timestamp: Date.now() })
+            );
+          } catch {
+            // ignore storage write failures
+          }
 
           if (!localStorage.getItem("currency")) {
             const region = navigator.language.split("-")[1];
@@ -95,39 +121,41 @@ export const CartProvider = ({ children }) => {
     const normalizedItem = {
       ...item,
       id: item.id ?? itemKey,
+      cartKind: item.cartKind || (isRentalCartItem(item) ? "rental" : "shop"),
       price:
         item.price ??
         (typeof item.priceCents === "number" ? item.priceCents / 100 : 0),
-      quantity: Math.max(0, Number(item.quantity ?? item.stock ?? 0) || 0),
+      quantity: getCartItemQuantity(item),
     };
 
     setCart((prev) => {
       const exists = prev.find((p) => getCartItemKey(p) === itemKey);
-      const stockLimit = Math.max(
-        0,
-        Number(normalizedItem.quantity ?? exists?.quantity ?? exists?.stock ?? 0) || 0
-      );
+      const stockLimit = getCartItemMaxSelectableQuantity({
+        ...exists,
+        ...normalizedItem,
+      });
       if (exists) {
-        // prevent exceeding stock
-        if (exists.cartQuantity >= stockLimit) return prev;
+        if (stockLimit > 0 && exists.cartQuantity >= stockLimit) return prev;
         return prev.map((p) =>
           getCartItemKey(p) === itemKey
             ? {
                 ...p,
                 ...normalizedItem,
                 id: normalizedItem.id ?? p.id ?? itemKey,
-                cartQuantity: Math.min(p.cartQuantity + 1, stockLimit),
+                cartQuantity:
+                  stockLimit > 0
+                    ? Math.min(p.cartQuantity + 1, stockLimit)
+                    : p.cartQuantity + 1,
               }
             : p
         );
       }
-      // initial add
       return [
         ...prev,
         {
           ...normalizedItem,
           id: normalizedItem.id ?? itemKey,
-          cartQuantity: Math.min(1, Math.max(stockLimit, 1)),
+          cartQuantity: 1,
         },
       ];
     });
@@ -149,10 +177,10 @@ export const CartProvider = ({ children }) => {
       prev.map((p) => {
         if (getCartItemKey(p) === targetKey) {
           let newQty = p.cartQuantity + change;
-          const stockLimit = Math.max(0, Number(p.quantity ?? p.stock ?? 0) || 0);
+          const stockLimit = getCartItemMaxSelectableQuantity(p);
 
           if (newQty < 1) newQty = 1;
-          if (stockLimit > 0 && newQty > stockLimit) newQty = stockLimit; // cap to stock
+          if (stockLimit > 0 && newQty > stockLimit) newQty = stockLimit;
 
           return { ...p, cartQuantity: newQty };
         }

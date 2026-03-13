@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import 'dotenv/config';
+import "../runtimeEnv.js";
 import { prisma } from "../prismaClient.js"; 
 import fs from 'fs';
 import path from 'path';

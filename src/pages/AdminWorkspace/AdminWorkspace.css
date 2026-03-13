@@ -841,6 +841,7 @@
   border: 1px solid var(--aw-border);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 14px 24px rgba(14, 27, 35, 0.18);
 }
 

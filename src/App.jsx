@@ -542,12 +542,12 @@ function App() {
           <div className={`shell-bottom-cta ${showShellCta ? "is-visible" : ""}`} aria-hidden={!showShellCta}>
             <div className="shell-bottom-cta-corner shell-bottom-cta-corner-left" aria-hidden="true">
               <svg viewBox="0 0 44 44" focusable="false" role="presentation">
-                <path d="M0 0H44V44C34.7 -16 0 30.3 0 0Z" />
+                <path d="M0 0H44V44C44 19.7 40 0 0 0Z" />
               </svg>
             </div>
             <div className="shell-bottom-cta-corner shell-bottom-cta-corner-right" aria-hidden="true">
               <svg viewBox="0 0 44 44" focusable="false" role="presentation">
-                <path d="M0 0H44V44C34.7 -16 0 24.3 0 0Z" />
+                <path d="M0 0H44V44C44 19.7 40 0 0 0Z" />
               </svg>
             </div>
             <Link to="/rentals" className="shell-bottom-cta-btn shell-bottom-cta-btn-book">

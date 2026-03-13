@@ -57,7 +57,6 @@
 .contact-card-intro,
 .muted,
 .hint {
-  color: var(--text-main);
   font-weight: 700;
   line-height: 1.58;
 }
@@ -151,7 +150,7 @@
 .cta-chip,
 .policy-chip {
   background: rgba(255, 255, 255, 0.86);
-  color: var(--ink);
+  color: var(--light);
   border-color: rgba(58, 63, 69, 0.14);
 }
 
@@ -236,7 +235,7 @@
   isolation: isolate;
   overflow: hidden;
   padding: clamp(1.2rem, 3.8vw, 2.1rem);
-  min-height: 100vh;
+  min-height: var(--app-vh);
   align-content: center;
   display: grid;
   gap: clamp(1rem, 2.8vw, 1.6rem);
@@ -1370,6 +1369,7 @@
   padding-top: clamp(5.6rem, 11vw, 7.4rem);
   position: relative;
   isolation: isolate;
+  overflow: hidden;
   overflow: clip;
   --rental-detail-bg: none;
 }
@@ -2092,6 +2092,7 @@
 .faq-item {
   border: 1px solid rgba(58, 63, 69, 0.12);
   border-radius: 12px;
+  overflow: hidden;
   overflow: clip;
   background: rgba(255, 255, 255, 0.84);
 }
@@ -2276,6 +2277,15 @@
   border: 1px solid rgba(58, 63, 69, 0.18);
   border-radius: 8px;
   padding: 0.36rem;
+  appearance: textfield;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.qty-input input::-webkit-outer-spin-button,
+.qty-input input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
 }
 
 .cart-summary-card,
@@ -2389,7 +2399,7 @@
 }
 
 .booking-rentals {
-  max-height: calc(100vh - 7.5rem);
+  max-height: calc(var(--app-vh) - 7.5rem);
   overflow: auto;
 }
 
@@ -2635,7 +2645,7 @@
 }
 
 .login-page {
-  min-height: 100vh;
+  min-height: var(--app-vh);
   display: grid;
   place-items: center;
   gap: 0.85rem;
@@ -3100,6 +3110,7 @@
   padding: 1.35rem;
   display: grid;
   gap: 0.7rem;
+  align-content: start;
   justify-items: start;
 }
 
@@ -3125,8 +3136,14 @@
 }
 
 .cart-empty-actions {
+  align-items: flex-start;
+  align-content: flex-start;
   flex-wrap: wrap;
   gap: 0.7rem;
+}
+
+.cart-empty-actions > :is(.hero-btn, .checkout-btn, .ghost-btn) {
+  min-height: 48px;
 }
 
 

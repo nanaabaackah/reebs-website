@@ -68,12 +68,81 @@ const getItemCategory = (item = {}) =>
   item.productCategory ||
   "";
 
+const PLACEHOLDER_IMAGE = "/imgs/ui/placeholder.png";
+const UNSAFE_MEDIA_SCHEME = /^(?:data|javascript|vbscript|file):/i;
+const HAS_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
+const HAS_UNSAFE_URL_CHARACTERS = /["'<>\\]/;
+const ABSOLUTE_URL_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+
+export const sanitizeCatalogMediaUrl = (value, fallback = PLACEHOLDER_IMAGE) => {
+  const raw = value?.toString().trim() || "";
+  if (!raw) return fallback;
+  if (HAS_CONTROL_CHARACTERS.test(raw) || HAS_UNSAFE_URL_CHARACTERS.test(raw)) {
+    return fallback;
+  }
+  if (UNSAFE_MEDIA_SCHEME.test(raw)) {
+    return fallback;
+  }
+  if (ABSOLUTE_URL_SCHEME.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (!["http:", "https:"].includes(parsed.protocol)) return fallback;
+      return parsed.toString();
+    } catch {
+      return fallback;
+    }
+  }
+  if (/^(?:\/|\.\.\/|\.\/)/.test(raw)) {
+    return raw;
+  }
+  return fallback;
+};
+
+export const toCatalogCssImageValue = (value, fallback = PLACEHOLDER_IMAGE) => {
+  const safeUrl = sanitizeCatalogMediaUrl(value, fallback);
+  return safeUrl ? `url("${safeUrl}")` : "none";
+};
+
+export const createCatalogCssImageStyle = (
+  value,
+  cssVariableName = "--item-category-bg",
+  fallback = PLACEHOLDER_IMAGE
+) => ({
+  [cssVariableName]: toCatalogCssImageValue(value, fallback),
+});
+
 export const getCatalogItemImage = (item = {}) =>
-  item.image ||
-  item.imageUrl ||
-  item.image_url ||
-  item.productImage ||
-  "/imgs/ui/placeholder.png";
+  sanitizeCatalogMediaUrl(
+    item.image ||
+      item.imageUrl ||
+      item.image_url ||
+      item.productImage,
+    PLACEHOLDER_IMAGE
+  );
+
+const hasCatalogMachineMeta = (item = {}) =>
+  [item.power, item.footprint, item.output].some((value) => value !== undefined && value !== null && `${value}`.trim());
+
+export const isCatalogMachineItem = (item = {}) => {
+  const name = normalizeCategoryKey(getItemName(item));
+  const category = normalizeCategoryKey(getItemCategory(item));
+
+  if (!name && !category) return false;
+  if (name.includes("machine")) return true;
+  if (category.includes("machine")) return true;
+  if (hasCatalogMachineMeta(item)) return true;
+
+  return (
+    name.includes("popcorn") ||
+    name.includes("cotton candy") ||
+    name.includes("snow cone") ||
+    name.includes("snowcone") ||
+    category.includes("popcorn") ||
+    category.includes("cotton candy") ||
+    category.includes("snow cone") ||
+    category.includes("snowcone")
+  );
+};
 
 const getShopCategoryKey = (item = {}) => {
   const key = normalizeCategoryKey(getItemCategory(item));
@@ -153,6 +222,24 @@ const isRentalLikeItem = (item = {}) => {
   return Boolean(getRentalCategoryKey(item));
 };
 
+const toDisplayTitleCase = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (match) => match.toUpperCase());
+
+export const getCatalogItemDisplayName = (item = {}, fallback = "Item") => {
+  const raw = `${getItemName(item) || ""}`.trim();
+  if (!raw) return fallback;
+
+  const machineAdjusted =
+    isCatalogMachineItem(item) && !normalizeCategoryKey(raw).includes("machine")
+      ? `${raw} Machine`
+      : raw;
+
+  return isRentalLikeItem(item) ? machineAdjusted : toDisplayTitleCase(machineAdjusted);
+};
+
 export const getCatalogItemBackground = (item = {}) => {
   const image = getCatalogItemImage(item);
 
@@ -175,6 +262,4 @@ export const getCatalogItemBackground = (item = {}) => {
 export const getCatalogItemBackgroundStyle = (
   item = {},
   cssVariableName = "--item-category-bg"
-) => ({
-  [cssVariableName]: `url("${getCatalogItemBackground(item)}")`,
-});
+) => createCatalogCssImageStyle(getCatalogItemBackground(item), cssVariableName);

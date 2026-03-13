@@ -4,10 +4,11 @@
   --portal-bottom-nav-clearance: calc(6.6rem + env(safe-area-inset-bottom));
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   background: var(--surface);
   color: var(--ink);
   font-family: "Inter", "Segoe UI", sans-serif;
+  overflow-x: hidden;
   overflow-x: clip;
   box-sizing: border-box;
 }
@@ -19,7 +20,7 @@
 .portal-app-content {
   --portal-modal-inline-offset: var(--portal-sidebar-collapsed);
   min-width: 0;
-  min-height: 100vh;
+  min-height: var(--app-vh);
   padding: 8rem 2rem var(--portal-bottom-nav-clearance);
   margin-left: var(--portal-sidebar-collapsed);
   background: var(--surface);
@@ -38,10 +39,11 @@
   flex-direction: column;
   align-items: center;
   width: var(--portal-sidebar-collapsed);
-  height: 100vh;
+  height: var(--app-vh);
   padding: 1.15rem 0.6rem;
   background: var(--card);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-right: 1px solid var(--border);
   color: var(--muted);
   transition: width 0.3s ease, padding 0.3s ease, box-shadow 0.3s ease;
@@ -620,6 +622,7 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   justify-content: flex-end;
   z-index: 4200;

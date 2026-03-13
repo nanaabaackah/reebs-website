@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 // Filename: users.js
-import "dotenv/config";
+import { resolvePgSslConfig } from "../../runtimeEnv.js";
 import { Client } from "pg";
 import { hashPassword } from "../../utils/passwords.js";
 import { requireUser } from "./_shared/userAuth.js";
@@ -47,7 +47,7 @@ export async function handler(event) {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+    ssl: resolvePgSslConfig(),
   });
 
   try {
